@@ -52,6 +52,8 @@ export async function GET(req: Request) {
       isArchived: true,
       createdAt: true,
       uploadedByUserId: true,
+      aiSummary: true,
+      aiMeta: true,
       files: {
         where: { isCurrent: true },
         take: 1,

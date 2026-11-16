@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { enforceRouteRateLimit } from "@/lib/route-rate-limit";
+import { logActivity } from "@/lib/security/activity-log";
+
+/** What a redemption is worth is decided here, never by the caller. */
+const FRIEND_DISCOUNT_PERCENT = 20;
+const CODE_PATTERN = /^[A-Z0-9-]{4,24}$/;
 
 export async function POST(req: Request) {
   try {
@@ -12,25 +18,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await req.json();
-    const code = typeof body?.code === "string" ? body.code.trim().toUpperCase() : "";
-    const friendDiscountPercent =
-      typeof body?.friendDiscountPercent === "number" ? body.friendDiscountPercent : 20;
-    const rewardType = body?.rewardType === "FREE_MONTH" ? "FREE_MONTH" : "WALLET_CREDIT";
+    const userId = (session.user as { id?: string } | undefined)?.id ?? "";
+    const limit = enforceRouteRateLimit({ request: req, route: "/api/referrals/redeem", scope: `${workspaceId}:${userId}`, max: 5, windowMs: 60 * 60_000 });
+    if (!limit.ok) return limit.response;
 
-    if (!code) {
-      return NextResponse.json({ error: "Referral code is required" }, { status: 400 });
+    const body = await req.json().catch(() => null);
+    const code = typeof body?.code === "string" ? body.code.trim().toUpperCase() : "";
+    // Any reward type or discount in the request is ignored: callers must not choose their own reward.
+    const friendDiscountPercent = FRIEND_DISCOUNT_PERCENT;
+    const rewardType = "WALLET_CREDIT" as const;
+
+    if (!code || !CODE_PATTERN.test(code)) {
+      return NextResponse.json({ error: "Enter a valid referral code" }, { status: 400 });
     }
 
     const profile = await prisma.customerReferralProfile.findFirst({
       where: { code, isActive: true },
-      select: { id: true, workspaceId: true },
+      select: { id: true, workspaceId: true, userId: true },
     });
 
     if (!profile) {
       return NextResponse.json({ error: "Referral code not found" }, { status: 404 });
     }
-    if (profile.workspaceId === workspaceId) {
+    // Your own code, or a code from another workspace you own, earns nothing.
+    if (profile.workspaceId === workspaceId || profile.userId === userId) {
       return NextResponse.json({ error: "You cannot redeem your own referral code" }, { status: 400 });
     }
 
@@ -59,8 +70,8 @@ export async function POST(req: Request) {
           referrerWorkspaceId: profile.workspaceId,
           rewardType,
           rewardStatus: "APPROVED",
-          walletCreditAmount: rewardType === "WALLET_CREDIT" ? 10 : null,
-          freeMonthsCount: rewardType === "FREE_MONTH" ? 1 : null,
+          walletCreditAmount: 10,
+          freeMonthsCount: null,
           notes: "Auto-created from referral redemption",
         },
       });
@@ -76,6 +87,7 @@ export async function POST(req: Request) {
       return createdRedemption;
     });
 
+    void logActivity({ workspaceId, action: "referral.redeemed", status: "SUCCESS", actor: { userId, email: null }, entity: { type: "referral_redemption", id: redemption.id } });
     return NextResponse.json({ redemption }, { status: 201 });
   } catch (error) {
     console.error("POST /api/referrals/redeem error", error);

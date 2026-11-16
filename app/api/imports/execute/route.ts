@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
+import { logActivity } from '@/lib/security/activity-log';
+import { importErrorResponse } from '@/lib/imports/core/auth';
 import { requireImportContext } from '@/lib/imports/core/auth';
 import { executeImport } from '@/lib/imports/core/execute';
 import { buildPreview } from '@/lib/imports/core/preview';
@@ -26,6 +29,8 @@ function idempotencyFromRequest(req: Request, runId: string, mode: ImportExecuti
 export async function POST(req: Request) {
   try {
     const context = await requireImportContext();
+    const limit = enforceRouteRateLimit({ request: req, route: '/api/imports/execute', scope: `${context.workspaceId}:${context.userId}`, max: 20, windowMs: 10 * 60_000 });
+    if (!limit.ok) return limit.response;
     const body = Body.parse(await req.json());
 
     const run = await prisma.importRun.findFirst({ where: { id: body.previewRunId, workspaceId: context.workspaceId } });
@@ -70,24 +75,31 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Blocking validation errors remain. Resolve before execute.', preview: freshPreview }, { status: 400 });
     }
 
-    const summary = await executeImport({
-      workspaceId: context.workspaceId,
-      actorUserId: context.userId,
-      preview: freshPreview,
-      mode: body.mode,
-      onChunkCommitted: async (lastProcessedRow, counts) => {
-        await prisma.importRun.update({
-          where: { id: run.id },
-          data: {
-            lastProcessedRow,
-            importedCount: counts.imported,
-            updatedCount: counts.updated,
-            skippedCount: counts.skipped,
-            failedCount: counts.failed,
-          },
-        });
-      },
-    });
+    let summary: Awaited<ReturnType<typeof executeImport>>;
+    try {
+      summary = await executeImport({
+        workspaceId: context.workspaceId,
+        actorUserId: context.userId,
+        preview: freshPreview,
+        mode: body.mode,
+        onChunkCommitted: async (lastProcessedRow, counts) => {
+          await prisma.importRun.update({
+            where: { id: run.id },
+            data: {
+              lastProcessedRow,
+              importedCount: counts.imported,
+              updatedCount: counts.updated,
+              skippedCount: counts.skipped,
+              failedCount: counts.failed,
+            },
+          });
+        },
+      });
+    } catch (execError) {
+      // Never leave the run stuck in EXECUTING: the person must be able to see it failed and start again.
+      await prisma.importRun.update({ where: { id: run.id }, data: { status: 'FAILED', executionFinishedAt: new Date() } });
+      throw execError;
+    }
 
     await prisma.importRun.update({
       where: { id: run.id },
@@ -105,11 +117,9 @@ export async function POST(req: Request) {
       },
     });
 
+    void logActivity({ workspaceId: context.workspaceId, action: 'import.executed', status: summary.failed > 0 ? 'FAILURE' : 'SUCCESS', actor: { userId: context.userId, email: null }, entity: { type: 'import_run', id: run.id }, metadata: { entity: storedInput.entity, mode: body.mode, imported: summary.imported, updated: summary.updated, skipped: summary.skipped, failed: summary.failed } });
     return NextResponse.json({ summary });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Execution failed';
-    if (message === 'UNAUTHORIZED') return NextResponse.json({ error: message }, { status: 401 });
-    if (message === 'FORBIDDEN') return NextResponse.json({ error: message }, { status: 403 });
-    return NextResponse.json({ error: message }, { status: 400 });
+    return importErrorResponse(error, 'Execution failed');
   }
 }

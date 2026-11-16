@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { encrypt } from '@/lib/encryption';
+import { logActivity } from '@/lib/security/activity-log';
 import { requireEmailBilling } from '../../_lib/auth';
 import { validateMailBillingUrl } from '@/lib/email-billing/miab-client';
 import { mailBillingServerPatchSchema, parseJsonBody } from '@/lib/email-billing/validation';
@@ -89,6 +90,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     else if (body.token && body.token !== 'SET') data.encryptedToken = encrypt(body.token);
 
     const server = await prisma.mailBillingServer.update({ where: { id }, data });
+    void logActivity({ workspaceId: auth.workspaceId, action: 'email_billing.server_updated', status: 'SUCCESS', actor: { userId: auth.userId, email: null }, entity: { type: 'mail_billing_server', id }, metadata: { fields: Object.keys(data).filter((k) => k !== 'encryptedToken'), tokenChanged: 'encryptedToken' in data } });
     return NextResponse.json({ server: sanitizeServer(server) });
   } catch (error) {
     return NextResponse.json(

@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 import { requireEmailBilling } from '../../../_lib/auth';
 import { syncMailBillingServer } from '@/lib/email-billing/sync';
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireEmailBilling('workspace.manage_settings');
   if ('response' in auth) return auth.response;
+  const limit = enforceRouteRateLimit({ request: req, route: '/api/email-billing/servers/sync', scope: auth.workspaceId, max: 12, windowMs: 10 * 60_000 });
+  if (!limit.ok) return limit.response;
   try {
     const { id } = await params;
     const summary = await syncMailBillingServer({ workspaceId: auth.workspaceId, serverId: id, actorUserId: auth.userId, request: req });

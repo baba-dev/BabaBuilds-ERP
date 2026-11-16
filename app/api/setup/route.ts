@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { enableModule } from "@/lib/modules";
 import { syncPrimaryRemittanceBankAccount } from "@/lib/banking/sync-primary-remittance-account";
 import { encrypt } from "@/lib/encryption";
+import { RbacDeniedError, rbacDeniedResponse, requirePermission } from "@/lib/rbac";
+import { enforceRouteRateLimit } from "@/lib/route-rate-limit";
 
 type SetupPayload = {
   countryCode?: string;
@@ -66,6 +68,16 @@ export async function POST(req: Request) {
   const userId = typedSession?.user?.id;
 
   if (!workspaceId || !userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Setup rewrites business details, payment and mail keys and turns modules on, so it needs the same right as Settings.
+  try {
+    await requirePermission(userId, workspaceId, "workspace.manage_settings");
+  } catch (e) {
+    if (e instanceof RbacDeniedError) return rbacDeniedResponse(e) as NextResponse;
+    throw e;
+  }
+  const limit = enforceRouteRateLimit({ request: req, route: "/api/setup", scope: `${workspaceId}:${userId}`, max: 30, windowMs: 10 * 60_000 });
+  if (!limit.ok) return limit.response;
 
   try {
     const body = (await req.json()) as SetupPayload;

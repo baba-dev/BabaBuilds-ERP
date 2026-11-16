@@ -15,6 +15,7 @@ import {
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -119,6 +120,7 @@ function commissionBadge(status: DashboardData["commissions"][number]["status"])
 }
 
 export default function ReferralsPage() {
+  const t = useTranslations("ReferralsHub");
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [redeemCode, setRedeemCode] = useState("");
@@ -129,10 +131,10 @@ export default function ReferralsPage() {
     try {
       const res = await fetch("/api/referrals/dashboard", { cache: "no-store" });
       const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error || "Failed to load reseller dashboard");
+      if (!res.ok) throw new Error(payload?.error || t('error'));
       setData(payload as DashboardData);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to load reseller dashboard");
+      toast.error(error instanceof Error ? error.message : t('error'));
     } finally {
       setLoading(false);
     }
@@ -140,17 +142,18 @@ export default function ReferralsPage() {
 
   useEffect(() => {
     void load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   const createProfile = async () => {
     try {
       const res = await fetch("/api/referrals", { method: "POST" });
       const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error || "Failed to create referral code");
-      toast.success("Referral code generated.");
+      if (!res.ok) throw new Error(payload?.error || t('error'));
+      toast.success(t('codeGenerated'));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to create referral code");
+      toast.error(error instanceof Error ? error.message : t('error'));
     }
   };
 
@@ -162,17 +165,15 @@ export default function ReferralsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: redeemCode,
-          friendDiscountPercent: 20,
-          rewardType: "FREE_MONTH",
         }),
       });
       const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error || "Failed to redeem referral");
+      if (!res.ok) throw new Error(payload?.error || t('error'));
       setRedeemCode("");
-      toast.success("Referral code redeemed successfully.");
+      toast.success(t('codeRedeemed'));
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to redeem referral");
+      toast.error(error instanceof Error ? error.message : t('error'));
     }
   };
 
@@ -185,23 +186,23 @@ export default function ReferralsPage() {
         body: JSON.stringify({ code: resellerCode }),
       });
       const payload = await res.json();
-      if (!res.ok) throw new Error(payload?.error || "Failed to apply reseller coupon");
+      if (!res.ok) throw new Error(payload?.error || t('error'));
       setResellerCode("");
       toast.success(
         `Applied ${payload.customerDiscountPercent}% customer discount and ${payload.resellerCommissionPercent}% commission mapping.`,
       );
       await load();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to apply reseller coupon");
+      toast.error(error instanceof Error ? error.message : t('error'));
     }
   };
 
   const copyCode = async (value: string) => {
     try {
       await navigator.clipboard.writeText(value);
-      toast.success("Code copied.");
+      toast.success(t('copied'));
     } catch {
-      toast.error("Could not copy.");
+      toast.error(t('copyFailed'));
     }
   };
 
@@ -211,11 +212,11 @@ export default function ReferralsPage() {
   }, [data]);
 
   if (loading && !data) {
-    return <div className="mx-auto max-w-7xl p-6 text-sm text-zinc-500">Loading reseller dashboard...</div>;
+    return <div className="mx-auto max-w-7xl p-6 text-sm text-zinc-500">{t('loading')}</div>;
   }
 
   if (!data) {
-    return <div className="mx-auto max-w-7xl p-6 text-sm text-rose-600">Unable to load dashboard data.</div>;
+    return <div className="mx-auto max-w-7xl p-6 text-sm text-rose-600">{t('loadError')}</div>;
   }
 
   return (
@@ -223,16 +224,16 @@ export default function ReferralsPage() {
       <div className="rounded-3xl border border-border/80 bg-gradient-to-br from-surface-elevated to-surface-base p-6 shadow-sm md:p-8">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-body">Reseller dashboard</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-muted-body">{t('eyebrow')}</p>
             <h1 className="mt-2 text-3xl font-black tracking-tight text-foreground md:text-4xl">
-              Partner Growth Command Center
+              {t('heading')}
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-muted-body md:text-base">
-              Track coupon performance, pipeline progression, commissions, and partner operations from one secure view.
+              {t('intro')}
             </p>
           </div>
           <Button variant="outline" className="gap-2" onClick={() => void load()}>
-            <RefreshCw className="h-4 w-4" /> Refresh
+            <RefreshCw className="h-4 w-4" /> {t('refresh')}
           </Button>
         </div>
       </div>
@@ -240,7 +241,7 @@ export default function ReferralsPage() {
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Total leads</CardTitle>
+            <CardTitle className="text-sm">{t('totalLeads')}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-black">{data.overview.totalLeads}</p>
@@ -249,7 +250,7 @@ export default function ReferralsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Conversion rate</CardTitle>
+            <CardTitle className="text-sm">{t('conversionRate')}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-black">{data.overview.conversionRate}%</p>
@@ -258,21 +259,21 @@ export default function ReferralsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Referred revenue</CardTitle>
+            <CardTitle className="text-sm">{t('referredRevenue')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-black">${data.overview.totalRevenue.toFixed(2)}</p>
+            <p className="text-2xl font-black">₹{data.overview.totalRevenue.toFixed(2)}</p>
             <p className="mt-1 text-xs text-muted-body">{data.overview.couponUsage} total coupon uses</p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Commission pipeline</CardTitle>
+            <CardTitle className="text-sm">{t('commissionPipeline')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-black">${data.overview.pendingCommission.toFixed(2)}</p>
+            <p className="text-2xl font-black">₹{data.overview.pendingCommission.toFixed(2)}</p>
             <p className="mt-1 text-xs text-muted-body">
-              ${data.overview.paidCommission.toFixed(2)} paid out
+              ₹{data.overview.paidCommission.toFixed(2)} paid out
             </p>
           </CardContent>
         </Card>
@@ -282,9 +283,9 @@ export default function ReferralsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-orange-500" /> Today&apos;s actions
+              <Sparkles className="h-4 w-4 text-orange-500" /> {t('todayActions')}
             </CardTitle>
-            <CardDescription>Suggested next moves based on current pipeline and coupon health.</CardDescription>
+            <CardDescription>{t('todayActionsDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {data.todayActions.map((item) => (
@@ -301,21 +302,21 @@ export default function ReferralsPage() {
             <CardTitle className="flex items-center gap-2">
               <LinkIcon className="h-4 w-4 text-indigo-500" /> Referral quick tools
             </CardTitle>
-            <CardDescription>Customer referral benefits and quick utility actions.</CardDescription>
+            <CardDescription>{t('customerDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="rounded-xl border border-border/80 p-3">
-                <p className="text-lg font-black">${data.customerStats.walletCredits.toFixed(0)}</p>
-                <p className="text-[11px] uppercase tracking-wide text-muted-body">Wallet credit</p>
+                <p className="text-lg font-black">₹{data.customerStats.walletCredits.toFixed(0)}</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-body">{t('walletCredit')}</p>
               </div>
               <div className="rounded-xl border border-border/80 p-3">
                 <p className="text-lg font-black">{data.customerStats.freeMonths}</p>
-                <p className="text-[11px] uppercase tracking-wide text-muted-body">Free months</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-body">{t('freeMonths')}</p>
               </div>
               <div className="rounded-xl border border-border/80 p-3">
                 <p className="text-lg font-black">{data.profile?.successfulReferrals ?? 0}</p>
-                <p className="text-[11px] uppercase tracking-wide text-muted-body">Successful</p>
+                <p className="text-[11px] uppercase tracking-wide text-muted-body">{t('successful')}</p>
               </div>
             </div>
             {data.profile ? (
@@ -323,15 +324,15 @@ export default function ReferralsPage() {
                 <div className="flex items-center justify-between gap-3">
                   <p className="font-mono text-sm font-bold">{data.profile.code}</p>
                   <Button size="sm" variant="outline" onClick={() => void copyCode(data.profile!.code)}>
-                    <Copy className="mr-1 h-3.5 w-3.5" /> Copy
+                    <Copy className="me-1 h-3.5 w-3.5" /> {t('copy')}
                   </Button>
                 </div>
                 <p className="mt-2 text-xs text-muted-body">
-                  Total referred: {data.profile.totalReferrals} · Successful: {data.profile.successfulReferrals}
+                  {t('totalReferred')}: {data.profile.totalReferrals} · {t('successful')}: {data.profile.successfulReferrals}
                 </p>
               </div>
             ) : (
-              <Button onClick={() => void createProfile()}>Generate referral code</Button>
+              <Button onClick={() => void createProfile()}>{t('generateCode')}</Button>
             )}
           </CardContent>
         </Card>
@@ -340,35 +341,35 @@ export default function ReferralsPage() {
       <Tabs defaultValue="pipeline" className="space-y-4">
         <TabsList>
           <TabsTrigger value="pipeline">
-            <Target className="h-4 w-4" /> Pipeline
+            <Target className="h-4 w-4" /> {t('tabPipeline')}
           </TabsTrigger>
           <TabsTrigger value="coupons">
-            <BadgeDollarSign className="h-4 w-4" /> Coupons
+            <BadgeDollarSign className="h-4 w-4" /> {t('tabCoupons')}
           </TabsTrigger>
           <TabsTrigger value="commissions">
-            <Wallet className="h-4 w-4" /> Commissions
+            <Wallet className="h-4 w-4" /> {t('tabCommissions')}
           </TabsTrigger>
           <TabsTrigger value="toolkit">
-            <TrendingUp className="h-4 w-4" /> Toolkit
+            <TrendingUp className="h-4 w-4" /> {t('tabToolkit')}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="pipeline">
           <Card>
             <CardHeader>
-              <CardTitle>Lead pipeline</CardTitle>
-              <CardDescription>Stage visibility across referred workspaces.</CardDescription>
+              <CardTitle>{t('leadPipeline')}</CardTitle>
+              <CardDescription>{t('leadPipelineDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Workspace</TableHead>
-                    <TableHead className="whitespace-nowrap">Stage</TableHead>
-                    <TableHead className="whitespace-nowrap">Coupon</TableHead>
-                    <TableHead className="whitespace-nowrap">Created</TableHead>
-                    <TableHead className="whitespace-nowrap">Paid tx</TableHead>
-                    <TableHead className="whitespace-nowrap text-right">Revenue</TableHead>
+                    <TableHead>{t('workspace')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('stage')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('coupon')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('created')}</TableHead>
+                    <TableHead className="whitespace-nowrap">{t('paidTx')}</TableHead>
+                    <TableHead className="whitespace-nowrap text-right">{t('revenue')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -388,7 +389,7 @@ export default function ReferralsPage() {
                         <TableCell>{lead.couponCode ?? "—"}</TableCell>
                         <TableCell className="whitespace-nowrap">{new Date(lead.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell className="whitespace-nowrap">{lead.paidTransactions}</TableCell>
-                        <TableCell className="whitespace-nowrap text-right font-bold">${lead.revenue.toFixed(2)}</TableCell>
+                        <TableCell className="whitespace-nowrap text-right font-bold">₹{lead.revenue.toFixed(2)}</TableCell>
                       </TableRow>
                     ))
                   )}
@@ -401,20 +402,20 @@ export default function ReferralsPage() {
         <TabsContent value="coupons">
           <Card>
             <CardHeader>
-              <CardTitle>Coupon analytics</CardTitle>
-              <CardDescription>Usage, conversion, and expiry visibility per code.</CardDescription>
+              <CardTitle>{t('couponAnalytics')}</CardTitle>
+              <CardDescription>{t('couponAnalyticsDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Discount / Comm</TableHead>
-                    <TableHead>Usage</TableHead>
-                    <TableHead>Leads</TableHead>
-                    <TableHead>Conversion</TableHead>
-                    <TableHead>Expiry</TableHead>
+                    <TableHead>{t('code')}</TableHead>
+                    <TableHead>{t('status')}</TableHead>
+                    <TableHead>{t('discountComm')}</TableHead>
+                    <TableHead>{t('usage')}</TableHead>
+                    <TableHead>{t('leads')}</TableHead>
+                    <TableHead>{t('conversion')}</TableHead>
+                    <TableHead>{t('expiry')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -437,7 +438,7 @@ export default function ReferralsPage() {
                         </TableCell>
                         <TableCell>
                           <Badge className={coupon.isActive ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-zinc-500/10 text-zinc-700 dark:text-zinc-300"}>
-                            {coupon.isActive ? "ACTIVE" : "INACTIVE"}
+                            {coupon.isActive ? t('active') : t('inactive')}
                           </Badge>
                         </TableCell>
                         <TableCell className="whitespace-nowrap">{coupon.discountValue}% / {coupon.commissionPercent}%</TableCell>
@@ -459,20 +460,20 @@ export default function ReferralsPage() {
         <TabsContent value="commissions">
           <Card>
             <CardHeader>
-              <CardTitle>Commission ledger</CardTitle>
-              <CardDescription>Transparent payout trail by deal.</CardDescription>
+              <CardTitle>{t('commissionLedger')}</CardTitle>
+              <CardDescription>{t('commissionLedgerDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Workspace</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Deal</TableHead>
-                    <TableHead>Rate</TableHead>
-                    <TableHead>Commission</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Reference</TableHead>
+                    <TableHead>{t('workspace')}</TableHead>
+                    <TableHead>{t('status')}</TableHead>
+                    <TableHead>{t('deal')}</TableHead>
+                    <TableHead>{t('rate')}</TableHead>
+                    <TableHead>{t('commission')}</TableHead>
+                    <TableHead>{t('date')}</TableHead>
+                    <TableHead>{t('reference')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -489,9 +490,9 @@ export default function ReferralsPage() {
                         <TableCell>
                           <Badge className={commissionBadge(item.status)}>{item.status}</Badge>
                         </TableCell>
-                        <TableCell className="whitespace-nowrap">${item.dealAmount.toFixed(2)}</TableCell>
+                        <TableCell className="whitespace-nowrap">₹{item.dealAmount.toFixed(2)}</TableCell>
                         <TableCell className="whitespace-nowrap">{item.commissionPercent}%</TableCell>
-                        <TableCell className="whitespace-nowrap font-bold">${item.commissionAmount.toFixed(2)}</TableCell>
+                        <TableCell className="whitespace-nowrap font-bold">₹{item.commissionAmount.toFixed(2)}</TableCell>
                         <TableCell className="whitespace-nowrap">{new Date(item.createdAt).toLocaleDateString()}</TableCell>
                         <TableCell>{item.providerReference ?? "—"}</TableCell>
                       </TableRow>
@@ -508,34 +509,34 @@ export default function ReferralsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <HandCoins className="h-4 w-4 text-orange-500" /> Quick applications
+                  <HandCoins className="h-4 w-4 text-orange-500" /> {t('quickApply')}
                 </CardTitle>
-                <CardDescription>Apply codes directly while on client calls.</CardDescription>
+                <CardDescription>{t('quickApplyDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <form onSubmit={redeemReseller} className="space-y-2">
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">Apply reseller coupon</p>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">{t('applyReseller')}</p>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Input
                       required
-                      placeholder="Enter reseller coupon code"
+                      placeholder={t('resellerPlaceholder')}
                       value={resellerCode}
                       onChange={(e) => setResellerCode(e.target.value)}
                     />
-                    <Button type="submit" className="sm:w-auto">Apply</Button>
+                    <Button type="submit" className="sm:w-auto">{t('apply')}</Button>
                   </div>
                 </form>
                 <form onSubmit={redeemReferral} className="space-y-2">
-                  <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">Redeem referral code</p>
+                  <p className="text-xs font-black uppercase tracking-[0.16em] text-muted-body">{t('redeemReferral')}</p>
                   <div className="flex flex-col gap-2 sm:flex-row">
                     <Input
                       required
-                      placeholder="Enter referral code"
+                      placeholder={t('referralPlaceholder')}
                       value={redeemCode}
                       onChange={(e) => setRedeemCode(e.target.value)}
                     />
                     <Button type="submit" variant="outline" className="sm:w-auto">
-                      Redeem
+                      {t('redeem')}
                     </Button>
                   </div>
                 </form>
@@ -545,21 +546,21 @@ export default function ReferralsPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <ArrowUpRight className="h-4 w-4 text-emerald-500" /> Partner toolkit
+                  <ArrowUpRight className="h-4 w-4 text-emerald-500" /> {t('toolkit')}
                 </CardTitle>
-                <CardDescription>Enablement tracks and public partner resources.</CardDescription>
+                <CardDescription>{t('toolkitDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3 text-sm">
                 <Link href="/reseller" className="flex items-center justify-between rounded-xl border border-border/70 px-4 py-3 hover:bg-muted/40">
-                  <span>Public reseller landing + pricing handoff</span>
+                  <span>{t('linkLanding')}</span>
                   <ArrowUpRight className="h-4 w-4" />
                 </Link>
                 <Link href="/help" className="flex items-center justify-between rounded-xl border border-border/70 px-4 py-3 hover:bg-muted/40">
-                  <span>Help hub and implementation support docs</span>
+                  <span>{t('linkHelp')}</span>
                   <ArrowUpRight className="h-4 w-4" />
                 </Link>
                 <Link href="/settings/billing" className="flex items-center justify-between rounded-xl border border-border/70 px-4 py-3 hover:bg-muted/40">
-                  <span>Checkout validation + billing settings</span>
+                  <span>{t('linkBilling')}</span>
                   <ArrowUpRight className="h-4 w-4" />
                 </Link>
               </CardContent>
