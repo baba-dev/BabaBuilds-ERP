@@ -55,7 +55,8 @@ env -u DATABASE_URL -u ERP_STAGING_MODE NODE_ENV=production \
 RUN="$APP/.next/standalone"
 mkdir -p "$RUN/public" "$RUN/.next" "$RUN/tmp"
 cp -a "$APP/public/." "$RUN/public/"
-cp -a "$APP/.next/static" "$RUN/.next/static"
+mkdir -p "$RUN/.next/static"
+cp -a "$APP/.next/static/." "$RUN/.next/static/"
 
 # Keep the authoritative live media as source of truth; never fork uploads
 # into the disposable standalone build directory.
