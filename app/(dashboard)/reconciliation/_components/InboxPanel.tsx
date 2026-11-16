@@ -129,7 +129,7 @@ export function InboxPanel({ accountId, view, locale, canCommit, focusId, onChan
                     <div className="rounded-xl border bg-muted/30 p-2.5">
                       <div className="flex items-center justify-between gap-2 text-sm">
                         <span className="min-w-0 truncate font-medium">{credit ? `${s.invoices[0].invoiceNumber} · ${s.invoices[0].clientName}` : `${s.expenses[0].vendor}${s.expenses[0].unpaid ? ` · ${t("unpaidBill")}` : ""}`}</span>
-                        <Badge variant="outline" className={cn("shrink-0 text-[10px]", s.ready ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : "")}>{s.ready ? t("ready") : t("confidence", { score: Math.round(top.score) })}</Badge>
+                        <Badge variant="outline" className={cn("shrink-0 text-[11px]", s.ready ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : "")}>{s.ready ? t("ready") : t("confidence", { score: Math.round(top.score) })}</Badge>
                       </div>
                       <p className="mt-0.5 truncate text-xs text-muted-foreground">{(top.reasons ?? []).slice(0, 3).map((x) => (t.has(`reasons.${x}` as never) ? t(`reasons.${x}` as never) : x.replaceAll("_", " "))).join(" · ")}{credit ? ` · ${t("outstanding", { amount: money(s.invoices[0].outstanding, s.invoices[0].currency, locale) })}` : ""}</p>
                       {canCommit && <div className="mt-2 flex flex-wrap gap-1.5">

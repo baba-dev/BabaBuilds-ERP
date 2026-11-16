@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { LifecycleActions } from "@/components/workforce/hub/LifecycleActions";
 import { StatusBadge, EmployeeAvatar } from "@/components/workforce/StatusBadge";
 import { WorkforcePageShell } from "@/components/workforce/WorkforceLayout";
 import { format } from "date-fns";
@@ -80,7 +81,8 @@ export default function EmployeeProfilePage() {
       setEditing(false);
       void fetchEmployee();
     } else {
-      toast.error("Failed to save changes");
+      const err = (await res.json().catch(() => ({}))) as { error?: string };
+      toast.error(err.error ?? "Failed to save changes");
     }
     setSaving(false);
   };
@@ -145,6 +147,8 @@ export default function EmployeeProfilePage() {
                   {tenure !== null && <span>{tenure} months tenure</span>}
                 </div>
               </div>
+              <div className="flex flex-wrap items-start gap-2">
+              <LifecycleActions employeeId={employee.id} status={employee.status} onDone={() => void fetchEmployee()} />
               <Button
                 id="edit-employee-btn"
                 size="sm"
@@ -154,6 +158,7 @@ export default function EmployeeProfilePage() {
               >
                 {editing ? <><X className="h-3.5 w-3.5 mr-1" /> Cancel</> : <><Edit2 className="h-3.5 w-3.5 mr-1" /> Edit</>}
               </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -199,7 +204,7 @@ export default function EmployeeProfilePage() {
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500">Reporting Structure</h3>
               {employee.manager ? (
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-zinc-600 mb-1.5">Reports To</p>
+                  <p className="text-[11px] uppercase tracking-wider text-zinc-600 mb-1.5">Reports To</p>
                   <div className="flex items-center gap-2 text-sm">
                     <User className="h-4 w-4 text-zinc-500" />
                     <span className="text-zinc-800 dark:text-zinc-200 font-medium">{employee.manager.firstName} {employee.manager.lastName}</span>
@@ -209,7 +214,7 @@ export default function EmployeeProfilePage() {
               ) : <p className="text-zinc-600 text-xs">No manager assigned</p>}
               {employee.directReports && employee.directReports.length > 0 && (
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-zinc-600 mb-1.5">Direct Reports ({employee.directReports.length})</p>
+                  <p className="text-[11px] uppercase tracking-wider text-zinc-600 mb-1.5">Direct Reports ({employee.directReports.length})</p>
                   <div className="space-y-1">
                     {employee.directReports.slice(0, 4).map((r) => (
                       <div key={r.id} className="flex items-center gap-2 text-xs text-zinc-600 dark:text-zinc-400">
@@ -243,7 +248,7 @@ export default function EmployeeProfilePage() {
                 {employee.attendanceRecords.map((rec) => (
                   <div key={rec.id} className="group relative">
                     <div className={`h-7 w-7 rounded-md ${ATTENDANCE_CELL_COLORS[rec.status] ?? "bg-zinc-700"} opacity-80 hover:opacity-100 transition-opacity cursor-default`} />
-                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:flex items-center gap-1 bg-white border border-zinc-200 rounded px-2 py-1 text-[10px] text-zinc-700 whitespace-nowrap z-10 shadow-lg dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-200">
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover:flex items-center gap-1 bg-white border border-zinc-200 rounded px-2 py-1 text-[11px] text-zinc-700 whitespace-nowrap z-10 shadow-lg dark:bg-zinc-900 dark:border-zinc-800 dark:text-zinc-200">
                       {format(new Date(rec.date), "MMM d")} · {rec.status}
                     </div>
                   </div>
@@ -270,7 +275,7 @@ export default function EmployeeProfilePage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {employee.leaveBalances.map((b) => (
                 <div key={b.id} className="rounded-xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 p-4 shadow-sm backdrop-blur-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">{b.leaveType.name}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 mb-2">{b.leaveType.name}</p>
                   <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{b.remaining}<span className="text-sm font-normal text-zinc-500">/{b.entitled}</span></p>
                   <p className="text-xs text-zinc-600 mt-1">days remaining</p>
                 </div>

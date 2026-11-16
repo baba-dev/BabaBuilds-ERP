@@ -25,6 +25,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { closeAIChat, getAIChatStoreSnapshot, subscribeToAIChatStore, openAIChat } from "@/src/stores/ui/aiChatStore";
 import Link from "next/link";
+import { isFocusRoute } from "@/components/layout/mobile-nav";
 
 const QUICK_PROMPTS: Array<{ label: string; query: string; kind?: "theme-toggle" }> = [
   { label: "📈 What's my estimated tax liability?", query: "What's my estimated tax liability?" },
@@ -428,7 +429,7 @@ export default function AIChatbot() {
               <CardTitle className="text-sm font-bold tracking-wide">
                 {isExpanded ? "AI Executive Assistant" : "AI Assistant"}
               </CardTitle>
-              <p className="text-[10px] text-purple-300 font-medium uppercase tracking-wider flex items-center gap-1">
+              <p className="text-[11px] text-purple-300 font-medium uppercase tracking-wider flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> Online
               </p>
             </div>
@@ -551,7 +552,7 @@ export default function AIChatbot() {
         <div className="px-3 py-1.5 pb-[max(env(safe-area-inset-bottom),0.375rem)] bg-white dark:bg-zinc-950 border-t border-zinc-100 dark:border-zinc-800/50 flex items-center justify-center shrink-0">
           <Link
             href="/help"
-            className="flex items-center gap-1.5 rounded-md text-[10px] font-semibold text-zinc-400 dark:text-zinc-600 hover:text-purple-600 dark:hover:text-purple-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 transition-colors uppercase tracking-widest"
+            className="flex items-center gap-1.5 rounded-md text-[11px] font-semibold text-zinc-400 dark:text-zinc-600 hover:text-purple-600 dark:hover:text-purple-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 transition-colors uppercase tracking-widest"
           >
             <BookOpen className="w-3 h-3" />
             Help Center & Docs
@@ -562,10 +563,12 @@ export default function AIChatbot() {
       {/* FLOATING ACTION BUTTON */}
       {/* Bug 9 fix: hide FAB whenever chat is open (isOpen) so it doesn't overlap page
           content as a floating X. The header close button handles dismissal instead. */}
-      <div className={`fixed bottom-[max(env(safe-area-inset-bottom),1.5rem)] right-6 z-[100] transition-all duration-300 ${isOpen || isExpanded ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
+      <div className={`fixed end-4 md:end-6 z-[45] transition-all duration-300 ${isFocusRoute(pathname) ? 'bottom-[calc(6rem+env(safe-area-inset-bottom,0px))] md:bottom-6' : 'bottom-above-nav'} ${isOpen || isExpanded ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'}`}>
         <button 
+          type="button"
+          aria-label={isOpen ? "Close AI assistant" : "Open AI assistant"}
           onClick={() => (isOpen ? closeAIChat() : openAIChat())}
-          className={`h-14 w-14 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 ${isOpen ? 'bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 rotate-90 shadow-zinc-400/50' : 'bg-purple-900 dark:bg-purple-600 hover:bg-purple-800 dark:hover:bg-purple-500 hover:shadow-purple-900/40 rotate-0'}`}
+          className={`h-12 w-12 md:h-14 md:w-14 rounded-full flex items-center justify-center text-white shadow-xl transition-all duration-300 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 ${isOpen ? 'bg-zinc-800 dark:bg-zinc-100 dark:text-zinc-900 rotate-90 shadow-zinc-400/50' : 'bg-purple-900 dark:bg-purple-600 hover:bg-purple-800 dark:hover:bg-purple-500 hover:shadow-purple-900/40 rotate-0'}`}
         >
           {isOpen ? <X className="w-6 h-6 -rotate-90 transition-transform duration-300" /> : <MessageSquare className="w-6 h-6" />}
         </button>

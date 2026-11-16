@@ -101,7 +101,7 @@ export function OverviewClient() {
             <div className="flex h-24 items-end gap-1" role="img" aria-label={`New workspaces per day: ${data.growth.signups.map((s) => s.count).join(", ")}`}>
               {data.growth.signups.map((s) => <motion.div key={s.date} title={`${s.date}: ${s.count}`} className="flex-1 rounded-t bg-indigo-400/80" initial={{ height: 0 }} animate={{ height: `${Math.max(4, (s.count / max) * 100)}%` }} transition={{ duration: 0.5 }} />)}
             </div>
-            <div className="mt-1.5 flex justify-between text-[10px] text-muted-foreground"><span>{data.growth.signups[0]?.date.slice(5)}</span><span>today</span></div>
+            <div className="mt-1.5 flex justify-between text-[11px] text-muted-foreground"><span>{data.growth.signups[0]?.date.slice(5)}</span><span>today</span></div>
           </Card>
         </div>
       </div>

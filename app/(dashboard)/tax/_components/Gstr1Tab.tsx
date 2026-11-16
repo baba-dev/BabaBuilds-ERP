@@ -76,9 +76,9 @@ export function Gstr1Tab({ obligations, period, onPeriod, onFile, access, onChan
                   <tbody>
                     {r.b2b.flatMap((p) => p.invoices.flatMap((i) => i.lines.map((l, idx) => (
                       <tr key={`${i.id}-${idx}`} className="border-t border-border/50">
-                        <td className={cn(td, "font-medium")}>{idx === 0 ? <>{i.number}{i.rcm ? <span className="ms-1.5 rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-800">RCM</span> : null}</> : ""}</td>
+                        <td className={cn(td, "font-medium")}>{idx === 0 ? <>{i.number}{i.rcm ? <span className="ms-1.5 rounded bg-amber-100 px-1 text-[11px] font-semibold text-amber-800">RCM</span> : null}</> : ""}</td>
                         <td className={td}>{idx === 0 ? i.date : ""}</td>
-                        <td className={td}>{idx === 0 ? <><span className="block">{p.name}</span><span className="block font-mono text-[10px] text-muted-foreground">{p.gstin}</span></> : ""}</td>
+                        <td className={td}>{idx === 0 ? <><span className="block">{p.name}</span><span className="block font-mono text-[11px] text-muted-foreground">{p.gstin}</span></> : ""}</td>
                         <td className={td}>{idx === 0 ? pos(i.pos) : ""}</td>
                         <td className={tdr}>{l.rate}%</td><td className={tdr}>{n(l.taxable)}</td>{taxCells(l)}
                       </tr>
@@ -111,7 +111,7 @@ export function Gstr1Tab({ obligations, period, onPeriod, onFile, access, onChan
               <Block id="sez" title={t("sez")} hint={t("sezHint")} count={r.sez.reduce((s, p) => s + p.invoices.length, 0)}>
                 <TableShell minWidth={720}>
                   <thead><tr><th className={th}>{t("invoice")}</th><th className={th}>{t("date")}</th><th className={th}>{t("party")}</th><th className={th}>{t("type")}</th><th className={thr}>{t("taxableCol")}</th><th className={thr}>IGST</th></tr></thead>
-                  <tbody>{r.sez.flatMap((p) => p.invoices.flatMap((i) => i.lines.map((l, idx) => <tr key={`${i.id}-${idx}`} className="border-t border-border/50"><td className={cn(td, "font-medium")}>{idx === 0 ? i.number : ""}</td><td className={td}>{idx === 0 ? i.date : ""}</td><td className={td}>{idx === 0 ? <><span className="block">{p.name}</span><span className="block font-mono text-[10px] text-muted-foreground">{p.gstin}</span></> : ""}</td><td className={td}>{i.supplyType === "SEZWP" ? t("withPayment") : t("withoutPayment")}</td><td className={tdr}>{n(l.taxable)}</td><td className={tdr}>{n(l.igst)}</td></tr>)))}</tbody>
+                  <tbody>{r.sez.flatMap((p) => p.invoices.flatMap((i) => i.lines.map((l, idx) => <tr key={`${i.id}-${idx}`} className="border-t border-border/50"><td className={cn(td, "font-medium")}>{idx === 0 ? i.number : ""}</td><td className={td}>{idx === 0 ? i.date : ""}</td><td className={td}>{idx === 0 ? <><span className="block">{p.name}</span><span className="block font-mono text-[11px] text-muted-foreground">{p.gstin}</span></> : ""}</td><td className={td}>{i.supplyType === "SEZWP" ? t("withPayment") : t("withoutPayment")}</td><td className={tdr}>{n(l.taxable)}</td><td className={tdr}>{n(l.igst)}</td></tr>)))}</tbody>
                 </TableShell>
               </Block>
 

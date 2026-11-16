@@ -271,7 +271,7 @@ export default function AdminResellersPage() {
                         <tr key={lead.id} className="border-t border-zinc-100 dark:border-zinc-800">
                           <td className="px-3 py-2">
                             <p className="font-semibold text-zinc-900 dark:text-zinc-100">{lead.workspaceName}</p>
-                            <p className="text-[10px] text-zinc-500">{lead.workspaceId.slice(0, 8)}...</p>
+                            <p className="text-[11px] text-zinc-500">{lead.workspaceId.slice(0, 8)}...</p>
                           </td>
                           <td className="px-3 py-2">
                             <Badge variant={lead.stage === "WON" ? "default" : "secondary"}>{lead.stage}</Badge>

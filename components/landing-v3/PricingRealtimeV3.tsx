@@ -88,7 +88,7 @@ export default function PricingRealtimeV3() {
                   label: (
                     <span className="flex items-center gap-2">
                       {t("annually")}
-                      <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] uppercase tracking-tighter text-orange-600 dark:text-orange-400">
+                      <span className="rounded-full bg-orange-500/15 px-2 py-0.5 text-[11px] uppercase tracking-tighter text-orange-600 dark:text-orange-400">
                         {t("bestValue")}
                       </span>
                     </span>

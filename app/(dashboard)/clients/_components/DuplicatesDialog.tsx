@@ -35,7 +35,7 @@ export function DuplicatesDialog({ open, onOpenChange, onChanged }: { open: bool
   }
 
   return (
-    <ResponsiveDialog open={open} onOpenChange={onOpenChange} title={t("dup.title")} description={t("dup.description")} desktopClassName="sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange} title={t("dup.title")} description={t("dup.description")} desktopClassName="sm:max-w-2xl max-h-[85dvh] overflow-y-auto">
       <div className="space-y-4">
         {loading && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="size-4 animate-spin" aria-hidden />{t("dup.loading")}</p>}
         {!loading && groups.length === 0 && <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">{t("dup.none")}</p>}

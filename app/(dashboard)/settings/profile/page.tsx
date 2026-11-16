@@ -145,7 +145,7 @@ export default function ProfileSettingsPage() {
 
   if (!mounted || isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center transition-colors duration-300">
+      <div className="min-h-app bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center transition-colors duration-300">
         <div className="animate-pulse flex flex-col items-center gap-4">
           <div className="w-12 h-12 bg-zinc-200 dark:bg-zinc-800 rounded-full"></div>
           <div className="h-4 w-32 bg-zinc-200 dark:bg-zinc-800 rounded"></div>
@@ -155,7 +155,7 @@ export default function ProfileSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 px-4 py-6 transition-colors duration-300 dark:bg-zinc-950 md:px-8 md:py-8">
+    <div className="min-h-app bg-zinc-50 px-4 py-6 transition-colors duration-300 dark:bg-zinc-950 md:px-8 md:py-8">
       <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
         
         {/* HEADER */}

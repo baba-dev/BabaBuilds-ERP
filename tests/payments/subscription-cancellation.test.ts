@@ -88,6 +88,26 @@ describe('workspace subscription cancellation', () => {
     expect(workspaceUpdate.mock.calls[0][0].data.planTier).toBeUndefined();
   });
 
+  it('refuses to cancel a Google Play subscription locally (must be cancelled in Play)', async () => {
+    workspaceFindUnique.mockResolvedValue({
+      ...paidWorkspace,
+      billingProvider: 'GOOGLE_PLAY',
+      billingContractType: 'RECURRING',
+      billingProviderSubscriptionId: 'play-token',
+    });
+    const { scheduleWorkspaceSubscriptionCancellation } = await import(
+      '@/lib/billing/subscription-cancellation'
+    );
+
+    await expect(
+      scheduleWorkspaceSubscriptionCancellation({ workspaceId: 'ws_1', actorUserId: 'owner_1' }),
+    ).rejects.toMatchObject({ code: 'MANAGE_IN_GOOGLE_PLAY', httpStatus: 409 });
+    // Only the error text may be recorded: no cancel-at-period-end flag, no downgrade.
+    for (const [arg] of workspaceUpdate.mock.calls) {
+      expect(Object.keys(arg.data)).toEqual(['subscriptionCancellationLastError']);
+    }
+  });
+
   it('fails closed when a Stripe contract does not belong to the workspace', async () => {
     workspaceFindUnique.mockResolvedValue({
       ...paidWorkspace,

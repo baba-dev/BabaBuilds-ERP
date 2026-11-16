@@ -5,37 +5,25 @@ import { ModuleDisabledError, requireModule } from '@/lib/modules';
 import { RbacDeniedError, requirePermission } from '@/lib/rbac';
 
 export async function resolveReportingContext(
-  requiredPermission:
-    | 'reporting_center.view'
-    | 'reporting_center.query.run'
-    | 'reporting_center.export',
+  requiredPermission: 'reporting_center.view' | 'reporting_center.query.run' | 'reporting_center.export',
 ) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    throw new Error('UNAUTHORIZED');
-  }
-
+  if (!session?.user?.id) throw new Error('UNAUTHORIZED');
   const wu = await resolveSessionMembership(session);
-
-  if (!wu?.workspaceId) {
-    throw new Error('WORKSPACE_NOT_FOUND');
-  }
-
+  if (!wu?.workspaceId) throw new Error('WORKSPACE_NOT_FOUND');
   try {
     await requireModule(wu.workspaceId, 'REPORTING_CENTER');
   } catch (error) {
     if (error instanceof ModuleDisabledError) throw new Error('MODULE_DISABLED');
     throw error;
   }
-
   try {
     await requirePermission(session.user.id, wu.workspaceId, requiredPermission);
   } catch (error) {
     if (error instanceof RbacDeniedError) throw new Error('FORBIDDEN');
     throw error;
   }
-
-  return { workspaceId: wu.workspaceId, userId: session.user.id };
+  return { workspaceId: wu.workspaceId, userId: session.user.id, email: session.user.email ?? null };
 }
 
 export function reportingErrorResponse(error: unknown) {
@@ -45,14 +33,11 @@ export function reportingErrorResponse(error: unknown) {
     WORKSPACE_NOT_FOUND: [400, 'Workspace context was not found.'],
     MODULE_DISABLED: [403, 'Reporting Center is disabled for this workspace.'],
     FORBIDDEN: [403, 'Your role does not have access to this reporting action.'],
-    PRESET_NOT_FOUND: [404, 'Requested report preset was not found.'],
-    INVALID_FILTERS: [400, 'One or more report filters are invalid.'],
-    MISSING_SQL_PARAM: [400, 'Report parameters are incomplete for this preset.'],
-    EMPTY_RESULT: [200, 'Report executed successfully with no rows.'],
-    REPORT_TIMEOUT: [408, 'Report execution timed out. Please narrow your filters.'],
-    REPORT_PAYLOAD_TOO_LARGE: [413, 'Report result is too large. Please narrow your filters.'],
+    REPORT_NOT_FOUND: [404, 'That report does not exist.'],
+    VIEW_NOT_FOUND: [404, 'That saved report was not found.'],
+    INVALID_INPUT: [422, 'Check the highlighted fields.'],
   };
-
   const [status, userMessage] = map[message] ?? [500, 'Reporting request failed unexpectedly.'];
-  return Response.json({ code: message, error: userMessage }, { status });
+  if (!map[message]) console.error('[reporting]', error);
+  return Response.json({ code: map[message] ? message : 'INTERNAL_ERROR', error: userMessage }, { status });
 }

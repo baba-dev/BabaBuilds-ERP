@@ -6,7 +6,7 @@ import Stripe from 'stripe';
 import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/security/activity-log';
 
-export type BillingProvider = 'RAZORPAY' | 'STRIPE';
+export type BillingProvider = 'RAZORPAY' | 'STRIPE' | 'GOOGLE_PLAY';
 export type BillingContractType = 'PREPAID' | 'RECURRING';
 
 type CancellationWorkspace = {
@@ -223,6 +223,15 @@ async function scheduleProviderCancellation(workspace: CancellationWorkspace): P
   }
   if (provider === 'RAZORPAY') {
     return { provider, effectiveAt: await scheduleRazorpayCancellation(workspace) };
+  }
+  if (provider === 'GOOGLE_PLAY') {
+    // Only the Google account that owns the subscription can cancel it, and Google Play policy
+    // requires cancellation to happen in Play. Cancelling "locally" would keep billing the user.
+    throw new SubscriptionCancellationError(
+      'This subscription is billed by Google Play. Cancel it in Google Play: Play Store > Payments & subscriptions > Subscriptions > BabaBuilds ERP.',
+      'MANAGE_IN_GOOGLE_PLAY',
+      409,
+    );
   }
 
   throw new SubscriptionCancellationError(

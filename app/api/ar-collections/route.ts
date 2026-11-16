@@ -1,92 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { ModuleDisabledError, requireModule } from '@/lib/modules';
-import { getArCollectionsSnapshot, runReminderAutomation } from '@/lib/ar-collections';
-import { withPermission } from '@/lib/rbac';
-import { getActiveWorkspaceIdForUser } from '@/lib/workspace-scope';
+import { arError, requireArAccess } from '@/lib/ar/access';
+import { getArCollectionsSnapshot, markBrokenPromises, runReminderAutomation, type Filters } from '@/lib/ar-collections';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
+import { checkPermissionSilent } from '@/lib/rbac';
 
-export async function GET() {
+const BUCKETS = ['current', 'd1_30', 'd31_60', 'd61_90', 'd90_plus'] as const;
+const VIEWS = ['all', 'actionable', 'promises', 'broken', 'disputed', 'paused'] as const;
+
+/** The collections workspace: open invoices with their real due dates, base-currency balances, risk and next best action, plus totals, aging and customers. */
+export async function GET(request: NextRequest) {
+  const auth = await requireArAccess('invoices.view');
+  if (!auth.ok) return auth.response;
+  const sp = request.nextUrl.searchParams;
+  const bucket = sp.get('bucket');
+  const view = sp.get('view');
+  const filters: Filters = {
+    bucket: (BUCKETS as readonly string[]).includes(bucket ?? '') ? (bucket as Filters['bucket']) : undefined,
+    view: (VIEWS as readonly string[]).includes(view ?? '') ? (view as Filters['view']) : undefined,
+    q: sp.get('q')?.slice(0, 80) || undefined,
+    clientId: sp.get('clientId') || undefined,
+  };
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const workspaceId = await getActiveWorkspaceIdForUser(userId);
-    if (!workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const view = await withPermission(userId, workspaceId, 'invoices.view');
-    if (!view.granted) return view.response;
-
-    try {
-      await requireModule(workspaceId, 'AR_COLLECTIONS');
-    } catch (error) {
-      if (error instanceof ModuleDisabledError) {
-        return NextResponse.json({ error: 'Module disabled' }, { status: 403 });
-      }
-      throw error;
-    }
-
-    const snapshot = await getArCollectionsSnapshot(workspaceId);
-    return NextResponse.json(snapshot);
+    // Promises whose day passed become "broken" here too, so a person opening the page never sees a stale status.
+    await markBrokenPromises(auth.ctx.workspaceId);
+    const [snapshot, canEdit, canSend] = await Promise.all([
+      getArCollectionsSnapshot(auth.ctx.workspaceId, filters),
+      checkPermissionSilent(auth.ctx.userId, auth.ctx.workspaceId, 'invoices.edit'),
+      checkPermissionSilent(auth.ctx.userId, auth.ctx.workspaceId, 'invoices.send'),
+    ]);
+    return NextResponse.json({ ...snapshot, canEdit, canSend }, { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
     console.error('[ar-collections/GET]', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return arError(500, 'AR_FAILED', 'Could not load collections.');
   }
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
+  const auth = await requireArAccess('invoices.send');
+  if (!auth.ok) return auth.response;
+  const limit = enforceRouteRateLimit({ request, route: '/api/ar-collections', scope: 'run-reminders', max: 10, windowMs: 10 * 60_000 });
+  if (!limit.ok) return limit.response;
+  const body = (await request.json().catch(() => ({}))) as { action?: string };
+  if (body.action !== 'RUN_REMINDERS') return arError(400, 'INVALID_ACTION', 'Invalid action');
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const workspaceId = await getActiveWorkspaceIdForUser(userId);
-    if (!workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const edit = await withPermission(userId, workspaceId, 'invoices.edit');
-    if (!edit.granted) return edit.response;
-
-    try {
-      await requireModule(workspaceId, 'AR_COLLECTIONS');
-    } catch (error) {
-      if (error instanceof ModuleDisabledError) {
-        return NextResponse.json({ error: 'Module disabled' }, { status: 403 });
-      }
-      throw error;
-    }
-
-    const body = (await req.json().catch(() => ({}))) as { action?: string };
-    if (body.action !== 'RUN_REMINDERS') {
-      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-    }
-
-    try {
-      const result = await runReminderAutomation(workspaceId, {
-        userId,
-        email: session?.user?.email ?? null,
-      });
-      return NextResponse.json(result);
-    } catch (e) {
-      const code = (e as Error & { code?: string }).code;
-      if (code === 'RATE_LIMIT_COOLDOWN') {
-        return NextResponse.json(
-          { error: 'Wait before running automation again.', code: 'RATE_LIMIT_COOLDOWN' },
-          { status: 429 },
-        );
-      }
-      throw e;
-    }
-  } catch (error) {
-    console.error('[ar-collections/POST]', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json(await runReminderAutomation(auth.ctx.workspaceId, { userId: auth.ctx.userId, email: auth.ctx.email }));
+  } catch (e) {
+    if ((e as Error & { code?: string }).code === 'RATE_LIMIT_COOLDOWN') return arError(429, 'RATE_LIMIT_COOLDOWN', 'Wait before running automation again.');
+    console.error('[ar-collections/POST]', e);
+    return arError(500, 'AR_FAILED', 'Could not run reminders.');
   }
 }

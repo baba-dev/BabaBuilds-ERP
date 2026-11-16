@@ -53,7 +53,7 @@ export default function SetupGatekeeper() {
             Complete your business profile to start using BabaERP.
           </DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col max-h-[90vh] h-full rounded-2xl overflow-hidden min-h-0 w-full">
+        <div className="flex flex-col max-h-[90dvh] h-full rounded-2xl overflow-hidden min-h-0 w-full">
           {/* We pass a callback so the wizard can tell the gatekeeper it's done */}
           <SetupWizard isModal onComplete={handleSetupComplete} />
         </div>

@@ -7,9 +7,12 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { withPermission } from '@/lib/rbac';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
+import { logActivity } from '@/lib/security/activity-log';
 import { isModuleEnabled } from '@/lib/modules';
 import { getNextInvoiceNumber, getNextProposalNo, isUniqueConstraintError } from '@/lib/document-numbering';
 import { supplierChargesGst } from "@/lib/msme/threshold";
+import { changeDue, computePosTotals, PAYMENT_METHODS } from '@/lib/pos/totals';
 
 const checkoutActionSchema = z.enum(['PAY_NOW', 'INVOICE', 'PROPOSAL', 'RETAINER']);
 const checkoutItemTypeSchema = z.enum(['SERVICE', 'PRODUCT', 'CUSTOM']);
@@ -42,6 +45,14 @@ const checkoutRequestSchema = z.object({
   clientId: z.string().trim().min(1).optional().nullable(),
   items: z.array(checkoutItemSchema).min(1),
   discount: z.number().min(0).optional(),
+  /** How a PAY_NOW sale was paid. Cash may carry the amount handed over so change can be checked. */
+  payment: z.object({
+    method: z.enum(PAYMENT_METHODS),
+    tendered: z.number().min(0).optional(),
+    reference: z.string().trim().max(60).optional(),
+  }).strict().optional(),
+  /** One key per sale attempt: a repeated tap or a retried request returns the same bill instead of making a second one. */
+  idempotencyKey: z.string().trim().min(8).max(64).optional(),
   allowNegativeStock: z.boolean().optional(),
 }).strict();
 
@@ -64,6 +75,8 @@ type ResolvedCheckoutItem = {
   /** HSN (goods) or SAC (services) the line is reported under in the GST returns. */
   sacCode: string | null;
   lineSubtotal: Prisma.Decimal;
+  /** What the line costs after its share of any discount; this is the figure GST is worked out on. */
+  lineTaxable: Prisma.Decimal;
 };
 
 type ProductSale = {
@@ -74,7 +87,7 @@ type ProductSale = {
 
 class PosCheckoutError extends Error {
   constructor(
-    public readonly code: 'CLIENT_NOT_FOUND' | 'SERVICE_NOT_FOUND' | 'PRODUCT_NOT_FOUND' | 'INSUFFICIENT_STOCK' | 'INVALID_ACTION' | 'INVALID_DISCOUNT',
+    public readonly code: 'CLIENT_NOT_FOUND' | 'SERVICE_NOT_FOUND' | 'PRODUCT_NOT_FOUND' | 'INSUFFICIENT_STOCK' | 'INVALID_ACTION' | 'INVALID_DISCOUNT' | 'SHORT_PAYMENT',
     public readonly meta: Record<string, string | number> = {},
   ) {
     super(code);
@@ -100,7 +113,7 @@ function buildInvoiceItems(items: ResolvedCheckoutItem[]) {
     // Invoice items store the rate as a fraction; the POS request carries percent.
     taxRate: item.taxRate / 100,
     sacCode: item.sacCode,
-    totalAmount: item.lineSubtotal,
+    totalAmount: item.lineTaxable,
   }));
 }
 
@@ -208,6 +221,7 @@ async function commitProductSales(
         quantity: -sale.quantity,
         reason: 'POS sale',
         referenceId,
+        balanceAfter: refreshed.currentStock,
       },
     });
   }
@@ -228,6 +242,9 @@ export async function POST(request: Request) {
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const limit = enforceRouteRateLimit({ request, route: '/api/pos/checkout', scope: workspaceId, max: 120, windowMs: 60_000 });
+    if (!limit.ok) return limit.response;
 
     const rawBody = await request.json();
     const parsed = checkoutRequestSchema.safeParse(rawBody);
@@ -250,6 +267,11 @@ export async function POST(request: Request) {
     if (hasCustomItems) {
       const customItemPermission = await withPermission(userId, workspaceId, 'pos.custom_item');
       if (!customItemPermission.granted) return customItemPermission.response;
+    }
+
+    if (parsed.data.idempotencyKey) {
+      const prior = await prisma.invoicePayment.findFirst({ where: { workspaceId, idempotencyKey: parsed.data.idempotencyKey }, include: { invoice: true } });
+      if (prior) return NextResponse.json({ success: true, message: 'Payment collected successfully!', invoice: prior.invoice, duplicate: true });
     }
 
     if (!resolvedClientId && (action === 'INVOICE' || action === 'PROPOSAL' || action === 'RETAINER')) {
@@ -308,6 +330,7 @@ export async function POST(request: Request) {
                 taxRate: item.taxRate ?? service.sacCode?.igstRate ?? 0,
                 sacCode: service.sacCode?.code ?? null,
                 lineSubtotal: unitPrice.mul(item.quantity),
+                lineTaxable: unitPrice.mul(item.quantity),
               });
             } else if (item.type === 'PRODUCT') {
               const product = productById.get(item.id!);
@@ -323,6 +346,7 @@ export async function POST(request: Request) {
                 taxRate: item.taxRate ?? product.gstRate ?? 0,
                 sacCode: product.hsnCode ?? null,
                 lineSubtotal: unitPrice.mul(item.quantity),
+                lineTaxable: unitPrice.mul(item.quantity),
               });
             } else {
               const unitPrice = decimal(item.price!);
@@ -335,23 +359,24 @@ export async function POST(request: Request) {
                 taxRate: item.taxRate ?? 0,
                 sacCode: null,
                 lineSubtotal: unitPrice.mul(item.quantity),
+                lineTaxable: unitPrice.mul(item.quantity),
               });
             }
           }
 
           if (!posChargesGst) for (const line of resolvedItems) line.taxRate = 0;
-          const subtotal = resolvedItems.reduce((acc, item) => acc.add(item.lineSubtotal), decimal(0));
-          const discount = decimal(requestedDiscount);
-          if (discount.gt(subtotal)) {
+          const computed = computePosTotals(
+            resolvedItems.map((line) => ({ unitPrice: Number(line.unitPrice), quantity: line.quantity, taxRate: line.taxRate })),
+            requestedDiscount,
+            true,
+          );
+          if (requestedDiscount > computed.subtotal) {
             throw new PosCheckoutError('INVALID_DISCOUNT');
           }
-          const taxableSubtotal = subtotal.sub(discount);
-          const discountRatio = subtotal.gt(0) ? discount.div(subtotal) : decimal(0);
-          const tax = resolvedItems.reduce((acc, item) => {
-            const taxableLine = item.lineSubtotal.sub(item.lineSubtotal.mul(discountRatio));
-            return acc.add(taxableLine.mul(item.taxRate).div(100));
-          }, decimal(0));
-          const totalAmount = taxableSubtotal.add(tax);
+          resolvedItems.forEach((line, i) => { line.lineTaxable = decimal(computed.lines[i]!.taxable); });
+          const taxableSubtotal = decimal(computed.taxable);
+          const tax = decimal(computed.tax);
+          const totalAmount = decimal(computed.total);
           const productSales = groupProductSales(resolvedItems);
 
           const profile = await tx.businessProfile.findUnique({ where: { workspaceId }, select: { invoicePrefix: true, gstin: true, gstStateCode: true } });
@@ -380,7 +405,7 @@ export async function POST(request: Request) {
                 currency: posCurrency,
                 baseGrandTotal: totalAmount,
                 stockCommittedAt: new Date(),
-                subtotal,
+                subtotal: taxableSubtotal,
                 taxAmount: tax,
                 grandTotal: totalAmount,
                 totalAmount,
@@ -391,11 +416,18 @@ export async function POST(request: Request) {
                 items: { create: buildInvoiceItems(resolvedItems) },
               },
             });
+            const payment = parsed.data.payment;
+            if (payment?.method === 'CASH' && payment.tendered !== undefined && changeDue(computed.total, payment.tendered) === null) {
+              throw new PosCheckoutError('SHORT_PAYMENT', { total: computed.total, tendered: payment.tendered });
+            }
             await tx.invoicePayment.create({
-              data: { workspaceId, invoiceId: invoice.id, amount: totalAmount, receivedAt: invoice.invoiceDate, method: 'OTHER', notes: 'POS checkout' },
+              data: {
+                workspaceId, invoiceId: invoice.id, amount: totalAmount, receivedAt: invoice.invoiceDate, method: payment?.method ?? 'OTHER',
+                reference: payment?.reference || null, notes: 'POS checkout', idempotencyKey: parsed.data.idempotencyKey ?? null, createdByUserId: userId,
+              },
             });
             await commitProductSales(tx, workspaceId, productSales, invoice.id, allowNegativeStock);
-            return { message: 'Payment collected successfully!', invoice };
+            return { message: 'Payment collected successfully!', invoice, change: payment?.method === 'CASH' && payment.tendered !== undefined ? changeDue(computed.total, payment.tendered) : null, totals: computed };
           } else if (action === 'INVOICE') {
             const invoiceDate = new Date();
             const { invoiceNumber, financialYear } = await getNextInvoiceNumber(tx, workspaceId, invoiceDate, invoicePrefix);
@@ -413,7 +445,7 @@ export async function POST(request: Request) {
                 currency: posCurrency,
                 baseGrandTotal: totalAmount,
                 stockCommittedAt: new Date(),
-                subtotal,
+                subtotal: taxableSubtotal,
                 taxAmount: tax,
                 grandTotal: totalAmount,
                 totalAmount,
@@ -461,6 +493,14 @@ export async function POST(request: Request) {
           throw new PosCheckoutError('INVALID_ACTION');
         });
 
+        void logActivity({
+          workspaceId,
+          action: 'pos.checkout',
+          status: 'SUCCESS',
+          actor: { userId, email: (session.user as { email?: string | null } | undefined)?.email ?? null },
+          entity: { type: 'pos_checkout', id: workspaceId },
+          metadata: { action, lines: items.length, units: items.reduce((s, i) => s + (i.quantity ?? 0), 0) },
+        });
         return NextResponse.json({ success: true, ...result });
       } catch (error) {
         if (attempt < MAX_NUMBERING_ATTEMPTS && isUniqueConstraintError(error)) continue;
@@ -480,6 +520,9 @@ export async function POST(request: Request) {
       }
       if (error.code === 'INVALID_DISCOUNT') {
         return NextResponse.json({ error: 'Discount cannot exceed subtotal' }, { status: 400 });
+      }
+      if (error.code === 'SHORT_PAYMENT') {
+        return NextResponse.json({ error: 'The cash received does not cover the total.', code: 'SHORT_PAYMENT' }, { status: 422 });
       }
       if (error.code === 'SERVICE_NOT_FOUND') {
         return NextResponse.json({ error: 'Service item not found' }, { status: 400 });

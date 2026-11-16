@@ -62,7 +62,7 @@ export function MatchedPanel({ accountId, locale, currency, canCommit, onChanged
               <li key={r.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b px-4 py-3 last:border-0">
                 <span className={cn("grid size-8 shrink-0 place-items-center rounded-full", credit ? "bg-emerald-500/10 text-emerald-600" : "bg-rose-500/10 text-rose-600")}>{credit ? <ArrowDownLeft className="size-4" aria-hidden /> : <ArrowUpRight className="size-4" aria-hidden />}</span>
                 <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{r.description}</p><p className="text-xs text-muted-foreground">{shortDate(r.date, locale)}{r.accountName ? ` · ${r.accountName}` : ""}</p></div>
-                <Badge variant="outline" className="text-[10px]">{r.matchedInvoiceId ? t("matchedInvoice") : r.matchedExpenseId ? t("matchedExpense") : t("matchedOther")}</Badge>
+                <Badge variant="outline" className="text-[11px]">{r.matchedInvoiceId ? t("matchedInvoice") : r.matchedExpenseId ? t("matchedExpense") : t("matchedOther")}</Badge>
                 <span className="font-medium tabular-nums">{credit ? "+" : "−"}{money(Math.abs(n), currency, locale)}</span>
                 {canCommit && <Button size="sm" variant="ghost" onClick={() => setUndo(r)}><Undo2 className="mr-1.5 size-4" aria-hidden />{t("undo")}</Button>}
               </li>

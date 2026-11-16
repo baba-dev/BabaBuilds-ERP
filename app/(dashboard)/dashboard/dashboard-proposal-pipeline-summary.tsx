@@ -30,7 +30,7 @@ export function DashboardProposalPipelineSummary({ summary }: DashboardProposalP
              </div>
              <div>
                <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Awaiting Invoice</p>
-               <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">Accepted Proposals</p>
+               <p className="text-[11px] text-zinc-500 uppercase tracking-widest mt-0.5">Accepted Proposals</p>
              </div>
           </div>
           <p className="text-sm font-black text-zinc-900 dark:text-zinc-50">{formatMoney(summary.acceptedNotConvertedValue)}</p>
@@ -44,7 +44,7 @@ export function DashboardProposalPipelineSummary({ summary }: DashboardProposalP
              </div>
              <div>
                <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Converted Unpaid</p>
-               <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5">Missing Cashflow</p>
+               <p className="text-[11px] text-zinc-500 uppercase tracking-widest mt-0.5">Missing Cashflow</p>
              </div>
           </div>
           <p className="text-sm font-black text-zinc-900 dark:text-zinc-50">{formatMoney(summary.convertedUnpaidValue)}</p>
@@ -55,14 +55,14 @@ export function DashboardProposalPipelineSummary({ summary }: DashboardProposalP
           <Link href="/proposals/pipeline?filter=stalled" className="mt-auto group bg-rose-50 hover:bg-rose-100 border border-rose-100 transition-colors rounded-lg p-3 flex justify-between items-center">
             <div>
               <p className="text-xs font-bold text-rose-700">🚨 {summary.stalledCount} Stalled Items</p>
-              <p className="text-[10px] text-rose-600/80 uppercase tracking-widest mt-0.5 font-medium">{formatMoney(summary.stalledValue)} at risk</p>
+              <p className="text-[11px] text-rose-600/80 uppercase tracking-widest mt-0.5 font-medium">{formatMoney(summary.stalledValue)} at risk</p>
             </div>
             <ChevronRight className="w-4 h-4 text-rose-500 group-hover:translate-x-0.5 transition-transform" />
           </Link>
         ) : (
           <div className="mt-auto bg-emerald-50 border border-emerald-100 rounded-lg p-3 text-center">
             <p className="text-xs font-bold text-emerald-700">✨ Healthy Pipeline</p>
-            <p className="text-[10px] text-emerald-600/80 uppercase tracking-widest mt-0.5">No stalled proposals detected</p>
+            <p className="text-[11px] text-emerald-600/80 uppercase tracking-widest mt-0.5">No stalled proposals detected</p>
           </div>
         )}
       </div>

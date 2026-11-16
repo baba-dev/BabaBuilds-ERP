@@ -55,6 +55,7 @@ type PaymentScheduleState = {
   payDay: number;
   processingOffsetDays: number;
   payoutMethod: string;
+  lopBasis: string;
 };
 
 type CostAllocationState = {
@@ -119,6 +120,7 @@ function normalizeSnapshot(raw: Record<string, unknown>): Snapshot {
           ? ps.processingOffsetDays
           : Number(ps.processingOffsetDays) || 2,
       payoutMethod: String(ps.payoutMethod ?? "BANK_TRANSFER"),
+      lopBasis: ps.lopBasis === "FIXED_30" ? "FIXED_30" : "CALENDAR_DAYS",
     },
     defaultCostAllocation: {
       strategy: String(da.strategy ?? "DEPARTMENT"),
@@ -612,6 +614,19 @@ export function PayrollSettingsStudio() {
                     })
                   }
                 />
+              </div>
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs">How a day of pay is worked out for unpaid days</Label>
+                <select
+                  className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                  disabled={disabled}
+                  value={snapshot.paymentSchedule.lopBasis}
+                  onChange={(e) => setSnapshot({ ...snapshot, paymentSchedule: { ...snapshot.paymentSchedule, lopBasis: e.target.value } })}
+                >
+                  <option value="CALENDAR_DAYS">Actual days in the month (monthly pay divided by 28 to 31)</option>
+                  <option value="FIXED_30">Fixed 30 days (monthly pay divided by 30)</option>
+                </select>
+                <p className="text-[11px] text-muted-foreground">Applies to loss of pay and to people who join or leave mid-month.</p>
               </div>
             </CardContent>
           </Card>

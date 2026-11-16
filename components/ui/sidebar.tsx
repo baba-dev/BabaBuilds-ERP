@@ -133,7 +133,7 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
           side={isRtl ? "right" : "left"}
           aria-label="Mobile navigation menu"
           className={cn(
-            "w-[280px] border-white/5 bg-black/95 p-0 text-zinc-50 backdrop-blur-3xl",
+            "w-[min(88vw,20rem)] max-w-none border-white/5 bg-black/95 p-0 pt-safe pb-safe text-zinc-50 backdrop-blur-3xl sm:max-w-none",
             isRtl ? "border-l" : "border-r",
             className,
           )}
@@ -174,9 +174,13 @@ export function Sidebar({ children, className }: { children: React.ReactNode; cl
   );
 }
 
-export function SidebarInset({ children, className }: { children: React.ReactNode; className?: string }) {
+export function SidebarInset({
+  children,
+  className,
+  ...rest
+}: { children: React.ReactNode; className?: string } & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div data-slot="sidebar-inset" className={cn("flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background", className)}>
+    <div {...rest} data-slot="sidebar-inset" className={cn("flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background", className)}>
       {children}
     </div>
   );
@@ -191,7 +195,7 @@ export function SidebarTrigger({ className }: { className?: string }) {
       size="icon"
       variant="ghost"
       onClick={() => toggleSidebar({ module: "navigation" })}
-      className={cn("h-9 w-9 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-white", className)}
+      className={cn("h-11 w-11 md:h-9 md:w-9 text-zinc-600 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-200 dark:hover:bg-white/10 dark:hover:text-white", className)}
     >
       <PanelLeft className="h-5 w-5" />
       <span className="sr-only">Toggle sidebar</span>

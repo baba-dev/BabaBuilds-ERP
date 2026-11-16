@@ -111,7 +111,7 @@ export function DashboardOperationsPanel({
                       No pending stock shortages, blocked tasks, or open purchase orders detected.
                     </p>
                   </div>
-                  <Button asChild size="sm" variant="outline" className="h-8 rounded-lg text-[10px] font-extrabold uppercase tracking-wider shrink-0 gap-1.5">
+                  <Button asChild size="sm" variant="outline" className="h-8 rounded-lg text-[11px] font-extrabold uppercase tracking-wider shrink-0 gap-1.5">
                     <Link href="/import-manager">
                       Universal Import
                       <ArrowRight className="w-3 h-3" />
@@ -120,7 +120,7 @@ export function DashboardOperationsPanel({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                  <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                     Recent Inventory Movements:
                   </p>
                   <div className="space-y-1.5">

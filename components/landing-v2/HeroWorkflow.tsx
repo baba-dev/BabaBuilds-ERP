@@ -55,7 +55,7 @@ export default function HeroWorkflow() {
         <div className="rounded-3xl border border-white/10 bg-slate-900/85 p-4 shadow-2xl backdrop-blur-sm sm:p-5">
           <div className="mb-4 flex items-center justify-between">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">Workflow</p>
-            <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-200">Live status</span>
+            <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-[11px] font-semibold uppercase text-emerald-200">Live status</span>
           </div>
           <div className="space-y-2">
             {workflowSteps.map((step, index) => {

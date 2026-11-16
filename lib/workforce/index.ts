@@ -7,6 +7,8 @@
 
 import 'server-only';
 import { prisma } from '@/lib/prisma';
+import { dayKey, isWorkingDay, todayInZone } from './calendar';
+import { loadCalendar } from './leave-service';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // DEFAULT DATA INITIALIZATION
@@ -123,43 +125,49 @@ export type WorkforceSummary = {
   presentToday: number;
   onLeaveToday: number;
   pendingApprovals: number;
+  lateToday: number;
+  absentToday: number;
+  /** Active people on a working day with no record and no leave yet. */
+  notMarkedToday: number;
+  isWorkingDay: boolean;
+  today: string;
+  upcomingHolidays: { name: string; date: string }[];
+  birthdaysAndJoiners: { newThisMonth: number; leftThisMonth: number };
 };
 
 /**
- * Returns real-time workforce KPIs for the dashboard widget.
- * Queries are parallelized and lightweight.
+ * Real-time workforce KPIs. "Today" is the workplace's calendar day (its time zone),
+ * stored as a UTC-midnight date like every other workforce date.
  */
 export async function getWorkforceSummary(workspaceId: string): Promise<WorkforceSummary> {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
+  const now = new Date();
+  const cal = await loadCalendar(workspaceId, now, new Date(now.getTime() + 45 * 86_400_000));
+  const today = todayInZone(now, cal.timeZone);
+  const monthStart = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+  const working = isWorkingDay(today, cal.workingDays, cal.holidays);
 
-  const [totalEmployees, activeEmployees, presentToday, onLeaveToday, pendingApprovals] =
-    await Promise.all([
-      prisma.employee.count({ where: { workspaceId } }),
-      prisma.employee.count({ where: { workspaceId, status: 'ACTIVE' } }),
-      prisma.attendanceRecord.count({
-        where: {
-          workspaceId,
-          date: { gte: today, lt: tomorrow },
-          status: { in: ['PRESENT', 'LATE', 'REMOTE'] },
-        },
-      }),
-      prisma.leaveRequest.count({
-        where: {
-          workspaceId,
-          status: 'APPROVED',
-          startDate: { lte: today },
-          endDate: { gte: today },
-        },
-      }),
-      prisma.leaveRequest.count({
-        where: { workspaceId, status: 'PENDING' },
-      }),
-    ]);
-
-  return { totalEmployees, activeEmployees, presentToday, onLeaveToday, pendingApprovals };
+  const [totalEmployees, activeEmployees, attendance, onLeave, pendingApprovals, newThisMonth, leftThisMonth, holidays] = await Promise.all([
+    prisma.employee.count({ where: { workspaceId } }),
+    prisma.employee.count({ where: { workspaceId, status: { not: 'INACTIVE' } } }),
+    prisma.attendanceRecord.groupBy({ by: ['status'], where: { workspaceId, date: today, employee: { status: { not: 'INACTIVE' } } }, _count: { _all: true } }),
+    prisma.leaveRequest.findMany({ where: { workspaceId, status: 'APPROVED', startDate: { lte: today }, endDate: { gte: today } }, select: { employeeId: true } }),
+    prisma.leaveRequest.count({ where: { workspaceId, status: 'PENDING' } }),
+    prisma.employee.count({ where: { workspaceId, joinDate: { gte: monthStart } } }),
+    prisma.employee.count({ where: { workspaceId, exitDate: { gte: monthStart, lte: today } } }),
+    prisma.workforceHoliday.findMany({ where: { workspaceId }, select: { name: true, date: true, isRecurring: true } }),
+  ]);
+  const count = (...st: string[]) => attendance.filter((g) => st.includes(g.status)).reduce((n, g) => n + g._count._all, 0);
+  const onLeaveToday = new Set(onLeave.map((l) => l.employeeId)).size;
+  const marked = attendance.reduce((n, g) => n + g._count._all, 0);
+  const upcomingHolidays = [...cal.holidays].filter((d) => d >= dayKey(today)).sort().slice(0, 3).map((date) => ({ date, name: holidays.find((h) => dayKey(h.date) === date || (h.isRecurring && dayKey(h.date).slice(5) === date.slice(5)))?.name ?? '' }));
+  return {
+    totalEmployees, activeEmployees,
+    presentToday: count('PRESENT', 'LATE', 'REMOTE'), lateToday: count('LATE'), absentToday: count('ABSENT'),
+    onLeaveToday, pendingApprovals,
+    notMarkedToday: working ? Math.max(0, activeEmployees - marked - onLeaveToday) : 0,
+    isWorkingDay: working, today: dayKey(today), upcomingHolidays,
+    birthdaysAndJoiners: { newThisMonth, leftThisMonth },
+  };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -173,10 +181,10 @@ export async function getWorkforceSummary(workspaceId: string): Promise<Workforc
 export async function getEmployeeByUserId(
   workspaceId: string,
   userId: string,
-): Promise<{ id: string; firstName: string; lastName: string } | null> {
+): Promise<{ id: string; firstName: string; lastName: string; status: string } | null> {
   return prisma.employee.findFirst({
     where: { workspaceId, userId },
-    select: { id: true, firstName: true, lastName: true },
+    select: { id: true, firstName: true, lastName: true, status: true },
   });
 }
 

@@ -1,99 +1,43 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { withPermission } from '@/lib/rbac';
-import { isModuleEnabled } from '@/lib/modules';
+import { REVENUE_STATUSES, SHOP_STATUSES } from '@/lib/shop/status';
+import { requireShop, shopErrorResponse } from '../_guard';
 
-type SessionContext = {
-  workspaceId?: string;
-  user?: { id?: string | null };
-};
+const query = z.object({
+  status: z.enum(['ALL', 'OPEN', ...SHOP_STATUSES]).default('ALL'),
+  q: z.string().trim().max(80).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  cursor: z.string().max(40).optional(),
+});
 
-/**
- * GET  /api/shop/orders          — list orders for the workspace (paginated)
- *
- * Requires:
- *   - SHOP module enabled for the workspace
- *   - `shop.orders.view` permission
- */
+/** Orders, newest first, with search, a status filter (OPEN = needs action) and cursor paging, plus the overview figures. */
 export async function GET(request: Request) {
   try {
-    const session = (await getServerSession(authOptions)) as SessionContext | null;
-    if (!session?.workspaceId || !session.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const workspaceId = session.workspaceId;
-    const userId = session.user.id;
+    const gate = await requireShop('shop.orders.view');
+    if ('response' in gate) return gate.response;
+    const { workspaceId } = gate.access;
+    const q = query.parse(Object.fromEntries(new URL(request.url).searchParams));
 
-    if (!(await isModuleEnabled(workspaceId, 'SHOP'))) {
-      return NextResponse.json(
-        { error: 'Shop module is disabled for this workspace.', code: 'SHOP_MODULE_DISABLED' },
-        { status: 409 },
-      );
-    }
-
-    const perm = await withPermission(userId, workspaceId, 'shop.orders.view');
-    if (!perm.granted) return perm.response;
-
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-
-    const orderWhere = {
+    const where = {
       workspaceId,
-      ...(status && status !== 'ALL' ? { status } : {}),
+      ...(q.status === 'OPEN' ? { status: { in: ['PAID', 'REFUND_DUE'] } } : q.status !== 'ALL' ? { status: q.status } : {}),
+      ...(q.q ? { OR: [{ buyerName: { contains: q.q } }, { buyerEmail: { contains: q.q } }, { id: { startsWith: q.q } }, { trackingRef: { contains: q.q } }, { items: { some: { productName: { contains: q.q } } } }] } : {}),
     };
-
-    const [orders, total, allStatusCounts, paidAgg] = await Promise.all([
-      prisma.shopOrder.findMany({
-        where: orderWhere,
-        include: {
-          items: { select: { productName: true, quantity: true, unitPrice: true } },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: limit,
-        skip: (page - 1) * limit,
-      }),
-      prisma.shopOrder.count({ where: orderWhere }),
-      prisma.shopOrder.groupBy({
-        by: ['status'],
-        where: { workspaceId },
-        _count: { _all: true },
-      }),
-      prisma.shopOrder.aggregate({
-        where: { workspaceId, status: 'PAID' },
-        _sum: { amount: true },
-      }),
+    const [rows, groups, revenue] = await Promise.all([
+      prisma.shopOrder.findMany({ where, include: { items: { select: { productName: true, quantity: true, unitPrice: true, lineTotal: true } }, linkedInvoice: { select: { id: true, invoiceNumber: true } } }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: q.limit + 1, ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}) }),
+      prisma.shopOrder.groupBy({ by: ['status'], where: { workspaceId }, _count: { _all: true } }),
+      prisma.shopOrder.aggregate({ where: { workspaceId, status: { in: REVENUE_STATUSES } }, _sum: { amount: true, taxTotal: true } }),
     ]);
-
-    const statusCounts = {
-      PAID: 0,
-      PENDING: 0,
-      FAILED: 0,
-      REFUNDED: 0,
-    };
-
-    for (const row of allStatusCounts) {
-      if (row.status in statusCounts) {
-        const key = row.status as keyof typeof statusCounts;
-        statusCounts[key] = row._count._all;
-      }
-    }
-
+    const more = rows.length > q.limit;
+    const items = more ? rows.slice(0, q.limit) : rows;
+    const counts: Record<string, number> = Object.fromEntries(SHOP_STATUSES.map((s) => [s, 0]));
+    for (const g of groups) counts[g.status] = g._count._all;
     return NextResponse.json({
-      orders,
-      total,
-      page,
-      limit,
-      overview: {
-        totalOrders: allStatusCounts.reduce((acc, row) => acc + row._count._all, 0),
-        statusCounts,
-        paidRevenue: Number(paidAgg._sum.amount ?? 0),
-      },
+      orders: items, nextCursor: more ? items[items.length - 1]!.id : null,
+      overview: { counts, total: Object.values(counts).reduce((a, b) => a + b, 0), revenue: Number(revenue._sum.amount ?? 0), tax: Number(revenue._sum.taxTotal ?? 0), needsAction: (counts.PAID ?? 0) + (counts.REFUND_DUE ?? 0) },
     });
-  } catch {
-    return NextResponse.json({ error: 'Failed to fetch orders.' }, { status: 500 });
+  } catch (e) {
+    return shopErrorResponse(e, 'orders.list');
   }
 }

@@ -22,7 +22,7 @@ export function ReviewButton({ obligation, access, onChanged }: { obligation: Ob
       <Button size="sm" variant="outline" onClick={() => setOpen(true)} aria-label={t("open")}>
         <MessageSquare className="me-1.5 size-4" aria-hidden />
         {status === "APPROVED" ? t("approved") : status === "READY_FOR_REVIEW" ? t("inReview") : t("review")}
-        {obligation.commentCount > 0 ? <span className="ms-1.5 rounded-full bg-indigo-600 px-1.5 text-[10px] font-bold text-white">{obligation.commentCount}</span> : null}
+        {obligation.commentCount > 0 ? <span className="ms-1.5 rounded-full bg-indigo-600 px-1.5 text-[11px] font-bold text-white">{obligation.commentCount}</span> : null}
       </Button>
       {open ? <ReviewSheet obligation={obligation} access={access} onClose={() => setOpen(false)} onChanged={onChanged} /> : null}
     </>

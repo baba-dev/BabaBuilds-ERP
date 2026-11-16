@@ -1,6 +1,5 @@
 import { Prisma } from "@prisma/client";
 import type {
-  CashForecastDirection,
   CashForecastHorizonType,
   CashForecastRiskLevel,
   CashForecastScenarioTag,
@@ -11,7 +10,9 @@ import type {
   ForecastSourceData,
 } from "@/lib/cash-flow/types";
 import { buildForecastBuckets } from "@/lib/cash-flow/date-buckets";
-import { getScenarioDefaults, applyScenarioToDate, applyScenarioToAmount } from "@/lib/cash-flow/scenario";
+import { applyScenarioToLine } from "@/lib/cash-flow/scenario";
+import { loadScenarioAssumptions, SCENARIOS } from "@/lib/cash-flow/assumptions";
+import { startOfDay } from "date-fns";
 import { loadForecastSourceData, buildForecastLinesFromSources } from "@/lib/cash-flow/sources";
 import { sumMoney, toDecimal } from "@/lib/money";
 
@@ -33,6 +34,8 @@ export type ForecastPeriodResult = {
   actualOutflows: Prisma.Decimal;
   projectedOutflows: Prisma.Decimal;
   closingCash: Prisma.Decimal;
+  /** The lowest the balance gets inside the period (a weekly closing balance can hide a mid-week dip). */
+  lowestCash: Prisma.Decimal;
   riskLevel: CashForecastRiskLevel;
   lineItems: ForecastLineDraft[]; // scenario-adjusted lines belonging to this bucket
 };
@@ -51,6 +54,8 @@ export type ForecastSnapshotResult = {
   periods: ForecastPeriodResult[];
   lineItems: ForecastLineDraft[];
   crunchDate: Date | null;
+  lowestCash: Prisma.Decimal;
+  lowestCashDate: Date | null;
   drivers: {
     inflows: Array<{ key: string; sourceType: CashForecastSourceType; amount: Prisma.Decimal }>;
     outflows: Array<{ key: string; sourceType: CashForecastSourceType; amount: Prisma.Decimal }>;
@@ -65,39 +70,19 @@ const classifyRisk = ({
   threshold: Prisma.Decimal;
 }): CashForecastRiskLevel => {
   if (closingCash.lt(0)) return "CRITICAL";
-  if (closingCash.lte(threshold)) return "HIGH";
-  // Medium risk if within 2x threshold (simple heuristic for v1)
-  if (closingCash.lte(threshold.mul(2))) return "MEDIUM";
+  if (closingCash.lt(threshold)) return "HIGH";
+  // Within twice the cushion is worth watching.
+  if (threshold.gt(0) && closingCash.lte(threshold.mul(2))) return "MEDIUM";
   return "LOW";
 };
 
 const isActualLine = (line: ForecastLineDraft) => line.classification === "ACTUAL";
 
-const directionOfAmount = (amount: Prisma.Decimal): CashForecastDirection => (amount.gte(0) ? "INFLOW" : "OUTFLOW");
-
-const normalizeLine = (
-  line: ForecastLineDraft,
-  scenarioTag: CashForecastScenarioTag,
-  assumptions: ForecastAssumptions
-): ForecastLineDraft => {
-  const amount = toDecimal(line.amount);
-  const direction: CashForecastDirection = line.direction ?? directionOfAmount(amount);
-  const absAmount = amount.abs();
-  const expectedDate = applyScenarioToDate(new Date(line.expectedDate), scenarioTag, assumptions);
-
-  // Apply amount modifiers only to non-actual projections.
-  const adjustedAmount =
-    line.classification === "ACTUAL"
-      ? absAmount
-      : applyScenarioToAmount(absAmount, scenarioTag, assumptions, direction);
-
-  return {
-    ...line,
-    direction,
-    scenarioTag,
-    amount: adjustedAmount,
-    expectedDate,
-  };
+const normalizeLine = (line: ForecastLineDraft, scenarioTag: CashForecastScenarioTag, assumptions: ForecastAssumptions, start: Date): ForecastLineDraft => {
+  const adjusted = applyScenarioToLine(line, scenarioTag, assumptions);
+  // A scenario that pulls a payment earlier than today means "now", not "in the past".
+  if (adjusted.classification !== "ACTUAL" && adjusted.expectedDate < start) adjusted.expectedDate = start;
+  return adjusted;
 };
 
 const bucketize = (buckets: ForecastBucket[], date: Date): ForecastBucket | null => {
@@ -148,125 +133,129 @@ function computeConfidenceScore(lines: ForecastLineDraft[]): number | null {
   return clamp01(base - penalty);
 }
 
-export async function computeCashForecastSnapshot(
-  input: ForecastEngineInput,
-  deps?: { loadSources?: (args: { workspaceId: string; startDate: Date; endDate: Date; now: Date }) => Promise<ForecastSourceData> }
-): Promise<ForecastSnapshotResult> {
+export type ForecastRunInput = {
+  sources: ForecastSourceData;
+  horizonType: CashForecastHorizonType;
+  scenarioTag: CashForecastScenarioTag;
+  startDate: Date;
+  assumptions: ForecastAssumptions;
+  now?: Date;
+};
+
+/** The pure forecast: no database, same inputs give the same numbers. */
+export function runForecast(input: ForecastRunInput): ForecastSnapshotResult {
   const now = input.now ?? new Date();
-  const assumptions = getScenarioDefaults(input.scenarioTag);
-
-  const buckets = buildForecastBuckets({
-    horizonType: input.horizonType,
-    startDate: input.startDate,
-  });
-  const endDate = buckets.length ? buckets[buckets.length - 1].periodEnd : input.startDate;
-
-  const loadSources = deps?.loadSources ?? (async (args) => loadForecastSourceData(args));
-  const sources = await loadSources({ workspaceId: input.workspaceId, startDate: input.startDate, endDate, now });
-
+  const { sources, assumptions, scenarioTag } = input;
+  const start = startOfDay(input.startDate);
+  const buckets = buildForecastBuckets({ horizonType: input.horizonType, startDate: start });
+  const endDate = buckets.length ? buckets[buckets.length - 1].periodEnd : start;
   const openingCash = toDecimal(sources.openingCash);
 
-  const rawLines = buildForecastLinesFromSources({
-    workspaceId: input.workspaceId,
-    startDate: input.startDate,
-    endDate,
-    now,
-    sources,
-  });
+  const rawLines = buildForecastLinesFromSources({ workspaceId: "", startDate: start, endDate, now, scenarioTag, sources, assumptions });
+  const lines = rawLines.map((l) => normalizeLine(l, scenarioTag, assumptions, start)).filter((l) => new Date(l.expectedDate) < endDate);
 
-  const lines = rawLines.map((l) => normalizeLine(l, input.scenarioTag, assumptions));
-
-  const bucketLines: Record<string, ForecastLineDraft[]> = {};
-  for (const b of buckets) bucketLines[b.bucketLabel] = [];
-
+  const bucketLines = new Map<string, ForecastLineDraft[]>();
+  for (const b of buckets) bucketLines.set(b.bucketLabel, []);
   for (const line of lines) {
     const b = bucketize(buckets, new Date(line.expectedDate));
-    if (!b) continue;
-    bucketLines[b.bucketLabel].push(line);
+    if (b) bucketLines.get(b.bucketLabel)!.push(line);
   }
 
-  let running = openingCash;
-  const periods: ForecastPeriodResult[] = [];
-  let crunchDate: Date | null = null;
-
   const threshold = toDecimal(assumptions.minimumCashThreshold ?? 0);
+  const periods: ForecastPeriodResult[] = [];
+  let running = openingCash;
+  let crunchDate: Date | null = null;
+  let lowestCash = openingCash;
+  let lowestCashDate: Date | null = null;
 
   for (const bucket of buckets) {
-    const periodLines = bucketLines[bucket.bucketLabel] ?? [];
+    const periodLines = (bucketLines.get(bucket.bucketLabel) ?? []).sort((a, b) => new Date(a.expectedDate).getTime() - new Date(b.expectedDate).getTime());
     const actualInflows = sumBy(periodLines, (l) => isActualLine(l) && l.direction === "INFLOW");
     const actualOutflows = sumBy(periodLines, (l) => isActualLine(l) && l.direction === "OUTFLOW");
     const projectedInflows = sumBy(periodLines, (l) => !isActualLine(l) && l.direction === "INFLOW");
     const projectedOutflows = sumBy(periodLines, (l) => !isActualLine(l) && l.direction === "OUTFLOW");
-
     const opening = running;
-    const net = actualInflows.plus(projectedInflows).minus(actualOutflows.plus(projectedOutflows));
-    const closing = opening.plus(net);
 
-    const riskLevel = classifyRisk({ closingCash: closing, threshold });
-    if (!crunchDate && (closing.lt(0) || closing.lte(threshold))) {
-      crunchDate = bucket.periodStart;
+    // Walk the period day by day: money out on a day lands before money in, so the dip is not understated.
+    let walk = opening;
+    let periodLow = opening;
+    let periodLowDate = bucket.periodStart;
+    const byDay = new Map<string, { date: Date; net: Prisma.Decimal; out: Prisma.Decimal }>();
+    for (const l of periodLines) {
+      const key = new Date(l.expectedDate).toISOString().slice(0, 10);
+      const cur = byDay.get(key) ?? { date: new Date(l.expectedDate), net: new Prisma.Decimal(0), out: new Prisma.Decimal(0) };
+      const amt = toDecimal(l.amount);
+      cur.net = l.direction === "INFLOW" ? cur.net.plus(amt) : cur.net.minus(amt);
+      if (l.direction === "OUTFLOW") cur.out = cur.out.plus(amt);
+      byDay.set(key, cur);
     }
+    for (const day of byDay.values()) {
+      const afterOut = walk.minus(day.out);
+      if (afterOut.lt(periodLow)) { periodLow = afterOut; periodLowDate = day.date; }
+      walk = walk.plus(day.net);
+      if (walk.lt(periodLow)) { periodLow = walk; periodLowDate = day.date; }
+    }
+    const closing = walk;
+    if (periodLow.lt(lowestCash)) { lowestCash = periodLow; lowestCashDate = periodLowDate; }
 
-    periods.push({
-      periodStart: bucket.periodStart,
-      periodEnd: bucket.periodEnd,
-      bucketLabel: bucket.bucketLabel,
-      openingCash: opening,
-      actualInflows,
-      projectedInflows,
-      actualOutflows,
-      projectedOutflows,
-      closingCash: closing,
-      riskLevel,
-      lineItems: periodLines,
-    });
+    const riskLevel = classifyRisk({ closingCash: periodLow, threshold });
+    if (!crunchDate && (periodLow.lt(0) || periodLow.lt(threshold))) crunchDate = periodLowDate;
 
+    periods.push({ periodStart: bucket.periodStart, periodEnd: bucket.periodEnd, bucketLabel: bucket.bucketLabel, openingCash: opening, actualInflows, projectedInflows, actualOutflows, projectedOutflows, closingCash: closing, lowestCash: periodLow, riskLevel, lineItems: periodLines });
     running = closing;
   }
 
   const totalProjectedInflows = sumBy(lines, (l) => !isActualLine(l) && l.direction === "INFLOW");
   const totalProjectedOutflows = sumBy(lines, (l) => !isActualLine(l) && l.direction === "OUTFLOW");
-
   const closingCash = periods.length ? periods[periods.length - 1].closingCash : openingCash;
 
-  // Driver concentration (top 5) by abs amount, grouped by source key.
   const inflowAgg = new Map<string, { sourceType: CashForecastSourceType; amount: Prisma.Decimal }>();
   const outflowAgg = new Map<string, { sourceType: CashForecastSourceType; amount: Prisma.Decimal }>();
-
   for (const l of lines) {
     const key = makeDriverKey(l);
     const map = l.direction === "INFLOW" ? inflowAgg : outflowAgg;
     const prev = map.get(key);
-    map.set(key, {
-      sourceType: l.sourceType,
-      amount: (prev?.amount ?? new Prisma.Decimal(0)).plus(toDecimal(l.amount)),
-    });
+    map.set(key, { sourceType: l.sourceType, amount: (prev?.amount ?? new Prisma.Decimal(0)).plus(toDecimal(l.amount)) });
   }
-
   const topN = (m: Map<string, { sourceType: CashForecastSourceType; amount: Prisma.Decimal }>, n = 5) =>
-    Array.from(m.entries())
-      .map(([key, v]) => ({ key, sourceType: v.sourceType, amount: v.amount }))
-      .sort((a, b) => b.amount.abs().cmp(a.amount.abs()))
-      .slice(0, n);
+    Array.from(m.entries()).map(([key, v]) => ({ key, sourceType: v.sourceType, amount: v.amount })).sort((a, b) => b.amount.abs().cmp(a.amount.abs())).slice(0, n);
 
   return {
-    horizonType: input.horizonType,
-    scenarioTag: input.scenarioTag,
-    startDate: input.startDate,
-    endDate,
-    openingCash,
-    closingCash,
-    totalProjectedInflows,
-    totalProjectedOutflows,
-    confidenceScore: computeConfidenceScore(lines),
-    assumptions,
-    periods,
-    lineItems: lines,
-    crunchDate,
-    drivers: {
-      inflows: topN(inflowAgg),
-      outflows: topN(outflowAgg),
-    },
+    horizonType: input.horizonType, scenarioTag, startDate: start, endDate, openingCash, closingCash, totalProjectedInflows, totalProjectedOutflows,
+    confidenceScore: computeConfidenceScore(lines), assumptions, periods, lineItems: lines, crunchDate, lowestCash, lowestCashDate,
+    drivers: { inflows: topN(inflowAgg), outflows: topN(outflowAgg) },
   };
 }
 
+/** Loads the workspace's data and runs one scenario. `deps` lets tests and callers supply sources and assumptions. */
+export async function computeCashForecastSnapshot(
+  input: ForecastEngineInput,
+  deps?: {
+    loadSources?: (args: { workspaceId: string; startDate: Date; endDate: Date; now: Date }) => Promise<ForecastSourceData>;
+    assumptions?: ForecastAssumptions;
+  },
+): Promise<ForecastSnapshotResult> {
+  const now = input.now ?? new Date();
+  const start = startOfDay(input.startDate);
+  const buckets = buildForecastBuckets({ horizonType: input.horizonType, startDate: start });
+  const endDate = buckets.length ? buckets[buckets.length - 1].periodEnd : start;
+  const loadSources = deps?.loadSources ?? ((args) => loadForecastSourceData(args));
+  const [sources, stored] = await Promise.all([
+    loadSources({ workspaceId: input.workspaceId, startDate: start, endDate, now }),
+    deps?.assumptions ? Promise.resolve(null) : loadScenarioAssumptions(input.workspaceId).catch(() => null),
+  ]);
+  const assumptions = deps?.assumptions ?? stored?.[input.scenarioTag] ?? (await import("@/lib/cash-flow/scenario")).getScenarioDefaults(input.scenarioTag);
+  return runForecast({ sources, horizonType: input.horizonType, scenarioTag: input.scenarioTag, startDate: start, assumptions, now });
+}
+
+/** All three scenarios from one load of the data: what the workspace sees and what the nightly job stores. */
+export async function computeAllScenarios(args: { workspaceId: string; horizonType: CashForecastHorizonType; startDate?: Date; now?: Date; overrides?: Partial<Record<CashForecastScenarioTag, ForecastAssumptions>> }) {
+  const now = args.now ?? new Date();
+  const start = startOfDay(args.startDate ?? now);
+  const buckets = buildForecastBuckets({ horizonType: args.horizonType, startDate: start });
+  const endDate = buckets.length ? buckets[buckets.length - 1].periodEnd : start;
+  const [sources, assumptions] = await Promise.all([loadForecastSourceData({ workspaceId: args.workspaceId, startDate: start, endDate, now }), loadScenarioAssumptions(args.workspaceId)]);
+  const results = {} as Record<CashForecastScenarioTag, ForecastSnapshotResult>;
+  for (const tag of SCENARIOS) results[tag] = runForecast({ sources, horizonType: args.horizonType, scenarioTag: tag, startDate: start, assumptions: args.overrides?.[tag] ?? assumptions[tag], now });
+  return { sources, assumptions, results, startDate: start, endDate };
+}

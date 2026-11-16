@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, type ReactNode } from "react";
 import {
-  Mail, Phone, Globe, MapPin, ShoppingCart, Check, Loader2, Sparkles,
+  Mail, Phone, Globe, MapPin, ShoppingCart, Loader2, Sparkles,
   Info, MessageCircleQuestion, Send, ChevronDown, Megaphone, HelpCircle, Search, ArrowUpDown,
   ShieldCheck, ReceiptText, Headphones, Clock3, ImageIcon, Boxes, ClipboardList,
   CreditCard, FileCheck2,
@@ -18,8 +18,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import Script from "next/script";
+import { CartCheckout } from "./CartCheckout";
 import DOMPurify from 'dompurify';
-import { GST_STATES } from "@/lib/gst/states";
 
 type SocialPlatform =
   | "website" | "instagram" | "facebook" | "x" | "linkedin"
@@ -43,13 +43,15 @@ interface ShopData {
     accentColor: string; email: string; phone: string | null; website: string | null; address: string;
   };
   content?: ShopContent;
+  currency?: string;
+  chargesGst?: boolean;
   checkout: {
     available: boolean; gateway: "RAZORPAY" | "STRIPE" | null;
     razorpayKeyId: string | null; stripePublishableKey: string | null;
   };
   products: {
     id: string; name: string; description: string | null;
-    imageUrl: string | null; price: number; sku: string; currentStock: number; category?: string | null;
+    imageUrl: string | null; price: number; taxRate?: number; sku: string; currentStock: number; category?: string | null;
   }[];
 }
 
@@ -81,8 +83,8 @@ function PlatformIcon({ platform }: { platform: SocialPlatform }) {
   );
 }
 
-const formatPrice = (price: number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", minimumFractionDigits: 0 }).format(price);
+const makeFormatPrice = (currency: string) => (price: number) =>
+  new Intl.NumberFormat("en-IN", { style: "currency", currency, minimumFractionDigits: 0 }).format(price);
 
 function StorefrontImage({
   src,
@@ -153,165 +155,6 @@ function useConfetti(trigger: boolean) {
     });
     return () => { cancelAnimationFrame(raf); };
   }, [trigger]);
-}
-
-// ── Buy Modal ─────────────────────────────────────────────────────────────────
-function BuyModal({
-  product, slug, onClose, onSuccess,
-}: {
-  product: ShopData["products"][0];
-  slug: string;
-  checkout: ShopData["checkout"];
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const [step, setStep] = useState<"form" | "processing" | "success">("form");
-  const [buyer, setBuyer] = useState({ name: "", email: "", phone: "", note: "", state: "", gstin: "" });
-  const [loading, setLoading] = useState(false);
-
-  const handleBuy = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const res  = await fetch(`/api/shop/${slug}/order`, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          items: [{ productId: product.id, quantity: 1 }],
-          buyerName: buyer.name,
-          buyerEmail: buyer.email,
-          buyerPhone: buyer.phone,
-          buyerNote: buyer.note,
-          buyerStateCode: buyer.state || undefined,
-          buyerGstin: buyer.gstin || undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) { toast.error(data.error || "Failed to start checkout."); setLoading(false); return; }
-
-      if (data.gateway === "STRIPE") {
-        window.location.href = data.sessionUrl;
-        return;
-      }
-
-      if (data.gateway === "RAZORPAY") {
-        setStep("processing");
-        const rzp = new window.Razorpay!({
-          key:         data.keyId,
-          amount:      data.amount,
-          currency:    data.currency,
-          order_id:    data.rpOrderId,
-          name:        data.shopName,
-          description: product.name,
-          prefill:     data.prefill,
-          theme:       { color: "#6366f1" },
-          handler: async (response: RazorpaySuccessResponse) => {
-            const verifyRes = await fetch(`/api/shop/${slug}/verify`, {
-              method:  "POST",
-              headers: { "Content-Type": "application/json" },
-              body:    JSON.stringify({
-                shopOrderId: data.orderId,
-                razorpayOrderId:   response.razorpay_order_id,
-                razorpayPaymentId: response.razorpay_payment_id,
-                razorpaySignature: response.razorpay_signature,
-              }),
-            });
-            if (verifyRes.ok) { setStep("success"); onSuccess(); }
-            else { toast.error("Payment verification failed. Please contact support."); setStep("form"); }
-          },
-          modal: { ondismiss: () => setStep("form") },
-        });
-        rzp.open();
-        setLoading(false);
-      }
-    } catch {
-      toast.error("An error occurred. Please try again.");
-      setLoading(false);
-    }
-  };
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden border-none shadow-2xl">
-        {step === "success" ? (
-          <div className="p-10 text-center space-y-4 bg-white dark:bg-zinc-950">
-            <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center mx-auto">
-              <Check className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <h2 className="text-2xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">Payment Successful!</h2>
-            <p className="text-zinc-500 dark:text-zinc-400 text-sm leading-relaxed">
-              Thank you for your purchase of <strong>{product.name}</strong>. An invoice has been prepared and will be shared with you shortly.
-            </p>
-            <Button onClick={onClose} className="mt-2 bg-indigo-600 hover:bg-indigo-700 text-white px-8">Close</Button>
-          </div>
-        ) : step === "processing" ? (
-          <div className="p-10 text-center space-y-4 bg-white dark:bg-zinc-950">
-            <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mx-auto" />
-            <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-400">Processing your payment...</p>
-          </div>
-        ) : (
-          <>
-            <div className="px-6 pt-6 pb-5 bg-zinc-50/80 dark:bg-zinc-900/40 border-b border-zinc-100 dark:border-zinc-800">
-              <DialogHeader>
-                <DialogTitle className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
-                  Purchase — {product.name}
-                </DialogTitle>
-                <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-sm mt-1">
-                  Enter your details to complete the checkout.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="mt-4 px-4 py-3 bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800/30 rounded-xl flex items-center justify-between">
-                <span className="text-sm font-semibold text-indigo-700 dark:text-indigo-300">{product.name}</span>
-                <span className="text-lg font-black text-indigo-700 dark:text-indigo-300">{formatPrice(product.price)}</span>
-              </div>
-            </div>
-            <form onSubmit={handleBuy} className="p-6 space-y-4 bg-white dark:bg-zinc-950">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2 space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Full Name <span className="text-rose-500">*</span></Label>
-                  <Input required value={buyer.name} onChange={(e) => setBuyer((b) => ({ ...b, name: e.target.value }))} placeholder="Your name" className="h-10" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Email <span className="text-rose-500">*</span></Label>
-                  <Input type="email" required value={buyer.email} onChange={(e) => setBuyer((b) => ({ ...b, email: e.target.value }))} placeholder="you@example.com" className="h-10" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Phone</Label>
-                  <Input value={buyer.phone} onChange={(e) => setBuyer((b) => ({ ...b, phone: e.target.value }))} placeholder="+91 98765..." className="h-10" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Delivery state</Label>
-                  <select value={buyer.state} onChange={(e) => setBuyer((b) => ({ ...b, state: e.target.value }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm">
-                    <option value="">Select state</option>
-                    {GST_STATES.map((st) => <option key={st.code} value={st.code}>{st.name}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">GSTIN (optional)</Label>
-                  <Input value={buyer.gstin} onChange={(e) => setBuyer((b) => ({ ...b, gstin: e.target.value.toUpperCase() }))} placeholder="For a GST invoice" maxLength={15} className="h-10" />
-                </div>
-                <div className="col-span-2 space-y-1.5">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400">Message / Requirements</Label>
-                  <Textarea value={buyer.note} onChange={(e) => setBuyer((b) => ({ ...b, note: e.target.value }))} placeholder="Any specific requirements or notes..." rows={3} />
-                </div>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <Button type="button" variant="outline" onClick={onClose} className="flex-1 text-xs font-bold uppercase tracking-widest">Cancel</Button>
-                <Button type="submit" disabled={loading} className="flex-1 text-xs font-bold uppercase tracking-widest" style={{ background: "#6366f1" }}>
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : `Pay ${formatPrice(product.price)}`}
-                </Button>
-              </div>
-              <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                By continuing, you agree to our <a className="underline" href="/terms">Terms</a>,{" "}
-                <a className="underline" href="/privacy">Privacy Policy</a>, and{" "}
-                <a className="underline" href="/refund-cancellation">Refund & Cancellation Policy</a>.
-              </p>
-            </form>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 // ── Lightweight, sandboxed Markdown → HTML for shop About text ────────────────
@@ -419,6 +262,8 @@ function ProductDetails({
   shop,
   isMobile,
   onBuyNow,
+  onAddToCart,
+  formatPrice,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -427,6 +272,8 @@ function ProductDetails({
   shop: ShopData["shop"];
   isMobile: boolean;
   onBuyNow: (product: ShopData["products"][0]) => void;
+  onAddToCart: (product: ShopData["products"][0]) => void;
+  formatPrice: (n: number) => string;
 }) {
   if (!product) return null;
   const canBuy = checkout.available && product.currentStock > 0;
@@ -462,14 +309,17 @@ function ProductDetails({
         <div className="flex items-center justify-between gap-4 border-t border-zinc-200 dark:border-zinc-800 pt-4">
           <p className="text-2xl font-black text-zinc-900 dark:text-zinc-50">{formatPrice(product.price)}</p>
           {canBuy ? (
-            <Button
-              className="text-white font-bold"
-              style={{ background: shop.accentColor }}
-              onClick={() => onBuyNow(product)}
-            >
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Buy now
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => onAddToCart(product)}>Add to basket</Button>
+              <Button
+                className="text-white font-bold"
+                style={{ background: shop.accentColor }}
+                onClick={() => onBuyNow(product)}
+              >
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Buy now
+              </Button>
+            </div>
           ) : (
             <a
               href={`mailto:${shop.email}?subject=${encodeURIComponent(`Enquiry: ${product.name}`)}&body=${encodeURIComponent(`Hi, I am interested in ${product.name}.`)}`}
@@ -618,7 +468,10 @@ function AiAssistButton({
 // ── Main Shop Client ──────────────────────────────────────────────────────────
 export function ShopClient({ data }: { data: ShopData }) {
   const { shop, checkout, products, content } = data;
-  const [selectedProduct, setSelectedProduct] = useState<ShopData["products"][0] | null>(null);
+  const formatPrice = useMemo(() => makeFormatPrice(data.currency ?? "INR"), [data.currency]);
+  const [cart, setCart] = useState<Record<string, number>>({});
+  const [cartOpen, setCartOpen] = useState(false);
+  const checkoutOpen = cartOpen;
   const [detailsProduct, setDetailsProduct] = useState<ShopData["products"][0] | null>(null);
   const [confetti, setConfetti] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -626,6 +479,20 @@ export function ShopClient({ data }: { data: ShopData }) {
   const [sortMode, setSortMode] = useState<"featured" | "price-asc" | "price-desc">("featured");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  const cartLines = useMemo(
+    () => products.flatMap((p) => (cart[p.id] ? [{ product: { id: p.id, name: p.name, price: p.price, taxRate: p.taxRate ?? 0, currentStock: p.currentStock, sku: p.sku }, quantity: Math.min(cart[p.id]!, p.currentStock) }] : [])),
+    [cart, products],
+  );
+  const cartCount = cartLines.reduce((n, l) => n + l.quantity, 0);
+  const addToCart = (product: ShopData["products"][0], openNow: boolean) => {
+    setCart((c) => {
+      const have = c[product.id] ?? 0;
+      if (have + 1 > product.currentStock) { toast.warning(`Only ${product.currentStock} of ${product.name} in stock.`); return c; }
+      return { ...c, [product.id]: have + 1 };
+    });
+    if (openNow) setCartOpen(true); else toast.success(`${product.name} added to your basket.`);
+  };
 
   useConfetti(confetti);
 
@@ -653,16 +520,29 @@ export function ShopClient({ data }: { data: ShopData }) {
     return () => window.removeEventListener("resize", update);
   }, []);
 
-  // Check for Stripe success redirect
+  // Back from Stripe Checkout: the payment is confirmed with Stripe before we say anything about it.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("payment") === "success") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
-      setConfetti(true);
-      toast.success("Payment successful! Thank you for your purchase.");
-      window.history.replaceState({}, "", window.location.pathname);
-    }
-  }, []);
+    const payment = params.get("payment");
+    if (!payment) return;
+    const orderId = params.get("order");
+    const sessionId = params.get("session_id");
+    window.history.replaceState({}, "", window.location.pathname);
+    if (payment === "cancelled") { toast.info("Checkout was cancelled. Your basket is still here."); return; }
+    if (payment !== "success" || !orderId || !sessionId) return;
+    let cancelled = false;
+    const id = toast.loading("Confirming your payment…");
+    fetch(`/api/shop/${shop.slug}/confirm`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId, sessionId }) })
+      .then(async (res) => {
+        const body = await res.json().catch(() => ({}));
+        if (cancelled) return;
+        if (res.ok) { setConfetti(true); setCart({}); toast.success("Order placed. We have emailed you a confirmation.", { id }); }
+        else if (body.refundDue) toast.error("An item sold out just before your order was confirmed. You will be refunded in full.", { id, duration: 12000 });
+        else toast.error(body.error || "We could not confirm your payment. If you were charged, please contact the shop.", { id, duration: 12000 });
+      })
+      .catch(() => { if (!cancelled) toast.error("We could not confirm your payment. If you were charged, please contact the shop.", { id }); });
+    return () => { cancelled = true; };
+  }, [shop.slug]);
 
   const categories = useMemo(() => {
     const unique = Array.from(
@@ -718,7 +598,7 @@ export function ShopClient({ data }: { data: ShopData }) {
         <Script src="https://checkout.razorpay.com/v1/checkout.js" strategy="lazyOnload" />
       )}
 
-      <div className="min-h-screen bg-white dark:bg-zinc-950 transition-colors">
+      <div className="min-h-dvh bg-white dark:bg-zinc-950 transition-colors">
         {/* ── ANNOUNCEMENT BAR ─────────────────────────────────────────────── */}
         {content?.announcement ? (
           <div
@@ -981,7 +861,7 @@ export function ShopClient({ data }: { data: ShopData }) {
                         <Button
                           className="font-semibold text-white"
                           style={accentStyles.strong}
-                          onClick={() => setSelectedProduct(product)}
+                          onClick={() => addToCart(product, true)}
                         >
                           <ShoppingCart className="w-4 h-4 mr-2" /> Buy now
                         </Button>
@@ -1113,11 +993,11 @@ export function ShopClient({ data }: { data: ShopData }) {
       </div>
 
       {/* ── AI ASSIST DRAWER ────────────────────────────────────────────────── */}
-      {content?.showAiAssist !== false && !selectedProduct && !detailsProduct ? (
+      {content?.showAiAssist !== false && !checkoutOpen && !detailsProduct ? (
         <AiAssistButton shop={shop} accent={shop.accentColor} />
       ) : null}
 
-      {!selectedProduct && !detailsProduct ? (
+      {!checkoutOpen && !detailsProduct ? (
         <div className="fixed md:hidden bottom-0 inset-x-0 z-30 border-t border-zinc-200 dark:border-zinc-800 bg-white/95 dark:bg-zinc-950/95 backdrop-blur px-4 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.6rem)]">
           <div className="flex items-center gap-2">
             <Button variant="outline" className="flex-1" asChild>
@@ -1133,16 +1013,32 @@ export function ShopClient({ data }: { data: ShopData }) {
         </div>
       ) : null}
 
-      {/* Buy Modal */}
-      {selectedProduct && (
-        <BuyModal
-          product={selectedProduct}
+      {/* Basket and checkout */}
+      {cartOpen ? (
+        <CartCheckout
+          lines={cartLines}
+          currency={data.currency ?? "INR"}
+          chargesGst={data.chargesGst ?? false}
           slug={shop.slug}
-          checkout={checkout}
-          onClose={() => setSelectedProduct(null)}
-          onSuccess={() => { setConfetti(true); setSelectedProduct(null); }}
+          accent={shop.accentColor}
+          onQty={(id, qty) => setCart((c) => ({ ...c, [id]: qty }))}
+          onRemove={(id) => setCart((c) => { const n = { ...c }; delete n[id]; return n; })}
+          onClose={() => setCartOpen(false)}
+          onPaid={() => { setConfetti(true); setCart({}); }}
         />
-      )}
+      ) : null}
+
+      {cartCount > 0 && !cartOpen ? (
+        <button
+          type="button"
+          onClick={() => setCartOpen(true)}
+          className="fixed bottom-20 right-4 z-40 flex items-center gap-2 rounded-full px-5 py-3 text-sm font-bold text-white shadow-xl md:bottom-6"
+          style={{ background: shop.accentColor }}
+          aria-label={`Open basket with ${cartCount} items`}
+        >
+          <ShoppingCart className="h-4 w-4" /> Basket ({cartCount})
+        </button>
+      ) : null}
 
       <ProductDetails
         open={Boolean(detailsProduct)}
@@ -1153,8 +1049,13 @@ export function ShopClient({ data }: { data: ShopData }) {
         isMobile={isMobile}
         onBuyNow={(product) => {
           setDetailsProduct(null);
-          setSelectedProduct(product);
+          addToCart(product, true);
         }}
+        onAddToCart={(product) => {
+          setDetailsProduct(null);
+          addToCart(product, false);
+        }}
+        formatPrice={formatPrice}
       />
 
       {/* Shop animations */}

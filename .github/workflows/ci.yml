@@ -1,9 +1,10 @@
 name: CI
 
-# One workflow, parallel jobs, one required check (`gate`).
-# Runner: GitHub-hosted by default. To use the self-hosted pool instead, set the repository
-# variable CI_RUNS_ON to: ["self-hosted","linux","x64","erp-ci"]
-# Mirror locally with: npm run ci:fast
+# GitHub-hosted runners, parallel jobs, one required check (`gate`).
+# SECURITY: this workflow runs on pull requests, so it must never use a self-hosted runner:
+# in a public repository anyone can open a pull request, and the job would run their code on your machine.
+# Self-hosted is only for deploy/backup/audit (scheduled or after CI on main), see those workflows.
+# Mirror the static + test checks locally with: npm run ci:fast
 
 on:
   pull_request:
@@ -11,6 +12,7 @@ on:
     branches: [main]
   merge_group:
 
+# A newer push to a pull request cancels the older run.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -21,7 +23,7 @@ permissions:
 jobs:
   static:
     name: Static checks
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -46,7 +48,7 @@ jobs:
 
   test:
     name: Unit and integration tests
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -55,19 +57,16 @@ jobs:
       # The schema hardcodes file:./dev.db, so create prisma/dev.db before running them.
       - name: Create test database
         run: npx prisma db push --skip-generate
-
-      # Full Vitest suite (previously only 2 of ~90 test files ran in CI).
       - name: Vitest
         run: npm test
 
   prisma:
     name: Prisma migrations
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-
       # Runs in an isolated temp copy of the schema (prisma/schema.prisma hardcodes file:./dev.db).
       # Path 1: baseline -> migrate deploy -> no drift vs schema.prisma (fails if the schema changed
       # without a migration). Path 2: a `db push` database adopts the history via `migrate resolve`.
@@ -76,7 +75,7 @@ jobs:
 
   build:
     name: Production build
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
+    runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
       NODE_OPTIONS: --max-old-space-size=4096
@@ -98,18 +97,17 @@ jobs:
 
   e2e-smoke:
     name: Browser smoke (demo)
-    runs-on: ${{ fromJSON(vars.CI_RUNS_ON || '"ubuntu-latest"') }}
-    timeout-minutes: 30
-    # Advisory until it has proven stable on this runner. Set repository variable
-    # CI_SMOKE_BLOCKING=true to make it required through the gate job.
-    continue-on-error: ${{ vars.CI_SMOKE_BLOCKING != 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    # Required by default. If it ever becomes flaky, set repository variable CI_SMOKE_ADVISORY=true
+    # to keep it running but stop it blocking merges.
+    continue-on-error: ${{ vars.CI_SMOKE_ADVISORY == 'true' }}
     env:
       NEXT_TELEMETRY_DISABLED: "1"
       DEMO_CIRCUIT_BREAKER_THRESHOLD: "1000"
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-
       - uses: ./.github/actions/test-env
 
       # Runs against `next dev` (see playwright.config.ts): demo sign-in needs the
@@ -125,6 +123,22 @@ jobs:
           path: playwright-report/
           retention-days: 14
           if-no-files-found: ignore
+
+  # Pull requests only: flags newly added dependencies with known vulnerabilities or disallowed licences.
+  # Advisory (not in the gate): it needs the repository's dependency graph, which is on for public repos.
+  dependency-review:
+    name: Dependency review
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
 
   # The only check branch protection needs to require: stable name, and it fails if any
   # job failed or was cancelled (skipped is fine).

@@ -578,7 +578,7 @@ export default function AuthModal({
     >
       <div
         className={cn(
-          "w-full max-w-md text-card-foreground overflow-hidden animate-in duration-300 max-h-[90vh] sm:max-h-none overflow-y-auto",
+          "w-full max-w-md text-card-foreground overflow-hidden animate-in duration-300 max-h-[90dvh] sm:max-h-none overflow-y-auto",
           isEmbedded
             ? [
                 "rounded-2xl sm:rounded-[1.35rem]",

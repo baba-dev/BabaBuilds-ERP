@@ -627,7 +627,7 @@ model Workspace {
 
   // Canonical provider contract identity and cancellation reconciliation state.
   // PREPAID orders expire locally; RECURRING contracts must be cancelled at the provider first.
-  billingProvider               String? // "RAZORPAY" | "STRIPE"
+  billingProvider               String? // "RAZORPAY" | "STRIPE" | "GOOGLE_PLAY"
   billingContractType           String   @default("PREPAID") // "PREPAID" | "RECURRING"
   billingProviderSubscriptionId String?
   subscriptionCancelAtPeriodEnd Boolean  @default(false)
@@ -650,6 +650,7 @@ model Workspace {
   clients                         Client[]
   invoices                        Invoice[]
   billingTransactions             BillingTransaction[]
+  playPurchases                   PlayPurchase[]
   resellerLeads                  ResellerLead[]
   customerReferralProfiles       CustomerReferralProfile[]
   referralRedemptions            CustomerReferralRedemption[]
@@ -773,6 +774,11 @@ model Workspace {
   @@index([isDemo])
   @@index([demoExpiresAt])
   @@index([demoTemplateKey])
+  reportViews ReportView[]
+  employeeCompensations EmployeeCompensation[]
+  payrollAdjustments    PayrollAdjustment[]
+  employeeLoans         EmployeeLoan[]
+  payrollRemittances    PayrollRemittance[]
 }
 
 model CompanyGroup {
@@ -1140,6 +1146,36 @@ model AppActivityLog {
   @@index([workspaceId, createdAt(sort: Desc)])
   @@index([action, createdAt(sort: Desc)])
   @@index([actorUserId, createdAt(sort: Desc)])
+}
+
+/// A Google Play subscription purchase token, bound to exactly one workspace.
+/// Created only by the authenticated verify endpoint; Real-time developer notifications (RTDN)
+/// carry just the token, so this table is how a notification finds its workspace.
+model PlayPurchase {
+  id                  String    @id @default(cuid())
+  workspaceId         String
+  workspace           Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  purchaseToken       String    @unique
+  /// Play subscription product id (== our SKU, see lib/billing/play-products.ts)
+  productId           String
+  /// SubscriptionIntervalKey the SKU maps to (MONTHLY, YEARLY, TEAM_MONTHLY, ...)
+  interval            String
+  /// Raw Google SubscriptionPurchaseV2.subscriptionState (e.g. SUBSCRIPTION_STATE_ACTIVE)
+  subscriptionState   String
+  autoRenewing        Boolean   @default(false)
+  expiresAt           DateTime?
+  latestOrderId       String?
+  /// Set when this purchase replaces an earlier token (resubscribe / plan change)
+  linkedPurchaseToken String?
+  isTestPurchase      Boolean   @default(false)
+  acknowledgedAt      DateTime?
+  lastSyncedAt        DateTime  @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId])
 }
 
 model BillingTransaction {
@@ -1628,6 +1664,11 @@ model Invoice {
   collectionRiskScore Float?
   lastReminderSentAt  DateTime?
   followUpStatus      String?
+  /// Collections: what the customer promised, when we next look at this invoice, why it is disputed, how many dunning reminders went out.
+  promiseDate         DateTime?
+  nextFollowUpAt      DateTime?
+  disputeReason       String?
+  collectionReminders Int       @default(0)
   clientName          String
   sacCode             String? // Removed the hardcoded @default("998313")
   serviceDescription  String
@@ -2785,6 +2826,10 @@ model CashForecastAlertPreference {
   warningEnabled  Boolean @default(true)
   infoEnabled     Boolean @default(true)
 
+  /// Last time the nightly job told the team about a coming shortfall, and which one, so the same warning is not sent every night.
+  lastAlertAt  DateTime?
+  lastAlertKey String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3361,6 +3406,13 @@ model Product {
   shopDescription String?
   shopImageUrl    String?
 
+  /// Soft delete: a product that appears on invoices or orders is archived, never removed.
+  archivedAt       DateTime?
+  /// How many to order when restocking, and from whom (a Vendor id), for reorder suggestions.
+  reorderQuantity  Int?
+  preferredVendorId String?
+  leadTimeDays     Int?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3408,6 +3460,11 @@ model InventoryMovement {
 
   referenceId String? // ID of Invoice or PO
 
+  /// Cost per unit of what moved (set on receipts), and the stock level after the movement.
+  unitCost        Decimal?
+  balanceAfter    Int?
+  createdByUserId String?
+
   createdAt DateTime @default(now())
 
   @@index([workspaceId])
@@ -3428,6 +3485,11 @@ model PurchaseOrder {
   supplierGstin     String?
   supplierStateCode String?
   supplierInvoiceNo String?
+
+  vendorId        String?
+  notes           String?
+  sentAt          DateTime?
+  createdByUserId String?
 
   expectedDate        DateTime?
   paymentTermsDays    Int?
@@ -3456,6 +3518,8 @@ model PurchaseOrderItem {
   quantity      Int
   unitPrice     Decimal
   expectedTotal Decimal
+  /// How many have arrived so far; a purchase order can be received in parts.
+  receivedQuantity Int @default(0)
 
   // GST: HSN and rate (percent) on this line; defaults come from the product master.
   hsnCode String?
@@ -3495,7 +3559,17 @@ model ShopOrder {
   stripeSessionId       String?
 
   // Status lifecycle
-  status String @default("PENDING") // PENDING | PAID | FAILED | REFUNDED
+  status String @default("PENDING") // PENDING | PAID | SHIPPED | FULFILLED | FAILED | REFUND_DUE | REFUNDED
+
+  // Delivery
+  shippingAddress String?
+  courier         String?
+  trackingRef     String?
+  internalNote    String?
+  paidAt          DateTime?
+  shippedAt       DateTime?
+  fulfilledAt     DateTime?
+  refundedAt      DateTime?
 
   // Linked ERP invoice (auto-generated on payment success, nulled if invoice deleted)
   linkedInvoiceId String?
@@ -4406,6 +4480,9 @@ model Employee {
   attendanceRecords AttendanceRecord[]
   leaveRequests     LeaveRequest[]
   leaveBalances     LeaveBalance[]
+  compensations     EmployeeCompensation[]
+  payrollAdjustments PayrollAdjustment[]
+  loans             EmployeeLoan[]
 
   @@unique([workspaceId, employeeCode])
   @@index([workspaceId, status])
@@ -4544,6 +4621,8 @@ model PayrollPeriod {
   updatedAt DateTime @updatedAt
 
   runs PayrollRun[]
+  adjustments PayrollAdjustment[]
+  remittances PayrollRemittance[]
 
   @@unique([workspaceId, startDate, endDate])
   @@index([workspaceId, status, startDate, endDate])
@@ -4571,10 +4650,20 @@ model PayrollRun {
   generatedByUserId String?
   generatedAt       DateTime  @default(now())
   approvedAt        DateTime?
+  approvedByUserId  String?
+  submittedAt       DateTime?
+  disbursedAt       DateTime?
+  disbursedByUserId String?
+  disbursementTxId  String?
+  notes             String?
+  /// Pre-flight findings and variance flags captured when the run was generated.
+  preflightJson     Json?
+  summaryJson       Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  remittances PayrollRemittance[]
   employeeSnapshots PayrollEmployeeSnapshot[]
   lineItems         PayrollLineItem[]
   posting           PayrollPosting?
@@ -4639,6 +4728,11 @@ model PayrollLineItem {
   currency       String @default("INR")
   breakdownJson  Json?
   calculationLog Json?
+  statutoryJson  Json?
+  payoutStatus   String    @default("PENDING") // PENDING | PAID | FAILED | HELD
+  paidAt         DateTime?
+  payoutRef      String?
+  payslipSentAt  DateTime?
 
   createdAt DateTime @default(now())
 
@@ -4767,6 +4861,129 @@ model PayrollPayComponent {
 
   @@unique([workspaceId, code])
   @@index([workspaceId, category])
+}
+
+/**
+ * EmployeeCompensation: effective-dated pay structure, statutory identifiers and bank details.
+ * The row with the latest effectiveFrom on or before the period end applies. Account numbers and PAN are
+ * encrypted; only the last four characters are kept in clear for display.
+ */
+model EmployeeCompensation {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  effectiveFrom DateTime
+  annualCtc     Decimal  @default(0)
+  /// [{ code, label, monthly, taxable, prorate, kind: "earning" }]
+  componentsJson Json
+
+  taxRegime           String  @default("new") // new | old
+  oldRegimeDeductions Decimal @default(0) // declared yearly deductions (80C, 80D, home loan interest, ...)
+  pfEnabled           Boolean @default(true)
+  pfOnActualBasic     Boolean @default(false) // false: wage ceiling of 15,000 applies
+  esiEnabled          Boolean @default(false)
+  ptState             String? // two-letter state code, e.g. MH
+
+  panEnc       String?
+  panLast4     String?
+  uan          String?
+  esiNumber    String?
+  accountHolder String?
+  bankName      String?
+  ifsc          String?
+  accountEnc    String?
+  accountLast4  String?
+  paymentMode   String  @default("BANK_TRANSFER") // BANK_TRANSFER | CASH | CHEQUE | UPI
+
+  note            String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([workspaceId, employeeId, effectiveFrom(sort: Desc)])
+}
+
+/** One-off pay items for a period: bonus, arrears, reimbursement, deduction, or loss-of-pay days. */
+model PayrollAdjustment {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodId String
+  period   PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  kind    String // EARNING | BONUS | ARREARS | REIMBURSEMENT | DEDUCTION | LOP_DAYS
+  code    String
+  label   String
+  amount  Decimal // rupees, or days when kind = LOP_DAYS
+  taxable Boolean @default(true)
+  note    String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  @@index([workspaceId, periodId])
+  @@index([periodId, employeeId])
+}
+
+/** Salary advance or loan recovered through payroll in fixed instalments. */
+model EmployeeLoan {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  label       String
+  principal   Decimal
+  emi         Decimal
+  outstanding Decimal
+  status      String   @default("ACTIVE") // ACTIVE | CLOSED
+  startPeriod DateTime
+  note        String?
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([workspaceId, employeeId, status])
+}
+
+/** A statutory amount owed to a government body for one payroll period: PF, ESI, professional tax or TDS. */
+model PayrollRemittance {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  periodId String
+  period   PayrollPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  runId String?
+  run   PayrollRun? @relation(fields: [runId], references: [id], onDelete: SetNull)
+
+  kind    String // PF | ESI | PT | TDS
+  amount  Decimal
+  dueDate DateTime
+  status  String   @default("DUE") // DUE | PAID
+
+  paidAt          DateTime?
+  paidByUserId    String?
+  reference       String? // challan / TRRN number
+  accountingTxId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, periodId, kind])
+  @@index([workspaceId, status, dueDate])
 }
 
 /**
@@ -5164,4 +5381,76 @@ model ClientNote {
   createdAt    DateTime @default(now())
 
   @@index([workspaceId, clientId, createdAt(sort: Desc)])
+}
+
+
+/// A saved report: the report plus its filters, optionally pinned, optionally emailed on a schedule.
+model ReportView {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  createdByUserId String?
+  name            String
+  /// Report key from the catalog, for example "pnl" or "ar_aging".
+  reportId        String
+  paramsJson      Json?
+  pinned          Boolean @default(false)
+  /// PRIVATE (only the creator) or WORKSPACE (everyone with reporting access).
+  visibility      String  @default("WORKSPACE")
+  /// Show this report's key figures on the dashboard.
+  pinnedToDashboard Boolean @default(false)
+
+  /// WEEKLY (Mondays) or MONTHLY (the 1st). Null means not scheduled.
+  scheduleFrequency  String?
+  scheduleRecipients String?
+  scheduleFormat     String    @default("CSV")
+  scheduleEnabled    Boolean   @default(true)
+  /// Hour of day (0 to 23) in scheduleTz at which the email goes out.
+  scheduleHour       Int       @default(7)
+  scheduleTz         String    @default("UTC")
+  scheduleNextAt     DateTime?
+  scheduleLastAt     DateTime?
+  scheduleLastError  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([workspaceId, createdByUserId])
+  @@index([scheduleNextAt])
+}
+
+/// A sale put on hold at the counter so another customer can be served. Kept on the server so any till can pick it up.
+model PosHeldSale {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  label       String?
+  clientId    String?
+  /// The cart as the register saved it: lines, quantities and the discount that was applied.
+  cartJson    Json
+  itemCount   Int      @default(0)
+  total       Decimal  @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId, createdAt])
+}
+
+/// An end-of-shift cash count at the counter: what the till should hold against what was counted.
+model PosCloseout {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  userId       String
+  /// The shift covers sales from the previous close (or the start of the day) up to this moment.
+  periodStart  DateTime
+  closedAt     DateTime @default(now())
+  salesCount   Int      @default(0)
+  totalSales   Decimal  @default(0)
+  expectedCash Decimal  @default(0)
+  countedCash  Decimal  @default(0)
+  variance     Decimal  @default(0)
+  byMethodJson Json?
+  notes        String?
+
+  @@index([workspaceId, closedAt])
 }

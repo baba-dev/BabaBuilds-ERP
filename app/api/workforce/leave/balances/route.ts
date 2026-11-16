@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { ensureBalances } from '@/lib/workforce/leave-service';
 import { requirePermission, checkPermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
 import { requireModule, ModuleDisabledError } from '@/lib/modules';
 import { getEmployeeByUserId } from '@/lib/workforce/index';
@@ -33,7 +34,8 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url);
-    const year = parseInt(searchParams.get('year') ?? String(new Date().getFullYear()));
+    const parsedYear = parseInt(searchParams.get('year') ?? String(new Date().getUTCFullYear()), 10);
+    const year = Number.isFinite(parsedYear) && parsedYear > 2000 && parsedYear < 2100 ? parsedYear : new Date().getUTCFullYear();
     const employeeIdParam = searchParams.get('employeeId');
 
     let employeeId: string | null = employeeIdParam;
@@ -51,6 +53,7 @@ export async function GET(req: NextRequest) {
     }
     if (!employeeId) return NextResponse.json({ balances: [] });
 
+    await ensureBalances(wid, employeeId, year);
     const balances = await prisma.leaveBalance.findMany({
       where: { workspaceId: wid, employeeId, year },
       include: { leaveType: { select: { id: true, name: true, code: true, color: true, isPaid: true } } },

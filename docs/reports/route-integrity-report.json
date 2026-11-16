@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-14T07:45:12.283Z",
+  "generatedAt": "2026-11-16T09:24:23.500Z",
   "summary": {
-    "knownRoutes": 132,
-    "checkedReferencedRoutes": 106,
+    "knownRoutes": 127,
+    "checkedReferencedRoutes": 99,
     "brokenReferencedRoutes": 0
   },
   "gate": {
@@ -24,7 +24,6 @@
         "app/api/admin/maintenance/route.ts",
         "app/api/chat/route.ts",
         "app/api/documents/upload/route.ts",
-        "app/api/inventory/products/[id]/route.ts",
         "app/api/settings/route.ts",
         "app/api/shop/[slug]/assets/[...asset]/route.ts",
         "app/api/user/profile/route.ts",
@@ -50,7 +49,8 @@
         "components/documents/UnifiedDocumentList.tsx",
         "components/invoice/InvoiceGeneratorForm.tsx",
         "components/notifications/CommsHub.tsx",
-        "components/payments/CloseWindowButton.tsx"
+        "components/payments/CloseWindowButton.tsx",
+        "components/pos/PosRegister.tsx"
       ]
     },
     {
@@ -154,70 +154,10 @@
       "exists": true,
       "references": [
         "app/(dashboard)/cash-flow/layout.tsx",
-        "app/(dashboard)/retainers/_components/RetainerDrawer.tsx",
-        "app/(dashboard)/settings/_components/sections/Automation.tsx"
-      ]
-    },
-    {
-      "route": "/cash-flow/alerts",
-      "exists": true,
-      "references": [
-        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
-      ]
-    },
-    {
-      "route": "/cash-flow/assumptions",
-      "exists": true,
-      "references": [
-        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx",
-        "app/(dashboard)/cash-flow/_components/primitives/line-item-detail-sheet.tsx",
-        "app/(dashboard)/cash-flow/_components/primitives/state.tsx",
-        "app/(dashboard)/cash-flow/scenarios/page.tsx"
-      ]
-    },
-    {
-      "route": "/cash-flow/inflows",
-      "exists": true,
-      "references": [
-        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
-      ]
-    },
-    {
-      "route": "/cash-flow/manual-adjustments",
-      "exists": true,
-      "references": [
-        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
-      ]
-    },
-    {
-      "route": "/cash-flow/outflows",
-      "exists": true,
-      "references": [
-        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
-      ]
-    },
-    {
-      "route": "/cash-flow/overview",
-      "exists": true,
-      "references": [
-        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx",
-        "app/(dashboard)/cash-flow/page.tsx",
         "app/(dashboard)/reconciliation/import/page.tsx",
+        "app/(dashboard)/retainers/_components/RetainerDrawer.tsx",
+        "app/(dashboard)/settings/_components/sections/Automation.tsx",
         "components/navigation/nav-config.ts"
-      ]
-    },
-    {
-      "route": "/cash-flow/scenarios",
-      "exists": true,
-      "references": [
-        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
-      ]
-    },
-    {
-      "route": "/cash-flow/variance",
-      "exists": true,
-      "references": [
-        "app/(dashboard)/cash-flow/_components/cash-flow-subnav.tsx"
       ]
     },
     {
@@ -236,6 +176,7 @@
         "app/sw.ts",
         "components/dashboard/GuidedFlowsHub.tsx",
         "components/gst/GstPreviewCard.tsx",
+        "components/layout/mobile-nav.tsx",
         "components/navigation/nav-config.ts",
         "components/onboarding/FirstLookWelcome.tsx"
       ]
@@ -323,11 +264,21 @@
         "components/LandingNavbar.tsx",
         "components/app-sidebar.tsx",
         "components/landing/persona/DemoLaunchButton.tsx",
+        "components/layout/mobile-nav.tsx",
         "components/modules/ModuleUnavailable.tsx",
         "components/navigation/nav-config.ts",
         "components/navigation/nav-main.tsx",
         "components/onboarding/FirstLookWelcome.tsx",
         "components/setup/SetupWizard.tsx"
+      ]
+    },
+    {
+      "route": "/delete-account",
+      "exists": true,
+      "references": [
+        "app/delete-account/page.tsx",
+        "app/privacy/page.tsx",
+        "app/sitemap.ts"
       ]
     },
     {
@@ -415,6 +366,7 @@
         "app/api/open-file/route.ts",
         "app/manifest.ts",
         "app/sw.ts",
+        "components/layout/mobile-nav.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
@@ -576,6 +528,7 @@
         "app/(dashboard)/dashboard/page.tsx",
         "app/(dashboard)/income/new/page.tsx",
         "app/(dashboard)/launch/page.tsx",
+        "app/(dashboard)/shop/_components/OrderDrawer.tsx",
         "app/api/chat/route.ts",
         "app/api/dashboard/route.ts",
         "app/api/open-file/route.ts",
@@ -583,6 +536,7 @@
         "app/sw.ts",
         "components/dashboard/GuidedFlowsHub.tsx",
         "components/invoice/InvoiceGeneratorForm.tsx",
+        "components/layout/mobile-nav.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
@@ -598,7 +552,8 @@
       "exists": true,
       "references": [
         "app/(dashboard)/inventory/purchase-orders/page.tsx",
-        "app/(dashboard)/shop/ShopDashboardClient.tsx",
+        "app/(dashboard)/shop/_components/CatalogPanel.tsx",
+        "app/(dashboard)/shop/_components/StorefrontPanel.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
@@ -641,6 +596,7 @@
         "components/AuthModal.tsx",
         "components/auth/LoginShowcase.tsx",
         "components/layout/DashboardShell.tsx",
+        "components/layout/mobile-nav.tsx",
         "components/setup/SetupWizard.tsx"
       ]
     },
@@ -684,6 +640,8 @@
       "exists": true,
       "references": [
         "app/(dashboard)/payroll/layout.tsx",
+        "app/(dashboard)/payroll/new/page.tsx",
+        "app/(dashboard)/payroll/runs/[id]/page.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
@@ -691,8 +649,7 @@
       "route": "/payroll/settings",
       "exists": true,
       "references": [
-        "app/(dashboard)/payroll/page.tsx",
-        "app/(dashboard)/payroll/runs/[id]/page.tsx"
+        "app/(dashboard)/payroll/page.tsx"
       ]
     },
     {
@@ -707,7 +664,9 @@
       "exists": true,
       "references": [
         "app/(dashboard)/settings/billing/BillingSettingsClient.tsx",
+        "app/delete-account/page.tsx",
         "app/refund-cancellation/page.tsx",
+        "app/shop/[slug]/CartCheckout.tsx",
         "app/shop/[slug]/ShopClient.tsx",
         "app/sitemap.ts",
         "app/terms/page.tsx",
@@ -799,6 +758,7 @@
       "references": [
         "app/(dashboard)/settings/billing/BillingSettingsClient.tsx",
         "app/privacy/page.tsx",
+        "app/shop/[slug]/CartCheckout.tsx",
         "app/shop/[slug]/ShopClient.tsx",
         "app/sitemap.ts",
         "app/terms/page.tsx",
@@ -809,9 +769,10 @@
       "route": "/reporting",
       "exists": true,
       "references": [
+        "app/(dashboard)/reporting/[reportId]/page.tsx",
         "app/(dashboard)/reporting/layout.tsx",
-        "components/navigation/nav-config.ts",
-        "components/reporting/reporting-center.tsx"
+        "app/api/chat/route.ts",
+        "components/navigation/nav-config.ts"
       ]
     },
     {
@@ -873,6 +834,7 @@
       "route": "/settings",
       "exists": true,
       "references": [
+        "app/(dashboard)/ar-collections/page.tsx",
         "app/(dashboard)/dashboard/dashboard-right-rail.tsx",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
         "app/(dashboard)/dashboard/page.tsx",
@@ -883,11 +845,13 @@
         "app/(dashboard)/reporting/layout.tsx",
         "app/(dashboard)/settings/_components/sections/Automation.tsx",
         "app/(dashboard)/settings/team/page.tsx",
+        "app/(dashboard)/shop/_components/StorefrontPanel.tsx",
         "app/(dashboard)/shop/page.tsx",
         "app/(dashboard)/tax/_components/SmallBusinessPanel.tsx",
         "app/api/chat/route.ts",
         "components/AIChatbot.tsx",
         "components/landing/MobileNativeInstallSection.tsx",
+        "components/layout/mobile-nav.tsx",
         "components/modules/ModuleUnavailable.tsx",
         "components/navigation/nav-secondary.tsx",
         "components/onboarding/FirstLookWelcome.tsx"
@@ -1019,8 +983,10 @@
       "exists": true,
       "references": [
         "app/(dashboard)/settings/billing/BillingSettingsClient.tsx",
+        "app/delete-account/page.tsx",
         "app/privacy/page.tsx",
         "app/refund-cancellation/page.tsx",
+        "app/shop/[slug]/CartCheckout.tsx",
         "app/shop/[slug]/ShopClient.tsx",
         "app/sitemap.ts",
         "app/tax-engine-scope/page.tsx",
@@ -1042,7 +1008,6 @@
       "route": "/workforce/attendance",
       "exists": true,
       "references": [
-        "app/(dashboard)/workforce/page.tsx",
         "components/workforce/WorkforceLayout.tsx"
       ]
     },
@@ -1067,7 +1032,6 @@
       "route": "/workforce/reports",
       "exists": true,
       "references": [
-        "app/(dashboard)/workforce/page.tsx",
         "components/workforce/WorkforceLayout.tsx"
       ]
     },

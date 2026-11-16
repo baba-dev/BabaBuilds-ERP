@@ -6,6 +6,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { logActivity } from "@/lib/security/activity-log";
+import { utcDay } from "@/lib/workforce/calendar";
+import { holidaySchema } from "@/lib/workforce/settings-schemas";
+import { readJson, requireWorkforce, workforceErrorResponse } from "../../_guard";
 import { prisma } from "@/lib/prisma";
 import { RbacDeniedError, rbacDeniedResponse, requirePermission } from "@/lib/rbac";
 import { ModuleDisabledError, requireModule } from "@/lib/modules";
@@ -51,42 +55,16 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const wid = await getWid(session);
-    if (!wid) return NextResponse.json({ error: "No workspace" }, { status: 400 });
-
-    try {
-      await requireModule(wid, "WORKFORCE");
-      await requirePermission(session.user.id, wid, "workforce.settings.manage");
-    } catch (e) {
-      if (e instanceof ModuleDisabledError) return NextResponse.json({ error: "Module disabled" }, { status: 403 });
-      if (e instanceof RbacDeniedError) return rbacDeniedResponse(e);
-      throw e;
-    }
-
-    const body = (await req.json()) as { name?: string; date?: string; isRecurring?: boolean; year?: number | null };
-    const name = body.name?.trim();
-    if (!name) return NextResponse.json({ error: "name is required" }, { status: 400 });
-    if (!body.date) return NextResponse.json({ error: "date is required" }, { status: 400 });
-
-    const date = new Date(body.date);
-    if (!Number.isFinite(date.getTime())) return NextResponse.json({ error: "date is invalid" }, { status: 400 });
-
-    const holiday = await prisma.workforceHoliday.create({
-      data: {
-        workspaceId: wid,
-        name,
-        date,
-        isRecurring: body.isRecurring ?? true,
-        year: body.isRecurring ? null : (body.year ?? date.getUTCFullYear()),
-      },
-    });
-
+    const g = await requireWorkforce('workforce.settings.manage');
+    if ('response' in g) return g.response;
+    const d = holidaySchema.parse(await readJson(req));
+    const date = utcDay(d.date);
+    const dup = await prisma.workforceHoliday.findFirst({ where: { workspaceId: g.access.workspaceId, date, name: d.name }, select: { id: true } });
+    if (dup) return NextResponse.json({ code: 'DUPLICATE', error: 'That holiday already exists.' }, { status: 409 });
+    const holiday = await prisma.workforceHoliday.create({ data: { workspaceId: g.access.workspaceId, name: d.name, date, isRecurring: d.isRecurring, year: d.isRecurring ? null : date.getUTCFullYear() } });
+    void logActivity({ workspaceId: g.access.workspaceId, action: 'workforce.holiday_added', status: 'SUCCESS', actor: { userId: g.access.userId, email: g.access.email }, entity: { type: 'holiday', id: holiday.id }, metadata: { name: d.name, date: d.date } });
     return NextResponse.json(holiday, { status: 201 });
-  } catch (err) {
-    console.error("[holidays/POST]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  } catch (error) {
+    return workforceErrorResponse(error, 'holidays.create');
   }
 }
-

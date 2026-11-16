@@ -103,7 +103,7 @@ export default async function LoginShowcase() {
         >
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-white/90">{t("preview.title")}</p>
-            <span className="rounded-full border border-white/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-white/50">
+            <span className="rounded-full border border-white/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-widest text-white/50">
               {t("preview.sample")}
             </span>
           </div>

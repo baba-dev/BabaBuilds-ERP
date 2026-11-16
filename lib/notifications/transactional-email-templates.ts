@@ -174,6 +174,45 @@ export function buildPaymentReminderEmail(args: {
   };
 }
 
+/** Reminder wording that gets firmer as an invoice ages: friendly, then firm, then final notice. */
+export function buildDunningEmail(args: {
+  companyName: string;
+  clientName: string;
+  invoiceNumber: string;
+  outstandingAmountFormatted: string;
+  dueDateFormatted: string;
+  daysOverdue: number;
+  tone: 'friendly' | 'firm' | 'final';
+}): TemplateResult {
+  const client = escapeHtml(args.clientName);
+  const invoice = escapeHtml(args.invoiceNumber);
+  const amount = escapeHtml(args.outstandingAmountFormatted);
+  const due = escapeHtml(args.dueDateFormatted);
+  const days = Math.max(0, Math.round(args.daysOverdue));
+  const copy = {
+    friendly: {
+      subject: `Friendly reminder: Invoice ${args.invoiceNumber}`, title: 'Payment Reminder', accent: '#f59e0b',
+      body: `<p>Hi ${client},</p><p>A quick reminder that invoice <strong>${invoice}</strong> (${amount}) was due on ${due}. If it has already been paid, thank you and please ignore this note.</p><p>If anything is holding it up, just reply and we will sort it out.</p>`,
+      text: `Hi ${args.clientName},\n\nA quick reminder that invoice ${args.invoiceNumber} (${args.outstandingAmountFormatted}) was due on ${args.dueDateFormatted}. If it has already been paid, thank you.\n\nIf anything is holding it up, just reply and we will sort it out.\n\n${args.companyName}`,
+    },
+    firm: {
+      subject: `Overdue: Invoice ${args.invoiceNumber} (${days} days)`, title: 'Invoice Overdue', accent: '#ea580c',
+      body: `<p>Dear ${client},</p><p>Invoice <strong>${invoice}</strong> for <strong>${amount}</strong> is now <strong>${days} days overdue</strong> (due ${due}). Please arrange payment this week, or reply with the date we can expect it.</p><p>If there is a problem with the invoice, tell us so we can resolve it.</p>`,
+      text: `Dear ${args.clientName},\n\nInvoice ${args.invoiceNumber} for ${args.outstandingAmountFormatted} is now ${days} days overdue (due ${args.dueDateFormatted}). Please arrange payment this week, or reply with the date we can expect it.\n\nIf there is a problem with the invoice, tell us so we can resolve it.\n\n${args.companyName}`,
+    },
+    final: {
+      subject: `Final notice: Invoice ${args.invoiceNumber}`, title: 'Final Notice', accent: '#dc2626',
+      body: `<p>Dear ${client},</p><p>This is a final reminder. Invoice <strong>${invoice}</strong> for <strong>${amount}</strong> is <strong>${days} days overdue</strong> (due ${due}). Please pay immediately, or contact us today to agree a plan, so that we do not have to take further steps.</p>`,
+      text: `Dear ${args.clientName},\n\nThis is a final reminder. Invoice ${args.invoiceNumber} for ${args.outstandingAmountFormatted} is ${days} days overdue (due ${args.dueDateFormatted}). Please pay immediately, or contact us today to agree a plan.\n\n${args.companyName}`,
+    },
+  }[args.tone];
+  return {
+    subject: copy.subject,
+    html: brandedLayout({ title: copy.title, eyebrow: 'Accounts Receivable', subtitle: `Invoice ${invoice} · ${amount}`, companyName: args.companyName, accentColor: copy.accent, bodyHtml: copy.body }),
+    text: copy.text,
+  };
+}
+
 export function buildProposalEmail(args: {
   companyName: string;
   clientName: string;

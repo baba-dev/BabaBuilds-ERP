@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 
 /**
  * GET /api/shop/check-slug?slug=myshop
  * Public endpoint — checks if a shop slug is available.
  */
 export async function GET(request: Request) {
+  const limit = enforceRouteRateLimit({ request, route: '/api/shop/check-slug', scope: 'public', max: 60, windowMs: 60_000 });
+  if (!limit.ok) return limit.response;
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get('slug')?.toLowerCase().trim();
 

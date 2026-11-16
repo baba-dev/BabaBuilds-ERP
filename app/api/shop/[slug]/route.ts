@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isModuleEnabled } from '@/lib/modules';
+import { supplierChargesGst } from '@/lib/msme/threshold';
 import { readShopContent } from '@/lib/shop/content';
 import { publicStorefrontAssetUrl } from '@/lib/shop/public-assets';
 
@@ -22,7 +23,7 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         workspace: {
           include: {
             products: {
-              where: { currentStock: { gt: 0 }, showInShop: true },
+              where: { currentStock: { gt: 0 }, showInShop: true, archivedAt: null },
               orderBy: [{ shopSortOrder: 'asc' }, { name: 'asc' }],
             },
           },
@@ -61,6 +62,8 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
         address:        profile.address,
       },
       content,
+      currency: (profile.workspace.baseCurrency || 'INR').toUpperCase(),
+      chargesGst: supplierChargesGst(profile, profile.workspace.countryCode || 'IN'),
       checkout: {
         available:      !!activeGateway,
         gateway:        activeGateway,        // 'RAZORPAY' | 'STRIPE' | null
@@ -80,6 +83,7 @@ export async function GET(_req: Request, context: { params: Promise<{ slug: stri
           productId: product.id,
         }),
         price: Number(product.baselinePrice),
+        taxRate: product.gstRate ?? 0,
         currentStock: product.currentStock,
       })),
     });

@@ -1,42 +1,26 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { computeAndPersistCashForecastSnapshot } from "@/lib/cash-flow/persist";
-import { requireCashFlowModule } from "@/app/api/cash-flow/_module";
+import { z } from "zod";
+import { cashFlowError, requireCashFlowAccess } from "@/lib/cash-flow/access";
+import { saveHorizonSnapshots } from "@/lib/cash-flow/persist";
+import { enforceRouteRateLimit } from "@/lib/route-rate-limit";
+import { logActivity } from "@/lib/security/activity-log";
 
+const bodySchema = z.object({ horizonType: z.enum(["DAILY_30", "WEEKLY_13", "MONTHLY_12"]).default("WEEKLY_13") });
+
+/** Save today's forecast (all three scenarios) so it can later be compared with what happened. The live view never needs this; the nightly job does it too. */
 export async function POST(request: Request) {
+  const auth = await requireCashFlowAccess("cash_flow.view");
+  if (!auth.ok) return auth.response;
+  const limit = enforceRouteRateLimit({ request, route: "/api/cash-flow/refresh", scope: "refresh", max: 10, windowMs: 10 * 60_000 });
+  if (!limit.ok) return limit.response;
+  const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
+  if (!parsed.success) return cashFlowError(400, "INVALID_BODY", "Unknown horizon.");
   try {
-    const session = await getServerSession(authOptions);
-    const workspaceId = session?.workspaceId as string | undefined;
-    if (!session || !workspaceId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-  const moduleGate = await requireCashFlowModule(workspaceId);
-  if (moduleGate) return moduleGate;
-
-    const body = (await request.json().catch(() => ({}))) as {
-      horizonType?: "DAILY_30" | "WEEKLY_13" | "MONTHLY_12";
-      scenarioTag?: "BASE" | "BEST_CASE" | "WORST_CASE";
-      startDate?: string;
-    };
-
-    const horizonType = body.horizonType ?? "WEEKLY_13";
-    const scenarioTag = body.scenarioTag ?? "BASE";
-    const startDate = body.startDate ? new Date(body.startDate) : new Date();
-
-    const result = await computeAndPersistCashForecastSnapshot({
-      workspaceId,
-      horizonType,
-      scenarioTag,
-      startDate,
-      generatedBy: "USER",
-    });
-
-    return NextResponse.json({ snapshotId: result.snapshot.id });
+    const { ids } = await saveHorizonSnapshots({ workspaceId: auth.ctx.workspaceId, horizonType: parsed.data.horizonType, generatedBy: "USER" });
+    void logActivity({ action: "cash_forecast_saved", status: "SUCCESS", workspaceId: auth.ctx.workspaceId, actor: { userId: auth.ctx.userId, email: auth.ctx.email }, request, metadata: { horizonType: parsed.data.horizonType } });
+    return NextResponse.json({ snapshotIds: ids });
   } catch (error) {
     console.error("[CASH_FLOW_REFRESH]", error);
-    return NextResponse.json({ error: "Failed to refresh forecast" }, { status: 500 });
+    return cashFlowError(500, "REFRESH_FAILED", "Failed to save the forecast.");
   }
 }
-

@@ -97,11 +97,11 @@ export function LinkedDocumentsPanel({
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <div className="truncate text-sm font-semibold text-foreground">{l.document.title}</div>
-                  <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                  <Badge variant="outline" className="text-[11px] uppercase tracking-wide">
                     {l.relation}
                   </Badge>
                   {l.document.isArchived ? (
-                    <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
+                    <Badge variant="secondary" className="text-[11px] uppercase tracking-wide">
                       Archived
                     </Badge>
                   ) : null}

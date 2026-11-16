@@ -1,97 +1,41 @@
-/**
- * app/api/workforce/settings/leave-types/[id]/route.ts
- * PATCH  — update leave type
- * DELETE — delete leave type (only if unused)
- */
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { RbacDeniedError, rbacDeniedResponse, requirePermission } from "@/lib/rbac";
-import { ModuleDisabledError, requireModule } from "@/lib/modules";
-import { resolveSessionMembership } from '@/lib/workspace-scope';
+import { NextRequest, NextResponse } from 'next/server';
 
-// The workspace the user is in (session), not an arbitrary membership.
-async function getWid(session: Parameters<typeof resolveSessionMembership>[0]) {
-  return (await resolveSessionMembership(session))?.workspaceId ?? null;
-}
+import { prisma } from '@/lib/prisma';
+import { logActivity } from '@/lib/security/activity-log';
+import { leaveTypePatchSchema } from '@/lib/workforce/settings-schemas';
+import { readJson, requireWorkforce, workforceErrorResponse } from '../../../_guard';
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type Ctx = { params: Promise<{ id: string }> };
+const notFound = () => NextResponse.json({ code: 'NOT_FOUND', error: 'Leave type not found.' }, { status: 404 });
+
+export async function PATCH(req: NextRequest, { params }: Ctx) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const wid = await getWid(session);
-    if (!wid) return NextResponse.json({ error: "No workspace" }, { status: 400 });
-
-    try {
-      await requireModule(wid, "WORKFORCE");
-      await requirePermission(session.user.id, wid, "workforce.settings.manage");
-    } catch (e) {
-      if (e instanceof ModuleDisabledError) return NextResponse.json({ error: "Module disabled" }, { status: 403 });
-      if (e instanceof RbacDeniedError) return rbacDeniedResponse(e);
-      throw e;
-    }
-
+    const g = await requireWorkforce('workforce.settings.manage');
+    if ('response' in g) return g.response;
     const { id } = await params;
-    const body = (await req.json()) as Partial<{
-      name: string;
-      description: string | null;
-      color: string;
-      defaultDays: number;
-      isPaid: boolean;
-      isActive: boolean;
-    }>;
-
-    const leaveType = await prisma.leaveType.update({
-      where: { id },
-      data: {
-        ...(body.name != null ? { name: body.name.trim() } : {}),
-        ...(body.description !== undefined ? { description: body.description ? body.description.trim() : null } : {}),
-        ...(body.color != null ? { color: body.color.trim() } : {}),
-        ...(body.defaultDays != null && Number.isFinite(Number(body.defaultDays)) ? { defaultDays: Number(body.defaultDays) } : {}),
-        ...(body.isPaid != null ? { isPaid: body.isPaid } : {}),
-        ...(body.isActive != null ? { isActive: body.isActive } : {}),
-      },
-    });
-
-    return NextResponse.json(leaveType);
-  } catch (err) {
-    console.error("[leave-types/PATCH]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    const d = leaveTypePatchSchema.parse(await readJson(req));
+    const r = await prisma.leaveType.updateMany({ where: { id, workspaceId: g.access.workspaceId }, data: { ...d, ...(d.description !== undefined ? { description: d.description || null } : {}) } });
+    if (r.count === 0) return notFound();
+    void logActivity({ workspaceId: g.access.workspaceId, action: 'workforce.leave_type_updated', status: 'SUCCESS', actor: { userId: g.access.userId, email: g.access.email }, entity: { type: 'leave_type', id }, metadata: { fields: Object.keys(d) } });
+    return NextResponse.json(await prisma.leaveType.findUnique({ where: { id } }));
+  } catch (error) {
+    return workforceErrorResponse(error, 'leave-types.patch');
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(_req: NextRequest, { params }: Ctx) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const wid = await getWid(session);
-    if (!wid) return NextResponse.json({ error: "No workspace" }, { status: 400 });
-
-    try {
-      await requireModule(wid, "WORKFORCE");
-      await requirePermission(session.user.id, wid, "workforce.settings.manage");
-    } catch (e) {
-      if (e instanceof ModuleDisabledError) return NextResponse.json({ error: "Module disabled" }, { status: 403 });
-      if (e instanceof RbacDeniedError) return rbacDeniedResponse(e);
-      throw e;
-    }
-
+    const g = await requireWorkforce('workforce.settings.manage');
+    if ('response' in g) return g.response;
     const { id } = await params;
-
-    const usage = await Promise.all([
-      prisma.leaveRequest.count({ where: { workspaceId: wid, leaveTypeId: id } }),
-      prisma.leaveBalance.count({ where: { workspaceId: wid, leaveTypeId: id } }),
-    ]);
-    if ((usage[0] ?? 0) > 0 || (usage[1] ?? 0) > 0) {
-      return NextResponse.json({ error: "Cannot delete a leave type that is already in use" }, { status: 409 });
-    }
-
-    await prisma.leaveType.delete({ where: { id } });
+    const wid = g.access.workspaceId;
+    if (!(await prisma.leaveType.findFirst({ where: { id, workspaceId: wid }, select: { id: true } }))) return notFound();
+    const [requests, balances] = await Promise.all([prisma.leaveRequest.count({ where: { workspaceId: wid, leaveTypeId: id } }), prisma.leaveBalance.count({ where: { workspaceId: wid, leaveTypeId: id } })]);
+    if (requests > 0 || balances > 0) return NextResponse.json({ code: 'IN_USE', error: 'This leave type is already in use. Turn it off instead of deleting it.' }, { status: 409 });
+    await prisma.leaveType.deleteMany({ where: { id, workspaceId: wid } });
+    void logActivity({ workspaceId: wid, action: 'workforce.leave_type_deleted', status: 'SUCCESS', actor: { userId: g.access.userId, email: g.access.email }, entity: { type: 'leave_type', id } });
     return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("[leave-types/DELETE]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  } catch (error) {
+    return workforceErrorResponse(error, 'leave-types.delete');
   }
 }
-

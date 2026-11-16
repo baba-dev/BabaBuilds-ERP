@@ -31,7 +31,7 @@ export default function HeroRevenueLoopVisual() {
             <p className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-700 dark:text-orange-300">
               {t("label")}
             </p>
-            <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
+            <span className="rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
               {t("live")}
             </span>
           </div>

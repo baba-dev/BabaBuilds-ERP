@@ -42,21 +42,42 @@ export async function GET() {
   const perm = await withPermission(userId, workspaceId, 'shop.view');
   if (!perm.granted) return perm.response;
 
-  const profile = await prisma.businessProfile.findUnique({
-    where: { workspaceId },
-    select: {
-      shopEnabled: true,
-      shopSlug: true,
-      shopTagline: true,
-      shopAccentColor: true,
-    },
-  });
+  const [profile, listed] = await Promise.all([
+    prisma.businessProfile.findUnique({
+      where: { workspaceId },
+      select: {
+        shopEnabled: true,
+        shopSlug: true,
+        shopTagline: true,
+        shopAccentColor: true,
+        razorpayKeyId: true,
+        razorpayKeySecret: true,
+        stripePublishableKey: true,
+        stripeSecretKey: true,
+        defaultGateway: true,
+        smtpHost: true,
+        smtpUser: true,
+        smtpPassword: true,
+        gstRegistrationType: true,
+      },
+    }),
+    prisma.product.count({ where: { workspaceId, showInShop: true, archivedAt: null } }),
+  ]);
 
+  const razorpay = Boolean(profile?.razorpayKeyId && profile?.razorpayKeySecret);
+  const stripe = Boolean(profile?.stripePublishableKey && profile?.stripeSecretKey);
   return NextResponse.json({
     shopEnabled: profile?.shopEnabled ?? false,
     shopSlug: profile?.shopSlug ?? null,
     shopTagline: profile?.shopTagline ?? null,
     shopAccentColor: profile?.shopAccentColor ?? '#6366f1',
+    // Whether the shop can take money and email customers, without exposing any secret.
+    readiness: {
+      gateway: razorpay || stripe ? (razorpay && profile?.defaultGateway !== 'STRIPE' ? 'RAZORPAY' : 'STRIPE') : null,
+      email: Boolean(profile?.smtpHost && profile?.smtpUser && profile?.smtpPassword),
+      listedProducts: listed,
+      gstRegistrationType: profile?.gstRegistrationType ?? null,
+    },
   });
 }
 

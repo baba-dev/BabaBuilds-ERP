@@ -25,10 +25,14 @@ export function invoiceToForecastLines(args: {
     status: "PENDING" | "PARTIALLY_PAID" | "PAID" | "VOID";
     totalAmount: Prisma.Decimal;
     amountReceived: number | Prisma.Decimal | null;
+    exchangeRate?: number | Prisma.Decimal | null;
   };
   workspaceDefaults: {
     paymentTermsDays: number;
   };
+  /** When given, a receivable already past due is moved to now + overdueCollectionDays instead of being left in the past. */
+  now?: Date;
+  overdueCollectionDays?: number;
   paymentBehavior?: {
     avgDaysToPay: number | null;
     medianDaysToPay: number | null;
@@ -41,25 +45,38 @@ export function invoiceToForecastLines(args: {
   inflowHaircutPercent: number;
 }): ForecastLineDraft[] {
   const { invoice, workspaceDefaults, scenarioTag, collectionsDelayDays, paymentBehavior } = args;
-  if (invoice.status === "PAID") return [];
+  if (invoice.status === "PAID" || invoice.status === "VOID") return [];
 
   const received = toDecimal(invoice.amountReceived ?? 0);
-  const remaining = toDecimal(invoice.totalAmount).minus(received);
+  const rate = toDecimal(invoice.exchangeRate ?? 1);
+  // Cash is forecast in the workspace currency: what is still owed, times the invoice's rate.
+  const remaining = toDecimal(invoice.totalAmount).minus(received).mul(rate.gt(0) ? rate : 1);
   if (remaining.lte(0)) return [];
 
   const termsDays = invoice.paymentTermsDays ?? workspaceDefaults.paymentTermsDays;
   const baseDate = invoice.expectedPaymentDate ?? invoice.dueDate ?? addDays(invoice.invoiceDate, termsDays);
   const behaviorAvgDays = paymentBehavior?.avgDaysToPay ?? null;
   const behaviorDelay = behaviorAvgDays !== null ? Math.max(0, Math.round(behaviorAvgDays - termsDays)) : 0;
-  const expectedDate = addDays(baseDate, collectionsDelayDays + behaviorDelay);
+  let expectedDate = addDays(baseDate, collectionsDelayDays + behaviorDelay);
 
   // v2 confidence heuristic: on-time rate drives confidence, with mild penalty for partial-payment behavior.
   const onTimeRate = paymentBehavior?.onTimeRate ?? null;
   const partialPaymentRate = paymentBehavior?.partialPaymentRate ?? null;
-  const confidence =
+  let confidence =
     onTimeRate !== null
       ? Math.max(0.05, Math.min(0.98, onTimeRate - (partialPaymentRate ?? 0) * 0.25))
       : undefined;
+
+  // Past due: the money is still owed, so it stays in the forecast, a little way out, and the older it is the less we trust it.
+  let overdueDays = 0;
+  if (args.now) {
+    const today = new Date(args.now); today.setHours(0, 0, 0, 0);
+    if (expectedDate < today) {
+      overdueDays = Math.max(1, Math.round((today.getTime() - expectedDate.getTime()) / 86_400_000));
+      expectedDate = addDays(today, (args.overdueCollectionDays ?? 7) + (overdueDays > 90 ? 30 : 0));
+      confidence = Math.max(0.1, (confidence ?? 0.7) * (overdueDays > 90 ? 0.4 : overdueDays > 30 ? 0.7 : 0.9));
+    }
+  }
 
   const line: ForecastLineDraft = {
     direction: "INFLOW" as CashForecastDirection,
@@ -77,9 +94,11 @@ export function invoiceToForecastLines(args: {
       status: invoice.status,
       remaining: remaining.toFixed(2),
       clientId: invoice.clientId,
+      dueDate: (invoice.dueDate ?? baseDate).toISOString(),
       behaviorDelayDays: behaviorDelay,
+      overdueDays,
     },
-    explanation: invoice.expectedPaymentDate
+    explanation: overdueDays > 0 ? `Overdue by ${overdueDays} days; assumed collected after follow-up.` : invoice.expectedPaymentDate
       ? "Expected on invoice expected payment date."
       : invoice.dueDate
         ? "Expected on invoice due date (or payment terms fallback)."
@@ -114,8 +133,11 @@ export function retainerToForecastLines(args: {
   // Respect the retainer's own end: an end date and/or a cycle limit stop future billing.
   if (retainer.endDate) events = events.filter((d) => d <= retainer.endDate!);
   if (retainer.maxCycles != null) events = events.slice(0, Math.max(0, retainer.maxCycles - (retainer.cyclesBilled ?? 0)));
-  return events
-    .filter((d) => d >= horizon.startDate && d <= horizon.endDate)
+  // A cycle that should already have been billed is billed on the next run: once, today, however many were missed.
+  const missed = events.filter((d) => d < horizon.startDate);
+  const upcoming = events.filter((d) => d >= horizon.startDate && d <= horizon.endDate);
+  const dated = missed.length ? [horizon.startDate, ...upcoming] : upcoming;
+  return dated
     .map((d) => {
       const expectedDate = addDays(d, collectionsDelayDays);
       const line: ForecastLineDraft = {
@@ -148,6 +170,7 @@ export function purchaseOrderToForecastLines(args: {
   scenarioTag: CashForecastScenarioTag;
   poShiftDays: number;
   outflowIncreasePercent: number;
+  now?: Date;
 }): ForecastLineDraft[] {
   const { purchaseOrder, scenarioTag, poShiftDays } = args;
   const status = purchaseOrder.status;
@@ -156,7 +179,13 @@ export function purchaseOrderToForecastLines(args: {
 
   const baseDate = purchaseOrder.expectedPaymentDate ?? purchaseOrder.expectedDate;
   if (!baseDate) return [];
-  const expectedDate = addDays(baseDate, poShiftDays);
+  let expectedDate = addDays(baseDate, poShiftDays);
+  if (args.now) {
+    const today = new Date(args.now); today.setHours(0, 0, 0, 0);
+    // An order whose payment date passed long ago has almost certainly been paid already (orders carry no paid flag): leave it out.
+    if (expectedDate < addDays(today, -30)) return [];
+    if (expectedDate < today) expectedDate = today;
+  }
 
   const classification: CashForecastClassification = status === "DELIVERED" ? "COMMITTED" : "EXPECTED";
 
@@ -291,6 +320,10 @@ function generateRecurringDates(start: Date, frequency: string, endInclusive: Da
 function incrementFrequency(date: Date, frequency: string): Date {
   const d = new Date(date);
   const f = (frequency || "").toUpperCase();
+  if (f === "WEEKLY") {
+    d.setDate(d.getDate() + 7);
+    return d;
+  }
   if (f === "MONTHLY") {
     d.setMonth(d.getMonth() + 1);
     return d;
@@ -308,42 +341,35 @@ function incrementFrequency(date: Date, frequency: string): Date {
   return d;
 }
 
+const startOfToday = (d: Date) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+
 export async function loadForecastSourceData(args: {
   workspaceId: string;
   startDate: Date;
   endDate: Date;
   now: Date;
 }): Promise<ForecastSourceData> {
-  const { workspaceId, startDate, endDate } = args;
+  const { workspaceId, endDate } = args;
+  // Cash movements are day-level: everything before the start of the first day is already in the opening balance.
+  const startDate = startOfToday(args.startDate);
   const loadStartedAt = Date.now();
 
-  const [accounts, bankTransactions, invoices, retainers, purchaseOrders, manualAdjustments, paymentBehaviors, payrollTransactions] = await Promise.all([
+  const [accounts, bankTransactions, invoices, retainers, purchaseOrders, manualAdjustments, paymentBehaviors, payrollTransactions, recurring] = await Promise.all([
     prisma.bankAccount.findMany({
       where: { workspaceId },
       orderBy: { id: "asc" },
-      select: { id: true, openingBalance: true, openingBalanceDate: true },
+      select: { id: true, name: true, currency: true, openingBalance: true, openingBalanceDate: true },
     }),
     prisma.bankTransaction.findMany({
-      where: { workspaceId, date: { gte: startDate, lte: endDate } },
+      // A move between the business's own accounts changes no one's total cash.
+      where: { workspaceId, isInternalTransfer: false, date: { gte: startDate, lte: endDate } },
       orderBy: [{ date: "asc" }, { id: "asc" }],
       select: { id: true, date: true, description: true, amount: true, accountId: true },
     }),
     prisma.invoice.findMany({
       where: { workspaceId, status: { in: ["PENDING", "PARTIALLY_PAID"] } },
       orderBy: [{ expectedPaymentDate: "asc" }, { dueDate: "asc" }, { invoiceDate: "asc" }, { id: "asc" }],
-      select: {
-        id: true,
-        invoiceNumber: true,
-        clientName: true,
-        invoiceDate: true,
-        dueDate: true,
-        expectedPaymentDate: true,
-        paymentTermsDays: true,
-        clientId: true,
-        status: true,
-        totalAmount: true,
-        amountReceived: true,
-      },
+      select: { id: true, invoiceNumber: true, clientName: true, invoiceDate: true, dueDate: true, expectedPaymentDate: true, paymentTermsDays: true, clientId: true, status: true, totalAmount: true, amountReceived: true, exchangeRate: true },
     }),
     prisma.retainer.findMany({
       where: { workspaceId, status: "ACTIVE", nextBillingDate: { lte: endDate } },
@@ -351,11 +377,7 @@ export async function loadForecastSourceData(args: {
       select: { id: true, name: true, frequency: true, status: true, nextBillingDate: true, endDate: true, maxCycles: true, cyclesBilled: true, exchangeRate: true, client: { select: { name: true } }, items: { select: { quantity: true, unitPrice: true, taxRate: true } } },
     }),
     prisma.purchaseOrder.findMany({
-      where: {
-        workspaceId,
-        status: { not: "CANCELLED" },
-        OR: [{ expectedPaymentDate: { lte: endDate } }, { expectedDate: { lte: endDate } }],
-      },
+      where: { workspaceId, status: { notIn: ["CANCELLED", "DRAFT"] }, OR: [{ expectedPaymentDate: { lte: endDate } }, { expectedPaymentDate: null, expectedDate: { lte: endDate } }] },
       orderBy: [{ expectedPaymentDate: "asc" }, { expectedDate: "asc" }, { id: "asc" }],
       select: { id: true, poNumber: true, supplier: true, status: true, expectedDate: true, expectedPaymentDate: true, totalAmount: true },
     }),
@@ -369,93 +391,90 @@ export async function loadForecastSourceData(args: {
       orderBy: { clientId: "asc" },
       select: { clientId: true, avgDaysToPay: true, medianDaysToPay: true, onTimeRate: true, lateRate: true, partialPaymentRate: true },
     }),
+    // Recent payroll runs, including ones before the horizon: the next ones are projected from them.
     prisma.accountingTransaction.findMany({
-      where: {
-        workspaceId,
-        sourceTable: 'PAYROLL_RUN',
-        postedAt: { gte: startDate, lte: endDate },
-      },
-      orderBy: [{ postedAt: "asc" }, { id: "asc" }],
-      select: {
-        id: true,
-        sourceId: true,
-        sourceRef: true,
-        postedAt: true,
-        postingCurrency: true,
-        entries: {
-          where: { accountCode: '1005_CASH_BANK_CLEARING', side: 'CREDIT' },
-          select: { amount: true },
-        },
-      },
+      where: { workspaceId, sourceTable: "PAYROLL_PAYOUT", postedAt: { gte: new Date(startDate.getTime() - 120 * 86_400_000), lte: endDate } },
+      orderBy: [{ postedAt: "desc" }, { id: "asc" }],
+      take: 12,
+      select: { id: true, sourceId: true, sourceRef: true, postedAt: true, postingCurrency: true, entries: { where: { accountCode: "1005_CASH_BANK_CLEARING", side: "CREDIT" }, select: { amount: true } } },
+    }),
+    prisma.recurringExpense.findMany({
+      where: { workspaceId, status: "ACTIVE" },
+      select: { id: true, vendor: true, category: true, amount: true, frequency: true, nextRunDate: true, endDate: true, dueInDays: true, paymentStatus: true },
     }),
   ]);
 
-  // Opening cash: sum across accounts as of startDate using openingBalance + tx between openingBalanceDate..startDate.
-  // For v1, if there are no accounts configured, opening cash is 0.
+  // Opening cash per account: its opening balance plus every movement since, summed in the database (never row by row in memory).
   let openingCash = new Prisma.Decimal(0);
-  let txUpToStartCount = 0;
-  const openingCashComputationStartedAt = Date.now();
-  if (accounts.length > 0) {
-    const txUpToStart = await prisma.bankTransaction.findMany({
-      where: { workspaceId, date: { lt: startDate } },
-      orderBy: [{ date: "asc" }, { id: "asc" }],
-      select: { amount: true, date: true, accountId: true },
-    });
-    txUpToStartCount = txUpToStart.length;
+  const accountBalances: NonNullable<ForecastSourceData["accounts"]> = [];
+  const openingCashStartedAt = Date.now();
+  const sums = await Promise.all(
+    accounts.map((acc) => prisma.bankTransaction.aggregate({ where: { workspaceId, accountId: acc.id, date: { gte: acc.openingBalanceDate, lt: startDate } }, _sum: { amount: true } })),
+  );
+  accounts.forEach((acc, idx) => {
+    const balance = toDecimal(acc.openingBalance).plus(toDecimal(sums[idx]?._sum.amount ?? 0));
+    openingCash = openingCash.plus(balance);
+    accountBalances.push({ id: acc.id, name: acc.name, balance, currency: acc.currency });
+  });
+  const openingCashComputationMs = Date.now() - openingCashStartedAt;
 
-    const accountById = new Map(accounts.map((acc) => [acc.id, acc]));
-    const txSumsByAccountId = txUpToStart.reduce<Map<string, Prisma.Decimal>>((acc, tx) => {
-      if (!tx.accountId) return acc;
-      const account = accountById.get(tx.accountId);
-      if (!account) return acc;
-      if (tx.date < account.openingBalanceDate) return acc;
-      const current = acc.get(tx.accountId) ?? new Prisma.Decimal(0);
-      acc.set(tx.accountId, current.plus(toDecimal(tx.amount)));
-      return acc;
-    }, new Map<string, Prisma.Decimal>());
-
-    for (const account of accounts) {
-      const openingBalance = toDecimal(account.openingBalance);
-      const accountTxSum = txSumsByAccountId.get(account.id) ?? new Prisma.Decimal(0);
-      openingCash = openingCash.plus(openingBalance.plus(accountTxSum));
-    }
-  }
-  const openingCashComputationMs = Date.now() - openingCashComputationStartedAt;
-  const elapsedMs = Date.now() - loadStartedAt;
-
-  // GST cash outflows come from the GST engine; a failure there must never break the forecast.
+  // Each of these is optional: a failure there must never break the forecast.
   let gstPayments: ForecastSourceData["gstPayments"] = [];
   try {
     gstPayments = (await getGstCashOutflows(workspaceId, startDate, endDate)).map((g) => ({ id: g.id, periodKey: g.periodKey, dueDate: g.dueDate, amount: new Prisma.Decimal(g.amount), label: g.label, estimated: g.estimated }));
   } catch (error) {
     console.error("Forecast: GST outflows unavailable", error);
   }
-
-  // Unpaid supplier bills are known outflows. A failure here must not break the forecast either.
   let payables: ForecastSourceData["payables"] = [];
   try {
-    payables = (await payablesForForecast(workspaceId, new Date())).map((p) => ({ id: p.id, vendor: p.vendor, dueDate: p.dueDate, amount: new Prisma.Decimal(p.amount), overdue: p.overdue, invoiceNo: p.invoiceNo, msme: p.msme }));
+    payables = (await payablesForForecast(workspaceId, args.now)).map((p) => ({ id: p.id, vendor: p.vendor, dueDate: p.dueDate, amount: new Prisma.Decimal(p.amount), overdue: p.overdue, invoiceNo: p.invoiceNo, msme: p.msme }));
   } catch (error) {
     console.error("Forecast: payables unavailable", error);
   }
+  let purchaseOrdersWithBills: string[] = [];
+  try {
+    if (purchaseOrders.length) {
+      const linked = await prisma.expense.findMany({ where: { workspaceId, purchaseOrderId: { in: purchaseOrders.map((p) => p.id) } }, select: { purchaseOrderId: true }, distinct: ["purchaseOrderId"] });
+      purchaseOrdersWithBills = linked.map((l) => l.purchaseOrderId).filter((v): v is string => !!v);
+    }
+  } catch (error) {
+    console.error("Forecast: purchase order bills unavailable", error);
+  }
+
+  // Money payroll already owes: statutory payments not yet made, and salaries on posted runs not yet paid.
+  let payrollCommitments: NonNullable<ForecastSourceData["payrollCommitments"]> = [];
+  try {
+    const [dues, unpaidRuns] = await Promise.all([
+      prisma.payrollRemittance.findMany({ where: { workspaceId, status: "DUE", dueDate: { lte: endDate } }, select: { id: true, kind: true, amount: true, dueDate: true, period: { select: { startDate: true } } } }),
+      prisma.payrollRun.findMany({ where: { workspaceId, status: "POSTED", disbursedAt: null }, select: { id: true, period: { select: { startDate: true } }, lineItems: { where: { payoutStatus: { not: "PAID" } }, select: { netPay: true } } } }),
+    ]);
+    payrollCommitments = [
+      ...dues.map((d) => ({ key: `remit:${d.id}`, kind: d.kind, title: `${d.kind} · ${d.period.startDate.toISOString().slice(0, 7)}`, amount: toDecimal(d.amount), date: d.dueDate < startDate ? startDate : d.dueDate, overdue: d.dueDate < startDate })),
+      ...unpaidRuns.map((r) => ({ key: `salary:${r.id}`, kind: "SALARY", title: `Salaries · ${r.period.startDate.toISOString().slice(0, 7)}`, amount: r.lineItems.reduce((sum, l) => sum.plus(toDecimal(l.netPay)), new Prisma.Decimal(0)), date: startDate, overdue: false })).filter((r) => r.amount.gt(0)),
+    ];
+  } catch (error) {
+    console.error("Forecast: payroll commitments unavailable", error);
+  }
+
+  const payrollRows = payrollTransactions.map((row) => ({
+    accountingTransactionId: row.id,
+    payrollRunId: row.sourceId.split(":")[0] ?? row.sourceId,
+    postedAt: row.postedAt,
+    amount: row.entries.reduce((sum, entry) => sum.plus(toDecimal(entry.amount)), new Prisma.Decimal(0)),
+    currency: row.postingCurrency,
+    sourceRef: row.sourceRef,
+  }));
 
   return {
     openingCash,
+    accounts: accountBalances,
     gstPayments,
     payables,
+    purchaseOrdersWithBills,
     bankTransactions,
     invoices,
     clientPaymentBehavior: Object.fromEntries(
-      (paymentBehaviors ?? []).map((b) => [
-        b.clientId,
-        {
-          avgDaysToPay: b.avgDaysToPay,
-          medianDaysToPay: b.medianDaysToPay,
-          onTimeRate: b.onTimeRate,
-          lateRate: b.lateRate,
-          partialPaymentRate: b.partialPaymentRate,
-        },
-      ])
+      paymentBehaviors.map((b) => [b.clientId, { avgDaysToPay: b.avgDaysToPay, medianDaysToPay: b.medianDaysToPay, onTimeRate: b.onTimeRate, lateRate: b.lateRate, partialPaymentRate: b.partialPaymentRate }]),
     ),
     retainers: retainers.map((r) => {
       // Cash arrives as the invoice total (tax included), converted to the workspace base currency.
@@ -475,21 +494,14 @@ export async function loadForecastSourceData(args: {
     }),
     purchaseOrders,
     manualAdjustments,
-    payrollOutflows: payrollTransactions.map((row) => ({
-      accountingTransactionId: row.id,
-      payrollRunId: row.sourceId,
-      postedAt: row.postedAt,
-      amount: row.entries.reduce((sum, entry) => sum.plus(toDecimal(entry.amount)), new Prisma.Decimal(0)),
-      currency: row.postingCurrency,
-      sourceRef: row.sourceRef,
-    })),
-    workspaceDefaults: {
-      invoicePaymentTermsDays: 15,
-      minimumCashThreshold: 0,
-    },
+    payrollOutflows: payrollRows.filter((r) => r.postedAt >= startDate),
+    payrollHistory: payrollRows.map((r) => ({ runId: r.payrollRunId, postedAt: r.postedAt, amount: r.amount })),
+    payrollCommitments,
+    recurringExpenses: recurring.map((r) => ({ id: r.id, vendor: r.vendor, category: r.category, amount: toDecimal(r.amount), frequency: r.frequency, nextRunDate: r.nextRunDate, endDate: r.endDate, dueInDays: r.dueInDays, paid: r.paymentStatus !== "UNPAID" })),
+    workspaceDefaults: { invoicePaymentTermsDays: 15, minimumCashThreshold: 0 },
     debug: {
       telemetry: {
-        elapsedMs,
+        elapsedMs: Date.now() - loadStartedAt,
         openingCashComputationMs,
         counts: {
           accounts: accounts.length,
@@ -500,11 +512,32 @@ export async function loadForecastSourceData(args: {
           manualAdjustments: manualAdjustments.length,
           clientPaymentBehaviors: paymentBehaviors.length,
           payrollTransactions: payrollTransactions.length,
-          txUpToStart: txUpToStartCount,
+          txUpToStart: 0,
         },
       },
     },
   };
+}
+
+const withinDays = (a: Date, b: Date, days: number) => Math.abs(a.getTime() - b.getTime()) <= days * 86_400_000;
+
+/** Next payroll runs, projected from the last few: same day of the month, the average of what was actually paid. Stops if payroll has not run in over two months. */
+export function projectPayroll(history: NonNullable<ForecastSourceData["payrollHistory"]>, start: Date, end: Date, actual: Array<{ postedAt: Date }>): Array<{ date: Date; amount: Prisma.Decimal; basedOn: number }> {
+  const runs = history.filter((h) => toDecimal(h.amount).gt(0)).sort((a, b) => b.postedAt.getTime() - a.postedAt.getTime());
+  const last = runs[0];
+  if (!last || start.getTime() - last.postedAt.getTime() > 70 * 86_400_000) return [];
+  const recent = runs.slice(0, 3);
+  const avg = recent.reduce((sum, r) => sum.plus(toDecimal(r.amount)), new Prisma.Decimal(0)).div(recent.length).toDecimalPlaces(2);
+  const out: Array<{ date: Date; amount: Prisma.Decimal; basedOn: number }> = [];
+  const day = last.postedAt.getDate();
+  let cursor = new Date(last.postedAt.getFullYear(), last.postedAt.getMonth() + 1, 1);
+  for (let i = 0; i < 14 && cursor <= end; i++) {
+    const daysInMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+    const date = new Date(cursor.getFullYear(), cursor.getMonth(), Math.min(day, daysInMonth));
+    if (date >= start && date <= end && !actual.some((a) => withinDays(a.postedAt, date, 12))) out.push({ date, amount: avg, basedOn: recent.length });
+    cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+  }
+  return out;
 }
 
 export function buildForecastLinesFromSources(args: {
@@ -518,81 +551,100 @@ export function buildForecastLinesFromSources(args: {
 }): ForecastLineDraft[] {
   const { sources } = args;
   const scenarioTag = args.scenarioTag ?? "BASE";
+  const start = startOfToday(args.startDate);
+  const end = args.endDate;
+  const a = args.assumptions;
 
-  // Defaults for v1; later load from CashForecastAssumption.
-  const workspaceDefaults = { paymentTermsDays: sources.workspaceDefaults?.invoicePaymentTermsDays ?? 15 };
-  const assumptions = args.assumptions ?? {
-    collectionsDelayDays: 0,
-    inflowHaircutPercent: 0,
-    outflowIncreasePercent: 0,
-    movePOEarlierLaterDays: 0,
-    minimumCashThreshold: sources.workspaceDefaults?.minimumCashThreshold ?? 0,
-  };
-
+  const workspaceDefaults = { paymentTermsDays: a?.defaultInvoicePaymentTermsDays ?? sources.workspaceDefaults?.invoicePaymentTermsDays ?? 15 };
+  const overdueCollectionDays = a?.overdueCollectionDays ?? 7;
   const lines: ForecastLineDraft[] = [];
   const behaviorByClientId = sources.clientPaymentBehavior ?? {};
 
-  for (const tx of sources.bankTransactions) {
-    lines.push(bankTransactionToForecastLine({ tx, scenarioTag }));
-  }
+  for (const tx of sources.bankTransactions) lines.push(bankTransactionToForecastLine({ tx, scenarioTag }));
 
   for (const inv of sources.invoices) {
-    lines.push(
-      ...invoiceToForecastLines({
-        invoice: inv,
-        workspaceDefaults,
-        paymentBehavior: inv.clientId ? (behaviorByClientId[inv.clientId] ?? null) : null,
-        scenarioTag,
-        collectionsDelayDays: assumptions.collectionsDelayDays,
-        inflowHaircutPercent: assumptions.inflowHaircutPercent,
-      })
-    );
+    lines.push(...invoiceToForecastLines({
+      invoice: inv, workspaceDefaults, paymentBehavior: inv.clientId ? (behaviorByClientId[inv.clientId] ?? null) : null,
+      scenarioTag, collectionsDelayDays: 0, inflowHaircutPercent: 0, now: args.now, overdueCollectionDays,
+    }));
   }
 
   for (const r of sources.retainers) {
-    lines.push(
-      ...retainerToForecastLines({
-        retainer: r,
-        horizon: { startDate: args.startDate, endDate: args.endDate },
-        scenarioTag,
-        collectionsDelayDays: assumptions.collectionsDelayDays,
-        inflowHaircutPercent: assumptions.inflowHaircutPercent,
-      })
-    );
+    lines.push(...retainerToForecastLines({ retainer: r, horizon: { startDate: start, endDate: end }, scenarioTag, collectionsDelayDays: 0, inflowHaircutPercent: 0 }));
   }
 
+  // An order that already has a bill is counted through the bill, not twice.
+  const billed = new Set(sources.purchaseOrdersWithBills ?? []);
   for (const po of sources.purchaseOrders) {
-    lines.push(
-      ...purchaseOrderToForecastLines({
-        purchaseOrder: po,
-        scenarioTag,
-        poShiftDays: assumptions.movePOEarlierLaterDays,
-        outflowIncreasePercent: assumptions.outflowIncreasePercent,
-      })
-    );
+    if (billed.has(po.id)) continue;
+    lines.push(...purchaseOrderToForecastLines({ purchaseOrder: po, scenarioTag, poShiftDays: 0, outflowIncreasePercent: 0, now: args.now }));
   }
 
-  for (const adj of sources.manualAdjustments) {
-    lines.push(manualAdjustmentToForecastLine({ adj, scenarioTag }));
-  }
+  for (const adj of sources.manualAdjustments) lines.push(manualAdjustmentToForecastLine({ adj, scenarioTag }));
 
+  // Payroll already posted is only a duplicate of the bank debit when the bank has it too.
+  const bankOutflows = sources.bankTransactions.filter((t) => toDecimal(t.amount).lt(0));
   for (const posting of sources.payrollOutflows ?? []) {
-    lines.push(payrollOutflowToForecastLine({ posting, scenarioTag }));
+    const amount = toDecimal(posting.amount).abs();
+    const onBank = bankOutflows.some((t) => withinDays(t.date, posting.postedAt, 5) && toDecimal(t.amount).abs().minus(amount).abs().lte(amount.mul(0.03)));
+    if (!onBank) lines.push(payrollOutflowToForecastLine({ posting, scenarioTag }));
+  }
+  for (const p of projectPayroll(sources.payrollHistory ?? [], start, end, [...(sources.payrollOutflows ?? []), ...(sources.payrollCommitments ?? []).filter((c) => c.kind === "SALARY").map((c) => ({ postedAt: c.date }))])) {
+    lines.push({
+      direction: "OUTFLOW", sourceType: "PAYROLL", sourceId: `payroll-forecast:${p.date.toISOString().slice(0, 7)}`, amount: p.amount, expectedDate: p.date, confidence: 0.85, scenarioTag, classification: "PREDICTED",
+      title: "Payroll (projected)", explanation: `Projected from your last ${p.basedOn} payroll run${p.basedOn > 1 ? "s" : ""}.`, metadataJson: { projected: true, basedOn: p.basedOn },
+    });
   }
 
-  for (const payment of sources.gstPayments ?? []) {
-    lines.push(gstPaymentToForecastLine({ payment, scenarioTag }));
+  for (const c of sources.payrollCommitments ?? []) {
+    lines.push({
+      direction: "OUTFLOW", sourceType: "PAYROLL", sourceId: c.key, amount: toDecimal(c.amount).abs(), expectedDate: c.date, confidence: 1, scenarioTag, classification: "COMMITTED",
+      title: c.title, explanation: c.kind === "SALARY" ? "Salaries on a posted payroll run that are not recorded as paid yet." : "Deducted from salaries and owed to government. Due on the statutory date.",
+      metadataJson: { kind: c.kind, overdue: c.overdue },
+    });
   }
+  for (const payment of sources.gstPayments ?? []) lines.push(gstPaymentToForecastLine({ payment, scenarioTag }));
 
   for (const bill of sources.payables ?? []) {
     lines.push({
       direction: "OUTFLOW", sourceType: "EXPENSE", sourceId: bill.id, amount: toDecimal(bill.amount).abs(), expectedDate: bill.dueDate, confidence: bill.overdue ? 0.8 : 0.95, scenarioTag, classification: "COMMITTED",
       title: `Bill to pay · ${bill.vendor}${bill.invoiceNo ? ` ${bill.invoiceNo}` : ""}`,
       explanation: bill.overdue ? "Overdue supplier bill, assumed paid soon." : "Supplier bill on credit, due on its due date.",
-      metadataJson: { overdue: bill.overdue, msme: bill.msme },
+      metadataJson: { overdue: bill.overdue, msme: bill.msme, vendor: bill.vendor },
     });
   }
 
-  // Filter to horizon range.
-  return lines.filter((l) => l.expectedDate >= args.startDate && l.expectedDate <= args.endDate);
+  // Recurring expense templates: every run that falls in the horizon.
+  for (const t of sources.recurringExpenses ?? []) {
+    let d = new Date(t.nextRunDate);
+    if (d < start) d = start; // a missed run happens on the next sweep
+    for (let i = 0; i < 400 && d <= end; i++) {
+      if (t.endDate && d > t.endDate) break;
+      const due = t.paid ? d : addDays(d, t.dueInDays ?? 30);
+      lines.push({
+        direction: "OUTFLOW", sourceType: "EXPENSE", sourceId: `recurring:${t.id}:${d.toISOString().slice(0, 10)}`, amount: toDecimal(t.amount).abs(), expectedDate: due, confidence: 0.9, scenarioTag, classification: "PREDICTED",
+        title: `Recurring · ${t.vendor}`, explanation: `Repeats ${t.frequency.toLowerCase()} (${t.category}).`, metadataJson: { recurring: true, category: t.category, vendor: t.vendor },
+      });
+      d = incrementFrequency(d, t.frequency);
+    }
+  }
+
+  // Standing monthly outflows saved with the scenario assumptions (rent, loan instalments, subscriptions).
+  for (const o of a?.recurringOutflows ?? []) {
+    let cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    for (let i = 0; i < 14 && cursor <= end; i++) {
+      const dim = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 0).getDate();
+      const date = new Date(cursor.getFullYear(), cursor.getMonth(), Math.min(o.dayOfMonth, dim));
+      if (date >= start && date <= end) {
+        lines.push({
+          direction: "OUTFLOW", sourceType: "MANUAL", sourceId: `standing:${o.title}:${date.toISOString().slice(0, 7)}`, amount: toDecimal(o.amount), expectedDate: date, confidence: 0.95, scenarioTag, classification: "COMMITTED",
+          title: `Standing · ${o.title}`, explanation: "Monthly commitment from your assumptions.", metadataJson: { standing: true, category: o.category ?? null },
+        });
+      }
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+    }
+  }
+
+  // Keep what falls inside the horizon (everything overdue was moved forward above).
+  return lines.filter((l) => l.expectedDate >= start && l.expectedDate <= end);
 }

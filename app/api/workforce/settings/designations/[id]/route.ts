@@ -38,7 +38,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Cannot delete a designation with employees assigned" }, { status: 409 });
     }
 
-    await prisma.designation.delete({ where: { id } });
+    const removed = await prisma.designation.deleteMany({ where: { id, workspaceId: wid } });
+    if (removed.count === 0) return NextResponse.json({ error: 'Designation not found' }, { status: 404 });
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[designations/DELETE]", err);

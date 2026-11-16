@@ -489,7 +489,7 @@ export default function LoginExperience({
 
   const lastUsedBadge = (value: AuthMethod) =>
     lastMethod === value ? (
-      <span className="ms-auto rounded-full bg-orange-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-orange-700 dark:text-orange-300">
+      <span className="ms-auto rounded-full bg-orange-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-orange-700 dark:text-orange-300">
         {t("lastUsed")}
       </span>
     ) : null;

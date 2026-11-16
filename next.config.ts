@@ -66,6 +66,8 @@ const nextConfig: NextConfig = {
       { source: '/invoice', destination: '/income', permanent: false },
       // In-app help lives at /help (the old page only redirected; do it before rendering)
       { source: '/dashboard/help', destination: '/help', permanent: true },
+      // Cash Flow is one workspace now; the old sub-pages (and links to them in emails or notifications) land there.
+      { source: '/cash-flow/:section(overview|inflows|outflows|variance|alerts|manual-adjustments|scenarios|assumptions)', destination: '/cash-flow', permanent: false },
     ];
   },
 };

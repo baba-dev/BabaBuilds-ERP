@@ -1,107 +1,76 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { ModuleDisabledError, requireModule } from '@/lib/modules';
-import type { Prisma } from '@prisma/client';
+import { arError, requireArAccess } from '@/lib/ar/access';
+import { addNote, getTimeline, parseFollowUpStatus, recordDispute, recordPromise, resolveDispute, sendArReminderEmailForInvoice, setRisk, setStatus, snooze, type ActionResult } from '@/lib/ar-collections';
 import { prisma } from '@/lib/prisma';
-import { withPermission } from '@/lib/rbac';
-import { parseFollowUpStatus, sendArReminderEmailForInvoice } from '@/lib/ar-collections';
-import { getActiveWorkspaceIdForUser } from '@/lib/workspace-scope';
+import { checkPermissionSilent } from '@/lib/rbac';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+type Ctx = { params: Promise<{ id: string }> };
+const REMINDER_COOLDOWN_MS = 60_000;
+
+/** What happened on this invoice: reminders, promises, disputes and notes, newest first. */
+export async function GET(_request: NextRequest, props: Ctx) {
+  const auth = await requireArAccess('invoices.view');
+  if (!auth.ok) return auth.response;
+  const { id } = await props.params;
+  const inv = await prisma.invoice.findFirst({ where: { id, workspaceId: auth.ctx.workspaceId }, select: { id: true } });
+  if (!inv) return arError(404, 'NOT_FOUND', 'Invoice not found.');
+  return NextResponse.json({ data: await getTimeline(auth.ctx.workspaceId, id) }, { headers: { 'Cache-Control': 'no-store' } });
+}
+
+const done = (r: ActionResult) => (r.ok ? NextResponse.json({ success: true }) : arError(r.status, r.code, r.message));
+
+/**
+ * One follow-up action: remind, promise, dispute, resolve_dispute, note, snooze, escalate, status, risk.
+ * The older shape (followUpStatus, sendReminderNow, collectionRiskScore) still works.
+ */
+export async function PATCH(request: NextRequest, props: Ctx) {
+  const auth = await requireArAccess('invoices.edit');
+  if (!auth.ok) return auth.response;
+  const { workspaceId, userId, email } = auth.ctx;
+  const { id } = await props.params;
+  const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
+  if (!body) return arError(400, 'INVALID_BODY', 'Send the change as JSON.');
+  const actor = { userId, email };
+
+  let action = typeof body.action === 'string' ? body.action : '';
+  if (!action) action = body.sendReminderNow ? 'remind' : body.followUpStatus !== undefined ? 'status' : body.collectionRiskScore !== undefined ? 'risk' : '';
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const workspaceId = await getActiveWorkspaceIdForUser(userId);
-    if (!workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const edit = await withPermission(userId, workspaceId, 'invoices.edit');
-    if (!edit.granted) return edit.response;
-
-    try {
-      await requireModule(workspaceId, 'AR_COLLECTIONS');
-    } catch (error) {
-      if (error instanceof ModuleDisabledError) {
-        return NextResponse.json({ error: 'Module disabled' }, { status: 403 });
+    switch (action) {
+      case 'remind': {
+        if (!(await checkPermissionSilent(userId, workspaceId, 'invoices.send'))) return arError(403, 'FORBIDDEN', 'You need permission to send reminders.');
+        const limit = enforceRouteRateLimit({ request, route: '/api/ar-collections/invoices', scope: 'remind', max: 40, windowMs: 10 * 60_000 });
+        if (!limit.ok) return limit.response;
+        const inv = await prisma.invoice.findFirst({ where: { id, workspaceId }, select: { status: true, lastReminderSentAt: true } });
+        if (!inv) return arError(404, 'NOT_FOUND', 'Invoice not found.');
+        if (inv.status === 'PAID' || inv.status === 'VOID') return arError(409, 'NOTHING_DUE', 'There is no balance to remind about.');
+        if (inv.lastReminderSentAt && Date.now() - inv.lastReminderSentAt.getTime() < REMINDER_COOLDOWN_MS) return arError(429, 'TOO_SOON', 'A reminder was just sent. Wait a minute before sending another.');
+        const tone = body.tone === 'friendly' || body.tone === 'firm' || body.tone === 'final' ? body.tone : undefined;
+        const res = await sendArReminderEmailForInvoice(workspaceId, id, { tone, actor });
+        if (!res.ok) {
+          const map = { NOT_FOUND: [404, 'Invoice not found.'], NO_CLIENT_EMAIL: [400, 'This client has no email address on file.'], SMTP_NOT_CONFIGURED: [400, 'Email (SMTP) is not configured in Business Settings.'], SEND_FAILED: [502, 'Failed to send the reminder.'] } as const;
+          return arError(map[res.code][0], res.code, map[res.code][1]);
+        }
+        const follow = body.followUpStatus !== undefined ? parseFollowUpStatus(body.followUpStatus) : null;
+        if (follow) await setStatus(workspaceId, id, follow, actor);
+        return NextResponse.json({ success: true });
       }
-      throw error;
-    }
-
-    const { id } = await params;
-    const body = (await req.json().catch(() => ({}))) as {
-      followUpStatus?: string;
-      sendReminderNow?: boolean;
-      collectionRiskScore?: number;
-    };
-
-    const hasScore = typeof body.collectionRiskScore === 'number' && !Number.isNaN(body.collectionRiskScore);
-    const followParsed = body.followUpStatus !== undefined ? parseFollowUpStatus(body.followUpStatus) : undefined;
-    if (body.followUpStatus !== undefined && body.followUpStatus.trim() !== '' && followParsed === null) {
-      return NextResponse.json({ error: 'Invalid follow-up status' }, { status: 400 });
-    }
-
-    if (!followParsed && !body.sendReminderNow && !hasScore) {
-      return NextResponse.json({ error: 'No update payload provided' }, { status: 400 });
-    }
-
-    const invoice = await prisma.invoice.findFirst({
-      where: { id, workspaceId },
-      select: { id: true },
-    });
-
-    if (!invoice) {
-      return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-    }
-
-    if (body.sendReminderNow) {
-      const emailResult = await sendArReminderEmailForInvoice(workspaceId, id);
-      if (!emailResult.ok) {
-        const status =
-          emailResult.code === 'NOT_FOUND'
-            ? 404
-            : emailResult.code === 'SMTP_NOT_CONFIGURED'
-              ? 400
-              : emailResult.code === 'NO_CLIENT_EMAIL'
-                ? 400
-                : 502;
-        return NextResponse.json(
-          {
-            error:
-              emailResult.code === 'SMTP_NOT_CONFIGURED'
-                ? 'Configure SMTP in Business Settings to send reminders.'
-                : emailResult.code === 'NO_CLIENT_EMAIL'
-                  ? 'Client has no email on file.'
-                  : emailResult.code === 'NOT_FOUND'
-                    ? 'Invoice not found'
-                    : 'Failed to send reminder email.',
-            code: emailResult.code,
-          },
-          { status },
-        );
+      case 'promise': return done(await recordPromise(workspaceId, id, { date: String(body.date ?? ''), note: typeof body.note === 'string' ? body.note : undefined }, actor));
+      case 'dispute': return done(await recordDispute(workspaceId, id, String(body.reason ?? ''), actor));
+      case 'resolve_dispute': return done(await resolveDispute(workspaceId, id, actor));
+      case 'note': return done(await addNote(workspaceId, id, String(body.note ?? ''), actor));
+      case 'snooze': return done(await snooze(workspaceId, id, Number(body.days), actor));
+      case 'escalate': return done(await setStatus(workspaceId, id, 'ESCALATED', actor));
+      case 'status': {
+        const s = parseFollowUpStatus(body.followUpStatus);
+        if (!s) return arError(400, 'INVALID_STATUS', 'Invalid follow-up status');
+        return done(await setStatus(workspaceId, id, s, actor));
       }
+      case 'risk': return done(await setRisk(workspaceId, id, body.collectionRiskScore === null ? null : Number(body.collectionRiskScore), actor));
+      default: return arError(400, 'INVALID_ACTION', 'No update provided.');
     }
-
-    const data: Prisma.InvoiceUpdateInput = {};
-    if (hasScore) {
-      data.collectionRiskScore = Math.max(0, Math.min(100, Math.round(body.collectionRiskScore!)));
-    }
-    if (body.sendReminderNow) {
-      data.followUpStatus = followParsed ?? 'REMINDER_SENT';
-    } else if (followParsed) {
-      data.followUpStatus = followParsed;
-    }
-
-    await prisma.invoice.update({ where: { id }, data });
-
-    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('[ar-collections/invoices/PATCH]', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return arError(500, 'AR_FAILED', 'Could not save the change.');
   }
 }

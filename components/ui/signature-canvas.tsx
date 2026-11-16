@@ -111,7 +111,7 @@ export function SignatureCanvas({ onSave, onClear }: SignatureCanvasProps) {
           <div className="absolute inset-0 flex flex-col items-center justify-center text-zinc-400 pointer-events-none select-none animate-in fade-in duration-300">
             <PenTool className="w-6 h-6 mb-2 text-indigo-500/50" />
             <p className="text-xs font-bold uppercase tracking-widest">Draw your signature here</p>
-            <p className="text-[10px] text-zinc-500 mt-1">Use your mouse, trackpad, or finger</p>
+            <p className="text-[11px] text-zinc-500 mt-1">Use your mouse, trackpad, or finger</p>
           </div>
         )}
         <canvas

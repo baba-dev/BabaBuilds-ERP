@@ -1,59 +1,67 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { withPermission } from '@/lib/rbac';
-import { isModuleEnabled } from '@/lib/modules';
+import { supplierChargesGst } from '@/lib/msme/threshold';
+import { posErrorResponse, requirePos } from '../_guard';
 
+const query = z.object({
+  type: z.enum(['SERVICES', 'PRODUCTS']).default('PRODUCTS'),
+  q: z.string().trim().max(80).optional(),
+  category: z.string().trim().max(80).optional(),
+  barcode: z.string().trim().max(60).optional(),
+  limit: z.coerce.number().int().min(1).max(60).default(40),
+  cursor: z.string().max(40).optional(),
+});
+
+/** Items to sell, searchable and paged so a big catalogue stays quick. Tax rates are the item's real rate; `chargesGst` says whether this seller may collect it. */
 export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.id;
-    if (!userId || !session?.workspaceId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const workspaceId = session.workspaceId;
+    const gate = await requirePos('view');
+    if ('response' in gate) return gate.response;
+    const { workspaceId } = gate.access;
+    const q = query.parse(Object.fromEntries(new URL(request.url).searchParams));
 
-    if (!(await isModuleEnabled(workspaceId, 'POS'))) {
-      return NextResponse.json({ error: 'POS module is disabled' }, { status: 403 });
-    }
+    const [workspace, profile] = await Promise.all([
+      prisma.workspace.findUnique({ where: { id: workspaceId }, select: { countryCode: true } }),
+      prisma.businessProfile.findUnique({ where: { workspaceId }, select: { gstRegistrationType: true } }),
+    ]);
+    const chargesGst = supplierChargesGst(profile, workspace?.countryCode || 'IN');
 
-    const permission = await withPermission(userId, workspaceId, 'pos.view');
-    if (!permission.granted) return permission.response;
-
-    const { searchParams } = new URL(request.url);
-    const type = searchParams.get('type') || 'SERVICES'; // 'SERVICES' or 'PRODUCTS'
-
-    if (type === 'SERVICES') {
-      const services = await prisma.serviceTemplate.findMany({
-        where: { workspaceId },
-        select: { id: true, name: true, defaultPrice: true, description: true, sacCode: { select: { code: true, igstRate: true } } }
+    if (q.type === 'SERVICES') {
+      const rows = await prisma.serviceTemplate.findMany({
+        where: { workspaceId, ...(q.q ? { name: { contains: q.q } } : {}) },
+        select: { id: true, name: true, defaultPrice: true, description: true, sacCode: { select: { igstRate: true } } },
+        orderBy: [{ name: 'asc' }, { id: 'asc' }],
+        take: q.limit + 1,
+        ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
       });
-      return NextResponse.json(services.map(s => ({
-        id: s.id,
-        type: 'SERVICE',
-        name: s.name,
-        price: Number(s.defaultPrice),
-        description: s.description,
-        taxRate: s.sacCode?.igstRate ?? 0
-      })));
-    } else {
-      const products = await prisma.product.findMany({
-        where: { workspaceId },
-        select: { id: true, name: true, baselinePrice: true, description: true, currentStock: true }
+      const more = rows.length > q.limit;
+      const page = more ? rows.slice(0, q.limit) : rows;
+      return NextResponse.json({
+        chargesGst, categories: [], nextCursor: more ? page[page.length - 1]!.id : null,
+        items: page.map((s) => ({ id: s.id, type: 'SERVICE', name: s.name, price: Number(s.defaultPrice), description: s.description, taxRate: s.sacCode?.igstRate ?? 0 })),
       });
-      return NextResponse.json(products.map(p => ({
-        id: p.id,
-        type: 'PRODUCT',
-        name: p.name,
-        price: Number(p.baselinePrice),
-        description: p.description,
-        stock: p.currentStock,
-        taxRate: 0 // Products might have tax logic, default 0 for now
-      })));
     }
-  } catch (error) {
-    console.error("POS Catalog Fetch Error:", error);
-    return NextResponse.json({ error: 'Failed to fetch catalog' }, { status: 500 });
+
+    const rows = await prisma.product.findMany({
+      where: {
+        workspaceId, archivedAt: null,
+        ...(q.category ? { category: q.category } : {}),
+        ...(q.barcode ? { OR: [{ barcode: q.barcode }, { sku: q.barcode.toUpperCase() }] } : q.q ? { OR: [{ name: { contains: q.q } }, { sku: { contains: q.q } }, { barcode: { contains: q.q } }] } : {}),
+      },
+      select: { id: true, name: true, sku: true, barcode: true, category: true, baselinePrice: true, description: true, currentStock: true, gstRate: true, unit: true },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      take: q.limit + 1,
+      ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}),
+    });
+    const more = rows.length > q.limit;
+    const page = more ? rows.slice(0, q.limit) : rows;
+    const categories = q.cursor ? [] : (await prisma.product.findMany({ where: { workspaceId, archivedAt: null, category: { not: null } }, select: { category: true }, distinct: ['category'], take: 50 })).map((c) => c.category as string).sort();
+    return NextResponse.json({
+      chargesGst, categories, nextCursor: more ? page[page.length - 1]!.id : null,
+      items: page.map((p) => ({ id: p.id, type: 'PRODUCT', name: p.name, sku: p.sku, barcode: p.barcode, category: p.category, unit: p.unit, price: Number(p.baselinePrice), description: p.description, stock: p.currentStock, taxRate: p.gstRate ?? 0 })),
+    });
+  } catch (e) {
+    return posErrorResponse(e, 'catalog');
   }
 }

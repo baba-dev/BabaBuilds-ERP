@@ -521,7 +521,7 @@ export default function TeamAccessPage() {
                       {member.user.name || member.user.email}
                     </span>
                     {!member.isActive && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 font-medium">
+                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400 font-medium">
                         Deactivated
                       </span>
                     )}
@@ -672,7 +672,7 @@ export default function TeamAccessPage() {
                 <tr key={`group-${module}`} className="bg-zinc-50/70 dark:bg-zinc-900/70">
                   <td
                     colSpan={BUSINESS_ROLES.length + 1}
-                    className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 sticky left-0"
+                    className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 sticky left-0"
                   >
                     {label}
                   </td>
@@ -812,7 +812,7 @@ export default function TeamAccessPage() {
             <div key={item.label} className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center">
               <div className={cn("text-2xl font-bold mb-0.5", item.color)}>{item.value}</div>
               <div className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">{item.label}</div>
-              <div className="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5 leading-tight">{item.note}</div>
+              <div className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-0.5 leading-tight">{item.note}</div>
             </div>
           ))}
         </div>
@@ -940,7 +940,7 @@ export default function TeamAccessPage() {
             <div className="flex items-center gap-2 mb-1">
               <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">{rule.conflict}</span>
               <span className={cn(
-                "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
+                "text-[11px] font-bold px-1.5 py-0.5 rounded-full",
                 rule.risk === "HIGH" ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400" : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400",
               )}>
                 {rule.risk}
@@ -966,7 +966,7 @@ export default function TeamAccessPage() {
             <div className="flex items-center gap-1.5 flex-wrap">
               {wf.steps.map((step, i) => (
                 <React.Fragment key={step}>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-900/40 text-violet-700 dark:text-violet-400 font-medium">
+                  <span className="text-[11px] px-2 py-0.5 rounded bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-900/40 text-violet-700 dark:text-violet-400 font-medium">
                     {step}
                   </span>
                   {i < wf.steps.length - 1 && (
@@ -998,7 +998,7 @@ export default function TeamAccessPage() {
   // ─── RENDER ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8">
+    <div className="min-h-app bg-zinc-50 dark:bg-zinc-950 p-4 md:p-8">
       <div className="max-w-5xl mx-auto space-y-6">
 
         {/* Page Header */}
@@ -1041,7 +1041,7 @@ export default function TeamAccessPage() {
                 {tab.label}
                 {tab.count !== undefined && (
                   <span className={cn(
-                    "text-[10px] px-1.5 py-0.5 rounded-full font-semibold",
+                    "text-[11px] px-1.5 py-0.5 rounded-full font-semibold",
                     activeTab === tab.id
                       ? "bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400"
                       : "bg-zinc-200 dark:bg-zinc-700 text-zinc-500 dark:text-zinc-400",

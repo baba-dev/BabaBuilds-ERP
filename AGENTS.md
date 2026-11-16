@@ -61,10 +61,30 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 - `GET /api/cron/trial-expiry` — expires `TRIALING` workspaces past `subscriptionEndsAt` (set `Authorization: Bearer $CRON_SECRET`). Example: daily at 06:00 alongside other cron routes.
 - Trial signup flow: marketing links hit `GET /signup?...` (sets `signup_intent` cookie for 24h) → `/login` → NextAuth `createUser` provisions `TRIALING` workspace with `planTier` PRO/TEAM from intent.
 
+### Mobile / Android (Google Play) conventions
+
+The Android app is a Trusted Web Activity over the PWA; see `docs/android-play-store.md` for the publishing runbook.
+
+- Inside the dashboard shell use `min-h-app` (never `min-h-screen`/`h-screen`; `tests/mobile` fails on it). Public pages use `min-h-dvh`.
+- Floating UI uses `bottom-above-nav`; safe areas use `pb-safe`/`pt-safe`; touch-only sizing uses the `pointer-coarse:` variant.
+- Hover-only controls must also be visible on touch (`pointer-coarse:opacity-100`).
+- Full-screen composers hide the bottom tab bar: add the route to `FOCUS_ROUTE_PATTERNS` in `components/layout/mobile-nav.tsx`.
+- Keep `public/.well-known/assetlinks.json` and `android/twa-manifest.json` in agreement; never commit keystores.
+
 ### CI (GitHub Actions)
 
-- `CI` workflow (`.github/workflows/ci.yml`) runs in parallel: static checks, full Vitest, migration history vs schema (`check:migrations`), production build, and a browser smoke job (advisory until `CI_SMOKE_BLOCKING=true`). The single required check is **`CI gate`**.
-- Runners default to GitHub-hosted. Set repository variable `CI_RUNS_ON` to `["self-hosted","linux","x64","erp-ci"]` to use the self-hosted pool.
+- `CI` workflow (`.github/workflows/ci.yml`) runs on GitHub-hosted runners as parallel jobs: static checks (locale parity, lint, typecheck, demo coverage), full Vitest, migration history vs schema (`check:migrations`), production build, and the Playwright browser smoke test. The single required check is **`CI gate`**. Pull requests also get an advisory dependency review, and `codeql.yml` runs CodeQL (advisory).
+- **Never run pull-request workflows on the self-hosted runner**: the repo is public, so that would run strangers' code on our server. Self-hosted (`[self-hosted, linux, x64, erp-ci]`) is only for `deploy.yml`, `backup.yml` and `security-audit.yml`, which run on a schedule, by hand, or after CI succeeds on `main`.
 - Deploy runs only after `CI` succeeds on a push to `main`, and deploys the exact validated commit.
 - Node is pinned in `.nvmrc` (22). Shared setup lives in `.github/actions/`.
 - Agent workflow: make the change, run `npm run ci:fast`, fix everything it reports, then push. Add or update tests for behavior you change; mocks of shared modules should spread `importOriginal()` so new exports do not break them.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
