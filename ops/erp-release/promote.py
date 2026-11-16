@@ -299,6 +299,11 @@ def materialize(cfg, archive, manifest, sha):
     if dest.exists():
         if dest.is_symlink() or not (dest / "server.js").is_file():
             fail("Existing release path is not a valid immutable release")
+        stored = dest / "release-manifest.json"
+        if stored.is_symlink() or not stored.is_file():
+            fail("Existing release has no protected manifest")
+        if json.loads(stored.read_text()) != json.loads(Path(manifest).read_text()):
+            fail("Existing immutable release manifest differs from requested artifact")
         return dest
     RELEASES.mkdir(mode=0o755, parents=True, exist_ok=True)
     if shutil.disk_usage(RELEASES).free < 12 * 1024**3:
@@ -394,7 +399,10 @@ def promote(cfg, *, archive, manifest, sha):
         "--env-file=" + cfg["production_env"],
         str(dest / "server.js"),
     ]
-    next_spec = {"exec": cfg["node26"], "cwd": str(dest), "args": args, "env": {"NODE_ENV": "production", "PORT": "3000", "HOSTNAME": "127.0.0.1"}}
+    next_spec = {"exec": cfg["node26"], "cwd": str(dest), "args": args, "env": {
+        "NODE_ENV": "production", "PORT": "3000", "HOSTNAME": "127.0.0.1",
+        "PRIVATE_UPLOADS_DIR": cfg["media_map"]["private_uploads"]
+    }}
     try:
         pm2(cfg, "delete", PM2_NAME)
         pm2_start(cfg, next_spec)
