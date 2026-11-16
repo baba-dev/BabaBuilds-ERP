@@ -8,7 +8,7 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 const withSerwist = withSerwistInit({
   swSrc: 'app/sw.ts',
   swDest: 'public/sw.js',
-  disable: process.env.NODE_ENV === 'development',
+  disable: process.env.NODE_ENV === 'development' || process.env.ERP_STAGING_MODE === '1',
 });
 
 const nextConfig: NextConfig = {
@@ -16,11 +16,25 @@ const nextConfig: NextConfig = {
   compress: false,      // Offload GZIP/Brotli compression to NGINX for CPU efficiency
   async headers() {
     const isDev = process.env.NODE_ENV === 'development';
+    const staging = process.env.ERP_STAGING_MODE === '1';
     const scriptSrc = isDev
       ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://challenges.cloudflare.com"
       : "script-src 'self' 'unsafe-inline' https://checkout.razorpay.com https://challenges.cloudflare.com";
 
-    const csp = [
+    const csp = staging ? [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "style-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline'",
+      "connect-src 'self'",
+      "frame-src 'none'",
+      "form-action 'self'",
+      "worker-src 'none'",
+      "object-src 'none'",
+    ].join('; ') : [
       "default-src 'self'",
       "base-uri 'self'",
       "frame-ancestors 'self'",
@@ -47,6 +61,10 @@ const nextConfig: NextConfig = {
             value: 'camera=(), microphone=(), geolocation=(), payment=(self)',
           },
           { key: 'Content-Security-Policy', value: csp },
+          ...(staging ? [
+            { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+            { key: 'Cache-Control', value: 'no-store, private' },
+          ] : []),
         ],
       },
       {
