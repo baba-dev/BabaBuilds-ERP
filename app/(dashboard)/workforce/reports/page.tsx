@@ -13,6 +13,9 @@ type Report = {
   leave: { requests: number; days: number; byType: { name: string; days: number }[]; pending: number };
 };
 const iso = (d: Date) => d.toISOString().slice(0, 10);
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+/** Only a plain YYYY-MM-DD ever reaches a URL; anything else keeps the previous value. */
+const pickDay = (value: string, fallback: string) => (DAY.test(value) ? value : fallback);
 
 function Bars({ rows }: { rows: { name: string; value: number }[] }) {
   const max = Math.max(1, ...rows.map((r) => r.value));
@@ -38,7 +41,7 @@ export default function WorkforceReportsPage() {
     const ctl = new AbortController();
     void (async () => {
       setError(null);
-      const res = await fetch(`/api/workforce/reports?from=${range.from}&to=${range.to}`, { signal: ctl.signal }).catch(() => null);
+      const res = await fetch(`/api/workforce/reports?${new URLSearchParams({ from: range.from, to: range.to }).toString()}`, { signal: ctl.signal }).catch(() => null);
       if (!res) return;
       const j = (await res.json().catch(() => ({}))) as Report & { error?: string };
       if (!res.ok) { setError(j.error ?? t("error")); return; }
@@ -55,11 +58,11 @@ export default function WorkforceReportsPage() {
 
   return (
     <WorkforcePageShell title={t("nav.reports")} description={t("description")}
-      actions={<a href={`/api/workforce/reports?from=${range.from}&to=${range.to}&format=csv`}><Button size="sm" variant="outline" className="h-8 text-xs"><Download className="me-1.5 h-3.5 w-3.5" />{t("reports.export")}</Button></a>}>
+      actions={<a href={`/api/workforce/reports?${new URLSearchParams({ from: range.from, to: range.to, format: "csv" }).toString()}`}><Button size="sm" variant="outline" className="h-8 text-xs"><Download className="me-1.5 h-3.5 w-3.5" />{t("reports.export")}</Button></a>}>
       <div className="space-y-6">
         <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs font-semibold">{t("leave.from")}<input type="date" className={cn(input, "mt-1 block")} value={range.from} max={range.to} onChange={(e) => setRange({ ...range, from: e.target.value })} /></label>
-          <label className="text-xs font-semibold">{t("leave.to")}<input type="date" className={cn(input, "mt-1 block")} value={range.to} min={range.from} onChange={(e) => setRange({ ...range, to: e.target.value })} /></label>
+          <label className="text-xs font-semibold">{t("leave.from")}<input type="date" className={cn(input, "mt-1 block")} value={range.from} max={range.to} onChange={(e) => setRange({ ...range, from: pickDay(e.target.value, range.from) })} /></label>
+          <label className="text-xs font-semibold">{t("leave.to")}<input type="date" className={cn(input, "mt-1 block")} value={range.to} min={range.from} onChange={(e) => setRange({ ...range, to: pickDay(e.target.value, range.to) })} /></label>
         </div>
         {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
         {!data ? <div className="h-48 animate-pulse rounded-2xl bg-zinc-100 dark:bg-zinc-900" /> : (
