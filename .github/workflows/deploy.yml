@@ -57,6 +57,17 @@ jobs:
             sudo -n git -C "$app" fetch --no-tags \
               https://github.com/baba-dev/BabaBuilds-ERP.git refs/heads/main
             sudo -n git -C "$app" merge-base --is-ancestor "$DEPLOY_SHA" FETCH_HEAD
+            # Stage 1 Node26 landed in main before this deploy workflow.
+            # Until the separately approved ARM64 Node26 runtime activation,
+            # refuse to deploy a Node26-only source tree under production Node22.
+            required_node="$(sudo -n git -C "$app" show "$DEPLOY_SHA:.nvmrc" | tr -d '[:space:]')"
+            case "$required_node" in
+              22|22.*) ;;
+              *)
+                echo "BLOCKED: main requires Node $required_node but production operator is Node22; Node26 Stage 2 must be activated separately." >&2
+                exit 1
+                ;;
+            esac
             sudo -n git -C "$app" show "$DEPLOY_SHA:scripts/operations/deploy-erp-standalone.sh" \
               | sudo -n tee "$state/operator.next" >/dev/null
             sudo -n bash -n "$state/operator.next"
