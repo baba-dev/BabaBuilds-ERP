@@ -29,6 +29,8 @@ MEDIA = (
     "public/signatures",
     "public/products",
     "public/uploads",
+    "public/partner-kit",
+    "tmp/share-target",
 )
 NAME = re.compile(r"^[a-z0-9]{4,12}$")
 RUN = re.compile(r"^[a-z][a-z0-9]{3,15}$")
