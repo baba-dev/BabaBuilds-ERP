@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { type Prisma } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { canManageCompanies, canManageSubscription, errorJson, parseNullableString, parseString, parseWorkspaceUsers, requireCompanyGroupContext, requireMultiCompanyAccess, subscriptionUpdateFromBody } from "../_shared";
+import { activeGroupMemberIds } from "@/lib/companies/access";
+import { companyPatchSchema } from "@/lib/companies/schemas";
+import { logActivity } from "@/lib/security/activity-log";
+import { canManageCompanies, canManageSubscription, errorJson, parseNullableString, parseString, parseWorkspaceUsers, requireCompanyGroupContext, requireMultiCompanyAccess } from "../_shared";
 
 const companySelect = {
   id: true,
@@ -22,8 +26,9 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     if (!canManageCompanies(context.groupRole)) return errorJson("Forbidden", 403);
 
     const { id } = await props.params;
-    const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-    if (!body) return errorJson("Invalid JSON body", 400);
+    const parsed = companyPatchSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Check the details.", fields: z.flattenError(parsed.error).fieldErrors }, { status: 422 });
+    const body = parsed.data as Record<string, unknown>;
 
     const link = await prisma.companyGroupWorkspace.findFirst({ where: { companyGroupId: context.companyGroupId, workspaceId: id }, select: { id: true, workspaceId: true } });
     if (!link) return errorJson("Company not found", 404);
@@ -36,7 +41,15 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
     }
     if (name && !profileData.companyName) profileData.companyName = name;
 
-    const selectedUsers = parseWorkspaceUsers(body.users ?? body.selectedUsers ?? body.userIds);
+    const selectedUsers = parseWorkspaceUsers(body.users);
+    // Only people who already belong to this group can be given a role in a company.
+    const known = await activeGroupMemberIds(context.companyGroupId, selectedUsers.map((u) => u.userId));
+    if (selectedUsers.some((u) => !known.has(u.userId))) return NextResponse.json({ error: "Everyone you add must already be a member of this group.", fields: { users: ["Add the person to the group first."] } }, { status: 422 });
+    const billingWorkspaceId = parseNullableString(body.billingWorkspaceId);
+    if (billingWorkspaceId) {
+      const inGroup = await prisma.companyGroupWorkspace.findFirst({ where: { companyGroupId: context.companyGroupId, workspaceId: billingWorkspaceId, isActive: true }, select: { id: true } });
+      if (!inGroup) return NextResponse.json({ error: "The billing company must be an active company in this group.", fields: { billingWorkspaceId: ["Pick a company from this group."] } }, { status: 422 });
+    }
 
     const updated = await prisma.$transaction(async (tx) => {
       await tx.workspace.update({
@@ -48,6 +61,7 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
         },
       });
 
+      if (typeof body.relationType === "string") await tx.companyGroupWorkspace.update({ where: { id: link.id }, data: { relationType: body.relationType } });
       if (Object.keys(profileData).length > 0) await tx.businessProfile.update({ where: { workspaceId: id }, data: profileData });
 
       if (selectedUsers.length > 0) {
@@ -60,14 +74,15 @@ export async function PATCH(request: Request, props: { params: Promise<{ id: str
         }
       }
 
-      if (canManageSubscription(context.groupRole)) {
-        const subData = subscriptionUpdateFromBody(body);
-        if (Object.keys(subData).length > 0) await tx.companyGroup.update({ where: { id: context.companyGroupId }, data: subData });
+      // Plan and subscription status are only ever changed by the payment flow, never from here.
+      if (canManageSubscription(context.groupRole) && billingWorkspaceId !== undefined) {
+        await tx.companyGroup.update({ where: { id: context.companyGroupId }, data: { billingWorkspace: billingWorkspaceId ? { connect: { id: billingWorkspaceId } } : { disconnect: true } } });
       }
 
       return tx.companyGroupWorkspace.findUniqueOrThrow({ where: { id: link.id }, select: companySelect });
     });
 
+    void logActivity({ workspaceId: context.workspaceId, action: "company.updated", status: "SUCCESS", actor: { userId: context.userId, email: null }, entity: { type: "company", id }, metadata: { fields: Object.keys(body) } });
     return NextResponse.json({ data: updated });
   } catch (error) {
     console.error("[companies/[id]/PATCH]", error);
