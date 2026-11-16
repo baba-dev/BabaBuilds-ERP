@@ -11,6 +11,16 @@
 
 CI performs all automated checks with **synthetic data**, including a real PG17 import, a second-database restore, financial tamper detection, D2 accounting checks and D4 synthetic concurrency. It cannot assert that the real host's 692 previous records or actual media are valid.
 
+## Isolated ERP staging Node.js prerequisite
+
+The live ERP uses `/usr/bin/node` (Node 20) and the other apps use
+`/opt/menuminute/node24/bin/node`. **Do not change either.** Install a
+separate Node 22 Linux ARM64 distribution under
+`/opt/bababuilds-erp/node22`, owned by root, readable by `erpstaging`.
+Verify the official Node.js SHA256 manifest before extraction. The staging
+operator script and its systemd unit explicitly use this isolated installation.
+No `/usr/bin/node` replacement, PM2 restart or Node 24 changes are necessary.
+
 ## Production safety
 
 Do not execute from /var/www/bababuilds-erp or use the live ERP PostgreSQL database name. The one-shot operator runner refuses an existing staging suffix. It cannot merge/cut over production or reset/drop databases. It creates a staging database, stage roles, sensitive snapshot, local media clone and staging-only systemd unit. It does not back up or restart production services.

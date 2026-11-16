@@ -27,11 +27,18 @@ checkout_branch="$(git -C "$app" branch --show-current)"
 if ss -lnt | grep -Eq '(127[.]0[.]0[.]1|0[.]0[.]0[.]0|[::]):3101[[:space:]]'; then
   echo "Staging port 3101 already occupied" >&2; exit 1
 fi
-for program in rsync runuser node npm psql systemctl; do command -v "$program" >/dev/null; done
-# The repository explicitly requires Node 22. Avoid staging state/database
-# changes if the invoking shell would build using the system Node 20.
-[[ "$(node -p 'process.versions.node.split(".")[0]')" == "22" ]] ||
- { echo "Stage requires Node 22 in PATH; production Node is left unchanged" >&2; exit 1; }
+for program in rsync runuser psql systemctl; do command -v "$program" >/dev/null; done
+# Use a private, verified Node 22 installation; do not replace /usr/bin/node
+# because the live ERP still runs that binary and MenuMinute/ClubKeep use Node 24.
+NODE22_BIN=/opt/bababuilds-erp/node22/bin
+[[ -x "$NODE22_BIN/node" && -x "$NODE22_BIN/npm" && -x "$NODE22_BIN/npx" ]] ||
+ { echo "Install the private ERP Node 22 runtime at $NODE22_BIN first" >&2; exit 1; }
+[[ "$("$NODE22_BIN/node" -p 'process.versions.node.split(".")[0]')"
+   == "22" ]] ||
+ { echo "Expected private Node 22 for ERP staging" >&2; exit 1; }
+export PATH="$NODE22_BIN:$PATH"
+[[ "$(command -v node)" == "$NODE22_BIN/node" ]] ||
+ { echo "ERP Node 22 PATH precedence is invalid" >&2; exit 1; }
 state="/var/lib/bababuilds-erp/staging/$suffix"
 [[ ! -e "$state" ]] || { echo "Staging suffix exists: no reuse" >&2; exit 1; }
 install -d -m 0700 "$state"
