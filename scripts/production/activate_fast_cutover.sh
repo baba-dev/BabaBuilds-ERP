@@ -88,7 +88,7 @@ if [[ -n "$(ss -H -lnt 'sport = :3000')" ]]; then
   exit 1
 fi
 echo "=== Final frozen SQLite source and off-host encrypted restore ==="
-mkdir -m 0700 "$STATE/backups/finalrestore1"
+install -d -o root -g root -m 0700 "$STATE/backups" "$STATE/backups/finalrestore1"
 SRC_SHA="$(sha256sum "$LIVE/prisma/dev.db" | awk '{print $1}')"
 python3 "$APP/scripts/staging/snapshot_sqlite.py" \
   --live-sqlite "$LIVE/prisma/dev.db" \
