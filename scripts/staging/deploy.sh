@@ -33,8 +33,7 @@ for program in rsync runuser psql systemctl; do command -v "$program" >/dev/null
 NODE22_BIN=/opt/bababuilds-erp/node22/bin
 [[ -x "$NODE22_BIN/node" && -x "$NODE22_BIN/npm" && -x "$NODE22_BIN/npx" ]] ||
  { echo "Install the private ERP Node 22 runtime at $NODE22_BIN first" >&2; exit 1; }
-[[ "$("$NODE22_BIN/node" -p 'process.versions.node.split(".")[0]')"
-   == "22" ]] ||
+[[ "$("$NODE22_BIN/node" -p 'process.versions.node.split(".")[0]')" == "22" ]] ||
  { echo "Expected private Node 22 for ERP staging" >&2; exit 1; }
 export PATH="$NODE22_BIN:$PATH"
 [[ "$(command -v node)" == "$NODE22_BIN/node" ]] ||

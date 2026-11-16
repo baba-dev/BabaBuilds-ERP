@@ -208,6 +208,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      - name: Bash syntax gate — staging runner
+        run: bash -n scripts/staging/deploy.sh
+
       - name: D1–D2 Python safety and financial invariants unit tests
         run: python3 -m unittest discover -s tests/staging -p 'test_*.py' -v
 
