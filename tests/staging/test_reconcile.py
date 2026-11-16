@@ -11,11 +11,15 @@ spec.loader.exec_module(r)
 
 class FinancialInvariantsTest(unittest.TestCase):
     def invoice(self, **over):
-        return dict(id="inv", workspaceId="w1", amountReceived="20.00",
-                    grandTotal="100", status="PARTIALLY_PAID", **over)
+        row = dict(id="inv", workspaceId="w1", amountReceived="20.00",
+                   grandTotal="100", status="PARTIALLY_PAID")
+        row.update(over)
+        return row
 
     def payment(self, **over):
-        return dict(id="p1", workspaceId="w1", invoiceId="inv", amount="20.00", **over)
+        row = dict(id="p1", workspaceId="w1", invoiceId="inv", amount="20.00")
+        row.update(over)
+        return row
 
     def test_clean(self):
         self.assertEqual(r.financial_invariants([self.invoice()], [self.payment()], []), {})
