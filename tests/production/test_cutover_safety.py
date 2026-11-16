@@ -57,6 +57,29 @@ class CutoverSafetyTests(unittest.TestCase):
             file.write_bytes(b"modified example")
             self.assertNotEqual(promote.digest(file), original)
 
+    def test_frozen_source_sha_distinct_from_backup_sha(self):
+        # The SQLite backup API can produce a different physical file hash.
+        # Promotion must compare the frozen live file to its OWN attested SHA.
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "live.db"
+            source.write_bytes(b"stable original sqlite bytes")
+            st = source.stat()
+            manifest = {
+                "frozen_source_sha256": promote.digest(source),
+                "snapshot_sha256": "a" * 64,
+                "source_inode": st.st_ino,
+                "source_device": st.st_dev,
+            }
+            self.assertNotEqual(manifest["frozen_source_sha256"],
+                                manifest["snapshot_sha256"])
+            promote.assert_frozen_source_unchanged(source, manifest)
+            source.write_bytes(b"modified after freeze")
+            with self.assertRaisesRegex(RuntimeError, "differs from frozen"):
+                promote.assert_frozen_source_unchanged(source, manifest)
+            with self.assertRaises(RuntimeError):
+                promote.assert_frozen_source_unchanged(source, {**manifest,
+                    "frozen_source_sha256": None})
+
     def test_operator_freeze_markers_are_not_optional(self):
         with tempfile.TemporaryDirectory() as directory:
             file = Path(directory) / "freeze"
