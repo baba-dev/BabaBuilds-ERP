@@ -37,6 +37,7 @@ MEDIA_TARGETS = (
     "public/partner-kit", "tmp/share-target",
 )
 NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+RESTIC_RE = re.compile(r"^[a-f0-9]{64}$")
 CHECKS = (
     "recurring_backup", "independent_database_restore", "media_restore",
     "existing_media", "new_private_upload", "pdf_report",
@@ -73,7 +74,7 @@ def json_protected(path):
 
 def recovery_checks(report, *, clock=None):
     clock = clock or now()
-    if not SHA_RE.fullmatch(str(report.get("snapshot", ""))):
+    if not RESTIC_RE.fullmatch(str(report.get("snapshot", ""))):
         fail("Off-host restic snapshot ID must be a complete SHA")
     if any(report.get("checks", {}).get(k) is not True for k in CHECKS):
         fail("Production handoff attestation incomplete")
