@@ -51,6 +51,10 @@ export async function sendEmail({
   text,
   attachments
 }: MailOptions) {
+  if (process.env.ERP_STAGING_MODE === '1') {
+    // Cloned real customer SMTP credentials must never send test messages.
+    throw new Error('ERP_STAGING_EXTERNAL_EMAIL_BLOCKED');
+  }
   let transporter;
   let fromAddress;
 

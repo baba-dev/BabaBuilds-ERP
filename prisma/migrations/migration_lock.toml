@@ -1,1 +1,2 @@
-provider = "sqlite"
+# New PostgreSQL history only. SQLite files archived in prisma/sqlite-history.
+provider = "postgresql"

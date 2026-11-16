@@ -116,6 +116,9 @@ function normalizeRoute(route) {
 function shouldIgnoreRoute(route) {
   if (!route.startsWith('/')) return true;
   if (route.startsWith('/api/')) return true;
+  // Absolute Linux filesystem paths are not browser navigation targets.
+  // Keep unknown web paths in scope: only known OS filesystem roots are excluded.
+  if (/^\/(?:var|etc|opt|usr|proc|sys|dev|run|tmp|home)\//.test(route)) return true;
   if (route.startsWith('/_')) return true; // framework-internal paths
   if (route.startsWith('/_next/')) return true;
   if (route.includes('[') || route.includes(']')) return true;

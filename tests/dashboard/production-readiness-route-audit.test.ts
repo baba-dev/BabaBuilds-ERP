@@ -22,6 +22,15 @@ describe("production readiness route audit links", () => {
     }
   });
 
+  it("does not mistake private server filesystem paths for application links", () => {
+    const scanner = fs.readFileSync(
+      path.join(process.cwd(), "scripts/route-integrity-report.mjs"), "utf8",
+    );
+    // Ignore OS filesystem root literals, without dropping unknown site routes.
+    expect(scanner).toContain("(?:var|etc|opt|usr|proc|sys|dev|run|tmp|home)");
+    expect(scanner).toContain("if (!exists) brokenRoutes.push(entry)");
+  });
+
   it("has no broken internal route references anywhere in app/components/content (GATE-003)", () => {
     const result = spawnSync(process.execPath, ["scripts/route-integrity-report.mjs"], {
       cwd: process.cwd(),

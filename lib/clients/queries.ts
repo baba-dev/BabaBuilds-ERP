@@ -14,14 +14,14 @@ const r2 = (v: number) => Math.round(v * 100) / 100;
 /** Billing roll-up per client in the workspace base currency (invoice total times its booked exchange rate). One grouped query, no N+1. */
 export async function clientMetrics(workspaceId: string, ids: string[] | null, now = new Date()): Promise<Map<string, ClientMetrics>> {
   const idFilter = ids ? (ids.length ? Prisma.sql`AND i."clientId" IN (${Prisma.join(ids)})` : Prisma.sql`AND 1 = 0`) : Prisma.empty;
-  const rows = await prisma.$queryRaw<Array<{ clientId: string; invoiceCount: bigint | number; billed: number | null; paid: number | null; outstanding: number | null; overdue: number | null; lastInvoiceAt: Date | number | string | null }>>(Prisma.sql`
-    SELECT i."clientId" AS clientId,
-      COUNT(*) AS invoiceCount,
-      SUM(CAST(i."grandTotal" AS REAL) * CAST(i."exchangeRate" AS REAL)) AS billed,
-      SUM(CASE WHEN i."status" = 'PAID' THEN CAST(i."grandTotal" AS REAL) * CAST(i."exchangeRate" AS REAL) ELSE 0 END) AS paid,
-      SUM(CASE WHEN i."status" IN ('PENDING','PARTIALLY_PAID') THEN (CAST(i."grandTotal" AS REAL) - CAST(COALESCE(i."amountReceived", 0) AS REAL)) * CAST(i."exchangeRate" AS REAL) ELSE 0 END) AS outstanding,
-      SUM(CASE WHEN i."status" IN ('PENDING','PARTIALLY_PAID') AND i."dueDate" IS NOT NULL AND i."dueDate" < ${now} THEN (CAST(i."grandTotal" AS REAL) - CAST(COALESCE(i."amountReceived", 0) AS REAL)) * CAST(i."exchangeRate" AS REAL) ELSE 0 END) AS overdue,
-      MAX(i."invoiceDate") AS lastInvoiceAt
+  const rows = await prisma.$queryRaw<Array<{ clientId: string; invoiceCount: bigint | number; billed: Prisma.Decimal | number | null; paid: Prisma.Decimal | number | null; outstanding: Prisma.Decimal | number | null; overdue: Prisma.Decimal | number | null; lastInvoiceAt: Date | number | string | null }>>(Prisma.sql`
+    SELECT i."clientId" AS "clientId",
+      COUNT(*) AS "invoiceCount",
+      SUM(i."grandTotal" * i."exchangeRate") AS billed,
+      SUM(CASE WHEN i."status" = 'PAID' THEN i."grandTotal" * i."exchangeRate" ELSE 0 END) AS paid,
+      SUM(CASE WHEN i."status" IN ('PENDING','PARTIALLY_PAID') THEN (i."grandTotal" - COALESCE(i."amountReceived", 0)) * i."exchangeRate" ELSE 0 END) AS outstanding,
+      SUM(CASE WHEN i."status" IN ('PENDING','PARTIALLY_PAID') AND i."dueDate" IS NOT NULL AND i."dueDate" < ${now} THEN (i."grandTotal" - COALESCE(i."amountReceived", 0)) * i."exchangeRate" ELSE 0 END) AS overdue,
+      MAX(i."invoiceDate") AS "lastInvoiceAt"
     FROM "Invoice" i
     WHERE i."workspaceId" = ${workspaceId} AND i."clientId" IS NOT NULL AND i."status" != 'VOID' AND i."voidedAt" IS NULL ${idFilter}
     GROUP BY i."clientId"`);

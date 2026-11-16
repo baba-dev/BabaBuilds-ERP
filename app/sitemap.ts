@@ -46,7 +46,7 @@ function getDocLastModified(slug: string): Date {
 
 async function getActiveShopSlugs(): Promise<Array<{ slug: string; updatedAt: Date }>> {
   const shops = await prisma.$queryRaw<Array<{ slug: string; updatedAt: Date }>>`
-    SELECT "shopSlug" as slug, "updatedAt"
+    SELECT "shopSlug" as slug, "updatedAt" AS "updatedAt"
     FROM "BusinessProfile"
     WHERE "shopEnabled" = true
       AND "shopSlug" IS NOT NULL

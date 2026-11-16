@@ -38,12 +38,12 @@ export async function loadPlatformOverview(now = new Date()): Promise<PlatformOv
     prisma.workspace.findMany({ where: { ...real, createdAt: { gte: d14 } }, select: { createdAt: true } }),
     prisma.invoice.count({ where: { voidedAt: null, workspace: real } }),
     prisma.invoice.count({ where: { voidedAt: null, createdAt: { gte: d30 }, workspace: real } }),
-    prisma.$queryRaw<Array<{ allTime: number | null; last30: number | null }>>(Prisma.sql`
+    prisma.$queryRaw<Array<{ allTime: Prisma.Decimal | number | null; last30: Prisma.Decimal | number | null }>>(Prisma.sql`
       SELECT
-        SUM(CAST(i."grandTotal" AS REAL) * CAST(COALESCE(i."exchangeRate", 1) AS REAL)) AS allTime,
-        SUM(CASE WHEN i."createdAt" >= ${d30} THEN CAST(i."grandTotal" AS REAL) * CAST(COALESCE(i."exchangeRate", 1) AS REAL) ELSE 0 END) AS last30
+        SUM(i."grandTotal" * COALESCE(i."exchangeRate", 1)) AS "allTime",
+        SUM(CASE WHEN i."createdAt" >= ${d30} THEN i."grandTotal" * COALESCE(i."exchangeRate", 1) ELSE 0 END) AS "last30"
       FROM "Invoice" i JOIN "Workspace" w ON w."id" = i."workspaceId"
-      WHERE i."voidedAt" IS NULL AND w."isDemo" = 0`),
+      WHERE i."voidedAt" IS NULL AND w."isDemo" = false`),
   ]);
 
   const count = (s: string) => byStatus.find((r) => r.subscriptionStatus === s)?._count._all ?? 0;
