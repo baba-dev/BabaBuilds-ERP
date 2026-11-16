@@ -158,6 +158,15 @@
     "source-map-js": "^1.2.2",
     "@tailwindcss/typography": {
       "postcss-selector-parser": "6.1.5"
+    },
+    "@serwist/build": {
+      "zod": "4.6.7"
+    },
+    "@serwist/next": {
+      "zod": "4.6.7"
+    },
+    "@serwist/webpack-plugin": {
+      "zod": "4.6.7"
     }
   },
   "packageManager": "npm@11.20.0"
