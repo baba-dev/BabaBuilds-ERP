@@ -13,7 +13,7 @@ RUN="$APP/.next/standalone"
 NODEBIN=/opt/bababuilds-erp/node22/bin
 PM2=/root/.nvm/versions/node/v24.14.1/lib/node_modules/pm2/bin/pm2
 export PM2_HOME=/root/.pm2
-export PATH="/root/.nvm/versions/node/v24.14.1/bin:$NODEBIN:/usr/bin:/bin"
+export PATH="/root/.nvm/versions/node/v24.14.1/bin:$NODEBIN:/usr/sbin:/usr/bin:/sbin:/bin"
 export HOME=/root
 
 [[ -f "$STATE/prepared-sha" && -f "$RUN/server.js" ]] || { echo "Production release not prepared" >&2; exit 1; }
@@ -26,8 +26,11 @@ export HOME=/root
 [[ "$(systemctl is-active pm2-root postgresql@17-main menuminute-web menuminute-worker clubkeep-web | grep -c '^active$')" == 5 ]] || {
   echo "Expected platform services not all active" >&2; exit 1;
 }
-[[ "$(runuser -u postgres -- psql -X -Atqc "select count(*) from pg_database where datname='bababuilds_erp'")" == 0 ]] || {
-  echo "Production PG name already exists" >&2; exit 1;
+pg_query="$(/usr/sbin/runuser -u postgres -- psql -X -Atqc "select count(*) from pg_database where datname='bababuilds_erp'")" || {
+  echo "Production PostgreSQL existence query failed; refusing cutover" >&2; exit 1;
+}
+[[ "$pg_query" == "0" ]] || {
+  echo "Production PostgreSQL database exists (or unexpected query result); refusing cutover" >&2; exit 1;
 }
 
 # Safely restore legacy runtime ONLY if no PostgreSQL production database
