@@ -206,13 +206,16 @@ class CutoverSafetyTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, "exactly one ERP"):
             runtime.entries_from_pm2("[]")
 
-    def test_deploy_requires_postcutover_verification(self):
+    def test_legacy_inplace_deploy_disabled_after_standalone_cutover(self):
+        # A green push to main must never restart the isolated production release
+        # using the former npm /var/www working directory.
         workflow = (ROOT / ".github/workflows/deploy.yml").read_text()
-        self.assertIn("ERP_POSTGRES_PRODUCTION_VERIFIED", workflow)
-        self.assertIn("postgres-production-verified", workflow)
-        self.assertIn("/opt/bababuilds-erp/node22/bin", workflow)
-        self.assertIn("production-database.env", workflow)
-        self.assertIn("pm2 restart erp --update-env", workflow)
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("no server changes", workflow)
+        self.assertNotIn("workflow_run:", workflow)
+        self.assertNotIn("git reset --hard", workflow)
+        self.assertNotIn("pm2 restart erp --update-env", workflow)
+        self.assertNotIn("appleboy/ssh-action", workflow)
 
 
 if __name__ == "__main__":
