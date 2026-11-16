@@ -64,6 +64,49 @@ Do not print the .env file, database connection URI, payment tokens or secret
 values in public logs. Do not proceed until the off-host restore and production
 runtime owner / launch method are known.
 
+## 0. Prove a Restic R2 off-host ERP backup BEFORE any write freeze
+
+The host already has protected root-owned `/etc/menuminute/backup/r2.json`,
+`restic-password`, and the working
+`/usr/local/sbin/menuminute-restic` wrapper. The operator verified that
+66 snapshots can be listed remotely; **none carried the menuminute-nightly
+tag, and that backup timer was inactive**. This proves remote access only,
+not ERP recoverability and not a working automated backup schedule.
+
+Before using this shared encrypted repository for *ERP* data, confirm it is
+an authorized backup destination for ERP customer data, that existing
+MenuMinute encryption/recovery keys are preserved, and that storage/retention
+policies will not prune either application's snapshots. No `forget` or
+`prune` operation is part of this rehearsal. An independent ERP-specific
+repository/credentials would be preferable for long-term blast-radius
+separation; the shared wrapper below is a temporary supervised rehearsal.
+
+The rehearsal takes a new **consistent read-only SQLite online snapshot**
+while live ERP remains operational; backs up only that snapshot, its manifest
+and the seven approved public/private media roots; creates a uniquely tagged
+new encrypted remote Restic snapshot; restores the snapshot/media into a
+different private local directory; independently compares SHA256 for every
+restored file and the source SQLite integrity. It leaves all remote snapshots
+in place. It does NOT freeze writes or change app configuration.
+
+Run as the root operator, after updating the separate Phase E checkout to a
+reviewed/CI-green commit (do not run the provisioner again):
+
+    CUT=cut1611a
+    RUN=preflight1
+    APP="/opt/bababuilds-erp-cutover/$CUT/app"
+    STATE="/var/lib/bababuilds-erp/cutover/$CUT"
+    sudo install -o root -g root -d -m 0700 "$STATE/backups/$RUN"
+    sudo python3 "$APP/scripts/staging/snapshot_sqlite.py"       --live-sqlite /var/www/bababuilds-erp/prisma/dev.db       --output "$STATE/backups/$RUN/source.sqlite"
+    sudo python3 "$APP/scripts/production/backup_restore_rehearsal.py"       --suffix "$CUT" --run-id "$RUN"       --snapshot "$STATE/backups/$RUN/source.sqlite"       --acknowledge-shared-encrypted-repository
+
+Expected: `"status":"PASS"`, `"remote_restore_verified":true`.
+The evidence file is protected within `$STATE/backups/$RUN/`. If a run
+fails, do not reuse its RUN label or delete its retained snapshots; inspect
+the failure and select a fresh RUN name. Repeat this verification using
+the FINAL frozen SQLite snapshot during maintenance, not merely the
+preflight live snapshot.
+
 ## 1. Fresh isolated candidate — BEFORE write freeze
 
 A NEW suffix is required; do not reuse successful stage 20261116a.

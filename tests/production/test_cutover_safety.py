@@ -20,6 +20,7 @@ provision = load("erp_prod_candidate", "scripts/production/provision_candidate.p
 promote = load("erp_prod_promote", "scripts/production/promote_candidate.py")
 importer = load("erp_stage_importer", "scripts/sqlite-to-postgres.py")
 verify = load("erp_stage_verifier", "scripts/phase-c-verify.py")
+backup = load("erp_backup_restore", "scripts/production/backup_restore_rehearsal.py")
 
 
 class CutoverSafetyTests(unittest.TestCase):
@@ -77,6 +78,43 @@ class CutoverSafetyTests(unittest.TestCase):
             stdout="# */10 * * * * /var/www/bababuilds-erp/scripts/run-cron.sh documents-ocr\n0 1 * * * /usr/bin/true\n"
         )):
             promote.assert_root_erp_cron_paused()
+
+    def test_backup_hashes_and_rejects_modified_restore(self):
+        import shutil
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "private"
+            source.mkdir()
+            file = source / "invoice.pdf"
+            file.write_bytes(b"sample")
+            restore = root / "restore"
+            restored = restore / source.relative_to("/")
+            restored.mkdir(parents=True)
+            shutil.copyfile(file, restored / file.name)
+            original = backup.inventory([file])
+            backup.verify_restored([source], original, restore)
+            (restored / file.name).write_bytes(b"tampered")
+            with self.assertRaisesRegex(RuntimeError, "checksum"):
+                backup.verify_restored([source], original, restore)
+
+    def test_backup_restore_rejects_unexpected_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source = root / "private"
+            source.mkdir()
+            file = source / "a"
+            file.write_text("data")
+            restore = root / "restore"
+            dest = restore / source.relative_to("/")
+            dest.mkdir(parents=True)
+            (dest / "a").write_text("data")
+            (dest / "unexpected").write_text("data")
+            with self.assertRaisesRegex(RuntimeError, "inventory"):
+                backup.verify_restored([source], backup.inventory([file]), restore)
+
+    def test_backup_remote_snapshots_need_valid_ids(self):
+        with patch.object(backup, "checked", return_value='[{"id":"not-valid"},{"id":"' + "a"*64 + '"}]'):
+            self.assertEqual(list(backup.snapshots("tag")), ["a"*64])
 
     def test_deploy_requires_postcutover_verification(self):
         workflow = (ROOT / ".github/workflows/deploy.yml").read_text()

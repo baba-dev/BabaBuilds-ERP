@@ -216,7 +216,7 @@ jobs:
 
       - name: Phase E protected production cutover tool tests
         run: |
-          python3 -m py_compile scripts/production/provision_candidate.py scripts/production/promote_candidate.py
+          python3 -m py_compile scripts/production/provision_candidate.py scripts/production/promote_candidate.py scripts/production/backup_restore_rehearsal.py
           python3 -m unittest discover -s tests/production -p 'test_*.py' -v
 
       - name: Build PostgreSQL baseline
