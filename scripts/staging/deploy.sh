@@ -93,6 +93,12 @@ install -d -o erpstaging -g erpstaging -m 0750 "$app/.next/standalone/public"
 install -d -o erpstaging -g erpstaging -m 0750 "$app/.next/standalone/.next/static"
 runuser -u erpstaging -- rsync -r --no-links --safe-links -- "$app/public/" "$app/.next/standalone/public/"
 runuser -u erpstaging -- rsync -r --no-links --safe-links -- "$app/.next/static/" "$app/.next/standalone/.next/static/"
+# Standalone server.js runs with __dirname as CWD. Private staging uploads
+# must be present in that CWD for relative-path document readers.
+if [[ -d "$app/private_uploads" && ! -L "$app/private_uploads" ]]; then
+  install -d -o erpstaging -g erpstaging -m 0700 "$app/.next/standalone/private_uploads"
+  runuser -u erpstaging -- rsync -r --no-links --safe-links -- "$app/private_uploads/" "$app/.next/standalone/private_uploads/"
+fi
 
 # D4 only creates/cleans up a synthetic workspace.
 export ERP_STAGING_TESTS=1
