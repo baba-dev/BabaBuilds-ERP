@@ -33,6 +33,9 @@ END $$;
 GRANT USAGE ON SCHEMA public TO "{runtime}";
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO "{runtime}";
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO "{runtime}";
+-- Never allow the application to rewrite Prisma migration audit history.
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE ON TABLE public."_prisma_migrations" FROM "{runtime}";
+GRANT SELECT ON TABLE public."_prisma_migrations" TO "{runtime}";
 REVOKE CREATE ON SCHEMA public FROM "{runtime}";
 COMMIT;
 """
