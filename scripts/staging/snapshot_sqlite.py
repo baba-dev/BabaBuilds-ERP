@@ -104,6 +104,13 @@ def main(argv=None):
         finally:
             check.close()
         after = src.stat()
+        # For a frozen cutover only: remember the *original* SQLite file
+        # hash separately from the byte-different SQLite backup API output.
+        frozen_sha = None
+        if args.expect_source_sha256:
+            frozen_sha = sha256(src)
+            if frozen_sha != actual_before:
+                raise RuntimeError("Frozen SQLite source changed while snapshotting")
         data = {
             "status": "PASS",
             "source_size_bytes_before": original.st_size,
@@ -118,6 +125,8 @@ def main(argv=None):
             "source_inode": original.st_ino,
             "source_device": original.st_dev,
         }
+        if frozen_sha is not None:
+            data["frozen_source_sha256"] = frozen_sha
         manifest_path = Path(str(dst) + ".manifest.json")
         fd = os.open(manifest_path, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
