@@ -80,6 +80,26 @@ def main():
         raise RuntimeError("Live SQLite journal/sidecar present; source not quiescent")
     if not LIVE.is_file() or LIVE.is_symlink() or digest(LIVE) != source_sha:
         raise RuntimeError("Live SQLite differs from frozen snapshot; refuse promotion")
+    # A stopped TCP listener is not enough: background jobs can still hold
+    # SQLite handles. Refuse promotion while any process has the live DB open.
+    live_stat = LIVE.stat()
+    db_holders = 0
+    for proc in Path("/proc").iterdir():
+        if not proc.name.isdigit():
+            continue
+        try:
+            for handle in (proc / "fd").iterdir():
+                try:
+                    opened = handle.stat()
+                    if opened.st_dev == live_stat.st_dev and opened.st_ino == live_stat.st_ino:
+                        db_holders += 1
+                        break
+                except (FileNotFoundError, PermissionError, OSError):
+                    continue
+        except (FileNotFoundError, PermissionError, OSError):
+            continue
+    if db_holders:
+        raise RuntimeError("Active processes still hold the production SQLite file")
     # Nothing should be listening on the old ERP port while the freeze is active.
     sockets = subprocess.run(
         ["ss", "-H", "-lnt", "sport", "=", ":3000"],
