@@ -50,7 +50,7 @@ env -u DATABASE_URL -u ERP_STAGING_MODE NODE_ENV=production \
   "$NODEBIN/node" \
   "--env-file=$LIVE/.env" \
   "--env-file=$STATE/credentials/migration.env" \
-  "$APP/node_modules/next/dist/bin/next" build --webpack
+  "$(readlink -f "$NODEBIN/npm")" run build
 [[ -s "$APP/public/sw.js" && -s "$APP/.next/standalone/server.js" ]] || {
   echo "Production Serwist or standalone server missing" >&2; exit 1;
 }
@@ -66,6 +66,12 @@ cp -a "$APP/.next/static/." "$RUN/.next/static/"
 for rel in public/invoices public/receipts public/logos public/signatures public/products public/uploads public/partner-kit; do
   mkdir -p "$LIVE/$rel"
   target="$RUN/$rel"
+  if [[ "$rel" == public/partner-kit && -d "$target" && ! -L "$target" && -n "$(ls -A "$target")" ]]; then
+    # The npm prebuild hook generates public partner PDFs. Keep those release
+    # assets and add any legacy-only files from the original production root.
+    cp -an "$LIVE/$rel/." "$target/"
+    continue
+  fi
   if [[ -e "$target" || -L "$target" ]]; then
     if [[ -d "$target" && ! -L "$target" && -z "$(ls -A "$target")" ]]; then
       rmdir "$target"
