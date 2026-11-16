@@ -5,7 +5,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import { checkPermissionSilent } from '@/lib/rbac';
 import { isModuleEnabled } from '@/lib/modules';
 import { getWorkforceSummary } from '@/lib/workforce/index';

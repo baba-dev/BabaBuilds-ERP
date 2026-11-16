@@ -6,7 +6,7 @@ import { computeAllScenarios } from '@/lib/cash-flow/forecast-engine';
 import { buildKpis } from '@/lib/cash-flow/insights';
 import { getMrrMovement } from '@/lib/retainers/movement';
 import { reconciliationSummary } from '@/lib/reconciliation/workspace';
-import { claimable, dateWhere, expensesIn, invoicesIn, iso, gross, month, netCost, netRev, num, r2, rate, sumRow } from '@/lib/reporting/helpers';
+import { claimable, dateWhere, expensesIn, invoicesIn, iso, gross, netCost, netRev, num, r2, rate, sumRow } from '@/lib/reporting/helpers';
 import { aggregate } from '@/lib/reporting/semantic';
 import type { ReportDef, Row } from '@/lib/reporting/types';
 

@@ -374,7 +374,6 @@ export async function POST(request: Request) {
             throw new PosCheckoutError('INVALID_DISCOUNT');
           }
           resolvedItems.forEach((line, i) => { line.lineTaxable = decimal(computed.lines[i]!.taxable); });
-          const subtotal = decimal(computed.subtotal);
           const taxableSubtotal = decimal(computed.taxable);
           const tax = decimal(computed.tax);
           const totalAmount = decimal(computed.total);

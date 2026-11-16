@@ -57,7 +57,7 @@ type Props<T> = {
   };
 };
 
-export function DataTable<T extends Record<string, any>>({
+export function DataTable<T extends object>({
   columns,
   data,
   rowId,

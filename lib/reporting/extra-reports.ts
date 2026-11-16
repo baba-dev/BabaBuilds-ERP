@@ -4,7 +4,7 @@ import { openPayables } from '@/lib/expenses/payables-data';
 import { forecastAccuracy } from '@/lib/cash-flow/accuracy';
 import { retainerMrr } from '@/lib/retainers/mrr';
 import { getConsolidatedInvoiceReport } from '@/lib/company-groups/reports';
-import { claimable, DAY, dateWhere, expensesIn, gross, invoicesIn, iso, month, netRev, num, r2, rate, sumRow } from '@/lib/reporting/helpers';
+import { claimable, DAY, dateWhere, expensesIn, invoicesIn, iso, month, netRev, num, r2, rate, sumRow } from '@/lib/reporting/helpers';
 import type { Ctx, ReportDef, Row } from '@/lib/reporting/types';
 
 const dayDiff = (a: Date, b: Date) => Math.floor((a.getTime() - b.getTime()) / DAY);

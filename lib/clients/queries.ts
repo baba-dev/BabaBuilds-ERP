@@ -10,7 +10,6 @@ export type ClientMetrics = { invoiceCount: number; billed: number; paid: number
 const ZERO: ClientMetrics = { invoiceCount: 0, billed: 0, paid: 0, outstanding: 0, overdue: 0, lastInvoiceAt: null };
 const n = (v: unknown) => Number(v ?? 0) || 0;
 const r2 = (v: number) => Math.round(v * 100) / 100;
-const DAY = 86_400_000;
 
 /** Billing roll-up per client in the workspace base currency (invoice total times its booked exchange rate). One grouped query, no N+1. */
 export async function clientMetrics(workspaceId: string, ids: string[] | null, now = new Date()): Promise<Map<string, ClientMetrics>> {

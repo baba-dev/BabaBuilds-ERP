@@ -55,7 +55,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
   const [contactForm, setContactForm] = useState<Partial<Contact> | null>(null);
 
   const tRef = useRef(t);
-  tRef.current = t;
+  useEffect(() => { tRef.current = t; });
   const load = useCallback(async () => {
     const r = await api<Overview>(`/api/clients/${id}?overview=1`);
     if (!r.ok) { setError(r.status === 404 ? tRef.current("notFound") : (r.data.error ?? tRef.current("loadFailed"))); return; }

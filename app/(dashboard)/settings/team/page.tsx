@@ -1056,11 +1056,11 @@ export default function TeamAccessPage() {
 
         {/* Tab Content */}
         <div className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm p-6">
-          {activeTab === "members"    && <MembersTab />}
-          {activeTab === "roles"      && <RolesTab />}
-          {activeTab === "seats"      && <SeatsTab />}
-          {activeTab === "activity"   && <ActivityTab />}
-          {activeTab === "governance" && <GovernanceTab />}
+          {activeTab === "members"    && MembersTab()}
+          {activeTab === "roles"      && RolesTab()}
+          {activeTab === "seats"      && SeatsTab()}
+          {activeTab === "activity"   && ActivityTab()}
+          {activeTab === "governance" && GovernanceTab()}
         </div>
       </div>
     </div>

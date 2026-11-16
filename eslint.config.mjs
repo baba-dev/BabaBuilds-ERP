@@ -20,23 +20,24 @@ export default defineConfig([
   ...nextTs,
   {
     rules: {
-      "@typescript-eslint/no-explicit-any": "warn",
-      "@typescript-eslint/no-require-imports": "warn",
-      "@next/next/no-html-link-for-pages": "warn",
-      "react-hooks/static-components": "warn",
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-require-imports": "error",
+      "@next/next/no-html-link-for-pages": "error",
+      // Remaining React Compiler debt (tracked in #590). set-state-in-effect is the only rule
+      // still downgraded; `npm run lint` enforces a warning budget so it cannot grow.
+      // Ratchet the --max-warnings value of the `lint` script in package.json down as call sites are fixed.
+      "react-hooks/static-components": "error",
       "react-hooks/set-state-in-effect": "warn",
-      // Temporary migration warnings for Next 16.4; track fixes in #590.
-      // Keep React Compiler findings visible until existing hooks are refactored.
-      "react-hooks/immutability": "warn",
-      "react-hooks/preserve-manual-memoization": "warn",
-      "react-hooks/refs": "warn",
-      "react-hooks/set-state-in-render": "warn",
-      "react-hooks/purity": "warn",
-      "react/no-unescaped-entities": "warn",
-      "prefer-const": "warn",
-      "@typescript-eslint/no-unsafe-function-type": "warn",
+      "react-hooks/immutability": "error",
+      "react-hooks/preserve-manual-memoization": "error",
+      "react-hooks/refs": "error",
+      "react-hooks/set-state-in-render": "error",
+      "react-hooks/purity": "error",
+      "react/no-unescaped-entities": "error",
+      "prefer-const": "error",
+      "@typescript-eslint/no-unsafe-function-type": "error",
       "@typescript-eslint/no-unused-vars": [
-        "warn",
+        "error",
         {
           argsIgnorePattern: "^_",
           varsIgnorePattern: "^_",
