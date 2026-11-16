@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-16T09:30:37.293Z",
+  "generatedAt": "2026-11-16T16:12:09.009Z",
   "summary": {
-    "knownRoutes": 127,
-    "checkedReferencedRoutes": 99,
+    "knownRoutes": 128,
+    "checkedReferencedRoutes": 101,
     "brokenReferencedRoutes": 0
   },
   "gate": {
@@ -46,7 +46,6 @@
         "components/PWARegistration.tsx",
         "components/auth/LoginExperience.tsx",
         "components/auth/LoginShowcase.tsx",
-        "components/documents/UnifiedDocumentList.tsx",
         "components/invoice/InvoiceGeneratorForm.tsx",
         "components/notifications/CommsHub.tsx",
         "components/payments/CloseWindowButton.tsx",
@@ -185,7 +184,8 @@
       "route": "/companies",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx",
+        "components/companies/CompaniesShell.tsx",
+        "components/companies/CompanyForm.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
@@ -193,42 +193,42 @@
       "route": "/companies/access-team",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
       "route": "/companies/billing-usage",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
       "route": "/companies/consolidated-dashboard",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
       "route": "/companies/consolidated-reports",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
       "route": "/companies/create",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
       "route": "/companies/settings",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
@@ -243,7 +243,6 @@
         "app/(dashboard)/documents/layout.tsx",
         "app/(dashboard)/documents/page.tsx",
         "app/(dashboard)/documents/settings/page.tsx",
-        "app/(dashboard)/inbox/import/page.tsx",
         "app/(dashboard)/layout.tsx",
         "app/(dashboard)/not-found.tsx",
         "app/(dashboard)/partner/page.tsx",
@@ -290,7 +289,10 @@
         "app/(dashboard)/documents/compliance/page.tsx",
         "app/(dashboard)/documents/layout.tsx",
         "app/(dashboard)/documents/page.tsx",
+        "app/(dashboard)/inbox/import/page.tsx",
+        "components/documents/DocumentsShell.tsx",
         "components/documents/LinkedDocumentsPanel.tsx",
+        "components/inbox/SharedImportClient.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
@@ -298,14 +300,16 @@
       "route": "/documents/compliance",
       "exists": true,
       "references": [
-        "app/(dashboard)/documents/compliance/page.tsx"
+        "app/(dashboard)/documents/compliance/page.tsx",
+        "components/documents/DocumentsShell.tsx"
       ]
     },
     {
       "route": "/documents/settings",
       "exists": true,
       "references": [
-        "app/(dashboard)/documents/settings/page.tsx"
+        "app/(dashboard)/documents/settings/page.tsx",
+        "components/documents/DocumentsShell.tsx"
       ]
     },
     {
@@ -516,6 +520,13 @@
         "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
         "app/(dashboard)/import-manager/layout.tsx",
         "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/inbox/import",
+      "exists": true,
+      "references": [
+        "components/inbox/SharedImportClient.tsx"
       ]
     },
     {
@@ -772,7 +783,15 @@
         "app/(dashboard)/reporting/[reportId]/page.tsx",
         "app/(dashboard)/reporting/layout.tsx",
         "app/api/chat/route.ts",
+        "components/companies/GroupViews.tsx",
         "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/reporting/group_revenue",
+      "exists": true,
+      "references": [
+        "components/companies/GroupViews.tsx"
       ]
     },
     {

@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { type BusinessRoleEnum, type Prisma } from "@prisma/client";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { canManageCompanies, errorJson, parseString, parseWorkspaceUsers, requireCompanyGroupContext, requireMultiCompanyAccess } from "./_shared";
+import { activeGroupMemberIds } from "@/lib/companies/access";
+import { companyCreateSchema } from "@/lib/companies/schemas";
+import { enforceRouteRateLimit } from "@/lib/route-rate-limit";
+import { logActivity } from "@/lib/security/activity-log";
+import { getGroupReportScope } from "@/lib/company-groups/reports";
+import { canManageCompanies, errorJson, requireCompanyGroupContext, requireMultiCompanyAccess } from "./_shared";
 
 const ALL_COMPANIES_ACCESS_MODES = new Set(["ALL_COMPANIES", "ALL_COMPANIES_IN_GROUP"]);
 
@@ -42,8 +48,10 @@ export async function GET() {
     const moduleResponse = await requireMultiCompanyAccess(result.context);
     if (moduleResponse) return moduleResponse;
 
+    // Members who only have access to specific companies see only those.
+    const scope = await getGroupReportScope(result.context.userId, result.context.companyGroupId, { includeArchivedCompanies: true });
     const links = await prisma.companyGroupWorkspace.findMany({
-      where: { companyGroupId: result.context.companyGroupId },
+      where: { companyGroupId: result.context.companyGroupId, workspaceId: { in: scope.workspaceIds } },
       select: companySelect,
       orderBy: [{ isPrimary: "desc" }, { isActive: "desc" }, { createdAt: "asc" }],
     });
@@ -64,18 +72,26 @@ export async function POST(request: Request) {
     if (moduleResponse) return moduleResponse;
     if (!canManageCompanies(context.groupRole)) return errorJson("Forbidden", 403);
 
-    const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
-    if (!body) return errorJson("Invalid JSON body", 400);
+    const limit = enforceRouteRateLimit({ request, route: "/api/companies", scope: context.companyGroupId, max: 10, windowMs: 60 * 60_000 });
+    if (!limit.ok) return limit.response;
 
-    const name = parseString(body.name) ?? parseString(body.companyName);
-    if (!name) return errorJson("Company name is required", 400);
+    const parsed = companyCreateSchema.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Check the details.", fields: z.flattenError(parsed.error).fieldErrors }, { status: 422 });
+    const d = parsed.data;
 
-    const selectedUsers = parseWorkspaceUsers(body.users ?? body.selectedUsers ?? body.userIds);
+    // Everyone added to the new company must already belong to this group; the creator is always an owner.
+    const selectedUsers = [...d.users];
     if (!selectedUsers.some((user) => user.userId === context.userId)) selectedUsers.push({ userId: context.userId, businessRole: "OWNER" });
+    const known = await activeGroupMemberIds(context.companyGroupId, selectedUsers.map((u) => u.userId));
+    const stranger = selectedUsers.find((u) => !known.has(u.userId));
+    if (stranger) return NextResponse.json({ error: "Everyone you add must already be a member of this group.", fields: { users: ["Add the person to the group first."] } }, { status: 422 });
 
-    const countryCode = parseString(body.countryCode) ?? "IN";
-    const baseCurrency = parseString(body.baseCurrency) ?? "INR";
-    const email = parseString(body.email) ?? "hello@example.com";
+    const name = d.name;
+    const countryCode = d.countryCode;
+    const baseCurrency = d.baseCurrency;
+    const email = d.email ?? "hello@example.com";
+    const body = d as unknown as Record<string, string | null | undefined>;
+    const parseString = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
 
     const created = await prisma.$transaction(async (tx) => {
       const workspace = await tx.workspace.create({
@@ -172,6 +188,7 @@ export async function POST(request: Request) {
       return tx.companyGroupWorkspace.findUniqueOrThrow({ where: { id: link.id }, select: companySelect });
     });
 
+    void logActivity({ workspaceId: context.workspaceId, action: "company.created", status: "SUCCESS", actor: { userId: context.userId, email: null }, entity: { type: "company", id: created.workspaceId }, metadata: { name, countryCode, baseCurrency, members: selectedUsers.length } });
     return NextResponse.json({ data: created }, { status: 201 });
   } catch (error) {
     console.error("[companies/POST]", error);

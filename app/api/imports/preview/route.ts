@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requireImportContext } from '@/lib/imports/core/auth';
+import { importErrorResponse, requireImportContext } from '@/lib/imports/core/auth';
 import { buildPreview } from '@/lib/imports/core/preview';
 import { IMPORT_ENTITY_KEYS } from '@/lib/imports/core/types';
 import { computeImportDigest } from '@/lib/imports/core/digest';
@@ -56,9 +56,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ previewRunId: run.id, preview });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Preview failed';
-    if (message === 'UNAUTHORIZED') return NextResponse.json({ error: message }, { status: 401 });
-    if (message === 'FORBIDDEN') return NextResponse.json({ error: message }, { status: 403 });
-    return NextResponse.json({ error: message }, { status: 400 });
+    return importErrorResponse(error, 'Preview failed');
   }
 }

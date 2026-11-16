@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { encrypt } from '@/lib/encryption';
+import { logActivity } from '@/lib/security/activity-log';
 import { requireEmailBilling } from '../_lib/auth';
 import { validateMailBillingUrl } from '@/lib/email-billing/miab-client';
 import { mailBillingServerCreateSchema, parseJsonBody } from '@/lib/email-billing/validation';
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    void logActivity({ workspaceId: auth.workspaceId, action: 'email_billing.server_created', status: 'SUCCESS', actor: { userId: auth.userId, email: null }, entity: { type: 'mail_billing_server', id: server.id }, metadata: { accessMode: body.accessMode, hasToken: Boolean(body.token) } });
     return NextResponse.json({ server: sanitizeServer(server) }, { status: 201 });
   } catch (error) {
     return NextResponse.json(

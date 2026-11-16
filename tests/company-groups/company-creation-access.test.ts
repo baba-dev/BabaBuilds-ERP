@@ -22,6 +22,11 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+vi.mock("@/lib/companies/access", () => ({ activeGroupMemberIds: vi.fn().mockResolvedValue(new Set(["selected-user"])) }));
+vi.mock("@/lib/route-rate-limit", () => ({ enforceRouteRateLimit: () => ({ ok: true }) }));
+vi.mock("@/lib/security/activity-log", () => ({ logActivity: vi.fn() }));
+vi.mock("@/lib/company-groups/reports", () => ({ getGroupReportScope: vi.fn() }));
+
 vi.mock("@/app/api/companies/_shared", () => ({
   canManageCompanies: vi.fn().mockReturnValue(true),
   errorJson: (message: string, status: number) => Response.json({ error: message }, { status }),
@@ -53,7 +58,7 @@ describe("company creation group access", () => {
 
     const response = await POST(new Request("http://localhost/api/companies", {
       method: "POST",
-      body: JSON.stringify({ name: "New Company" }),
+      body: JSON.stringify({ name: "New Company", users: [{ userId: "selected-user", businessRole: "ADMIN" }] }),
     }));
 
     expect(response.status).toBe(201);
@@ -90,7 +95,7 @@ describe("company creation group access", () => {
 
     const response = await POST(new Request("http://localhost/api/companies", {
       method: "POST",
-      body: JSON.stringify({ name: "New Company" }),
+      body: JSON.stringify({ name: "New Company", users: [{ userId: "selected-user", businessRole: "ADMIN" }] }),
     }));
 
     expect(response.status).toBe(201);

@@ -2,10 +2,11 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { redirectToLogin } from "@/lib/auth/login-redirect";
-import { prisma } from "@/lib/prisma";
+import { resolveSessionMembership } from "@/lib/workspace-scope";
 import { isModuleEnabled } from "@/lib/modules";
 import { checkPermissionsSilent } from "@/lib/rbac";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { DocumentsShell } from "@/components/documents/DocumentsShell";
 import { StorageMeter } from "@/components/documents/StorageMeter";
 import { getWorkspaceQuotaSnapshot } from "@/lib/documents/quota";
 
@@ -13,11 +14,7 @@ export default async function DocumentSettingsPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) redirectToLogin("/documents/settings");
 
-  const wu = await prisma.workspaceUser.findFirst({
-    where: { userId: session.user.id, isActive: true },
-    select: { workspaceId: true },
-  });
-  const workspaceId = wu?.workspaceId ?? null;
+  const workspaceId = (await resolveSessionMembership(session))?.workspaceId ?? null;
   if (!workspaceId) redirect("/dashboard");
 
   const [enabled, grants] = await Promise.all([
@@ -35,14 +32,8 @@ export default async function DocumentSettingsPage() {
   const quota = await getWorkspaceQuotaSnapshot(workspaceId);
 
   return (
+    <DocumentsShell>
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Documents · Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Storage policy, file type rules, and administrative controls.
-        </p>
-      </div>
-
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
@@ -82,5 +73,6 @@ export default async function DocumentSettingsPage() {
         </CardContent>
       </Card>
     </div>
+    </DocumentsShell>
   );
 }

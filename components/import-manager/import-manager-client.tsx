@@ -1,285 +1,220 @@
 "use client";
 
-import { useMemo, useState } from 'react';
-import { ArrowRight, Bot, Download, FileUp, Sparkles, UploadCloud } from 'lucide-react';
-import { toast } from 'sonner';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import type { ImportEntityKey, ImportExecutionMode, ImportPreview, MappingSuggestion } from '@/lib/imports/core/types';
-import { IMPORT_ADAPTERS } from '@/lib/imports/adapters/entity-adapters';
-import { cn } from '@/lib/utils';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { toast } from "sonner";
+import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Download, FileSpreadsheet, UploadCloud } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import type { ImportEntityKey, ImportExecutionMode, ImportPreview, MappingSuggestion } from "@/lib/imports/core/types";
+import { IMPORT_ADAPTERS } from "@/lib/imports/adapters/entity-adapters";
+import { cn } from "@/lib/utils";
 
 const entities = Object.values(IMPORT_ADAPTERS);
-const steps = ['Entity', 'Source', 'Upload', 'Mapping', 'Preview', 'Execute', 'Result'];
+const STEPS = ["entity", "upload", "mapping", "preview", "result"] as const;
+type HistoryRow = { id: string; entityKey: string; fileName: string; status: string; importedCount: number; failedCount: number; createdAt: string };
+const card = "rounded-2xl border border-border/70 bg-card/90 p-5 shadow-sm";
 
 export function ImportManagerClient() {
+  const t = useTranslations("ImportManagerHub");
+  const locale = useLocale();
+  const [step, setStep] = useState(0);
   const [entity, setEntity] = useState<ImportEntityKey | null>(null);
-  const [sourceMode, setSourceMode] = useState<'template' | 'arbitrary'>('template');
-  const [step, setStep] = useState(1);
+  const [sourceMode, setSourceMode] = useState<"template" | "arbitrary">("template");
   const [file, setFile] = useState<File | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);
   const [mappings, setMappings] = useState<MappingSuggestion[]>([]);
   const [aiNotice, setAiNotice] = useState<string | null>(null);
   const [preview, setPreview] = useState<ImportPreview | null>(null);
-  const [previewRunId, setPreviewRunId] = useState<string | null>(null);
-  const [mode, setMode] = useState<ImportExecutionMode>('create_only');
-  const [result, setResult] = useState<Record<string, unknown> | null>(null);
-  const [history, setHistory] = useState<Array<Record<string, unknown>>>([]);
+  const [runId, setRunId] = useState<string | null>(null);
+  const [mode, setMode] = useState<ImportExecutionMode>("create_only");
+  const [result, setResult] = useState<Record<string, number> | null>(null);
+  const [history, setHistory] = useState<HistoryRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const selected = entity ? IMPORT_ADAPTERS[entity] : null;
+  const required = useMemo(() => selected?.fields.filter((f) => f.required) ?? [], [selected]);
+  const mappedTargets = new Set(mappings.map((m) => m.targetField).filter(Boolean));
+  const missingRequired = required.filter((f) => !mappedTargets.has(f.key));
 
-  const requiredFields = useMemo(() => selected?.fields.filter((f) => f.required).map((f) => f.key) ?? [], [selected]);
+  const loadHistory = useCallback(async () => {
+    const res = await fetch("/api/imports/history", { cache: "no-store" });
+    if (res.ok) setHistory(((await res.json()) as { history: HistoryRow[] }).history ?? []);
+  }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time fetch on mount; state is set after the awaited response
+  useEffect(() => { void loadHistory(); }, [loadHistory]);
 
-  async function loadHistory() {
-    const res = await fetch('/api/imports/history', { cache: 'no-store' });
-    if (res.ok) {
-      const data = await res.json() as { history: Array<Record<string, unknown>> };
-      setHistory(data.history || []);
-    }
+  async function call<T>(url: string, init: RequestInit): Promise<T> {
+    const res = await fetch(url, init);
+    const data = (await res.json().catch(() => ({}))) as T & { error?: string };
+    if (!res.ok) throw new Error(data.error ?? t("error"));
+    return data;
   }
+  const fail = (e: unknown) => toast.error(e instanceof Error ? e.message : t("error"));
 
-  async function onDownloadTemplate() {
-    if (!entity) return;
-    window.open(`/api/imports/templates?entity=${entity}`, '_blank');
-  }
-
-  async function onParse() {
+  async function parse() {
     if (!file || !entity) return;
     setLoading(true);
     try {
-      const fd = new FormData();
-      fd.append('file', file);
-      fd.append('entity', entity);
-      fd.append('sourceMode', sourceMode);
-      const res = await fetch('/api/imports/parse', { method: 'POST', body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to parse file');
-      setHeaders(data.parsed.headers);
-      setRows(data.parsed.rows);
-      setMappings(data.mappingSuggestions);
-      setAiNotice(data.aiNotice);
-      setStep(4);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to parse file');
-    } finally {
-      setLoading(false);
-    }
+      const fd = new FormData(); fd.append("file", file); fd.append("entity", entity); fd.append("sourceMode", sourceMode);
+      const d = await call<{ parsed: { headers: string[]; rows: string[][] }; mappingSuggestions: MappingSuggestion[]; aiNotice: string | null }>("/api/imports/parse", { method: "POST", body: fd });
+      setHeaders(d.parsed.headers); setRows(d.parsed.rows); setMappings(d.mappingSuggestions); setAiNotice(d.aiNotice); setStep(2);
+    } catch (e) { fail(e); } finally { setLoading(false); }
   }
-
-  async function onPreview() {
+  async function runPreview() {
     if (!entity) return;
     setLoading(true);
     try {
-      const res = await fetch('/api/imports/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entity, sourceMode, fileName: file?.name || 'upload.csv', headers, rows, mappings, aiUsed: !aiNotice }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Preview failed');
-      setPreview(data.preview);
-      setPreviewRunId(data.previewRunId);
-      setStep(5);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Preview failed');
-    } finally {
-      setLoading(false);
-    }
+      const d = await call<{ preview: ImportPreview; previewRunId: string }>("/api/imports/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ entity, sourceMode, fileName: file?.name || "upload.csv", headers, rows, mappings, aiUsed: !aiNotice }) });
+      setPreview(d.preview); setRunId(d.previewRunId); setStep(3);
+    } catch (e) { fail(e); } finally { setLoading(false); }
   }
-
-  async function onExecute() {
-    if (!previewRunId) return;
+  async function execute() {
+    if (!runId) return;
     setLoading(true);
     try {
-      const idem = typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `import-${Date.now()}`;
-      const res = await fetch('/api/imports/execute', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': idem },
-        body: JSON.stringify({ previewRunId, mode }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Import execution failed');
-      setResult(data.summary);
-      setStep(7);
-      await loadHistory();
-      toast.success('Import completed safely.');
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Import execution failed');
-    } finally {
-      setLoading(false);
-    }
+      const d = await call<{ summary: Record<string, number> }>("/api/imports/execute", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ previewRunId: runId, mode }) });
+      setResult(d.summary); setStep(4); await loadHistory(); toast.success(t("done"));
+    } catch (e) { fail(e); } finally { setLoading(false); }
   }
+  function restart() { setStep(0); setEntity(null); setFile(null); setHeaders([]); setRows([]); setMappings([]); setPreview(null); setRunId(null); setResult(null); }
 
   return (
-    <div className="space-y-5 pb-8">
-      <Card className="border-amber-200/70 bg-gradient-to-br from-amber-50 to-orange-50 dark:border-amber-900/60 dark:from-zinc-950 dark:to-amber-950/20">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-amber-900 dark:text-amber-200"><Sparkles className="h-5 w-5" /> Universal Import Manager</CardTitle>
-          <CardDescription className="text-amber-700 dark:text-amber-300/90">All imports are preview-first. No write happens until validation and confirmation.</CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3">
-          <Button onClick={() => setStep(1)} className="bg-amber-600 hover:bg-amber-500 text-white">Start Import</Button>
-          <Badge variant="outline" className="border-amber-400/50 text-amber-700 dark:text-amber-300">Secure + Workspace-isolated</Badge>
-          <Badge variant="outline" className="border-orange-400/50 text-orange-700 dark:text-orange-300">CSV / XLSX</Badge>
-        </CardContent>
-      </Card>
+    <div className="space-y-6 pb-8">
+      <ol className="flex gap-1.5 overflow-x-auto" aria-label={t("title")}>
+        {STEPS.map((s, i) => (
+          <li key={s} aria-current={i === step ? "step" : undefined} className={cn("flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold", i === step ? "border-amber-400 bg-amber-50 text-amber-900 dark:bg-amber-950/30 dark:text-amber-100" : i < step ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-300" : "border-border/70 text-muted-foreground")}>
+            <span className={cn("grid h-5 w-5 place-items-center rounded-full text-[11px]", i < step ? "bg-emerald-500 text-white" : "bg-muted")}>{i < step ? "✓" : i + 1}</span>{t(`steps.${s}`)}
+          </li>
+        ))}
+      </ol>
 
-      <Card>
-        <CardHeader><CardTitle>Import Steps</CardTitle></CardHeader>
-        <CardContent className="grid gap-2 md:grid-cols-7">
-          {steps.map((s, i) => (
-            <div key={s} className={cn('rounded-xl border px-3 py-2 text-xs', step >= i + 1 ? 'border-amber-500/50 bg-amber-50 dark:bg-amber-950/20' : 'border-zinc-200 dark:border-zinc-800')}>
-              <div className="font-semibold">{i + 1}. {s}</div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader><CardTitle>Select entity</CardTitle></CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-3">
+      {step === 0 && (
+        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label={t("steps.entity")}>
           {entities.map((e) => (
-            <button key={e.entity} type="button" onClick={() => { setEntity(e.entity); setStep(2); }} className={cn('rounded-2xl border p-4 text-left transition-all hover:shadow-md', entity === e.entity ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/20' : 'border-zinc-200 dark:border-zinc-800')}>
-              <p className="font-semibold">{e.label}</p>
-              <p className="text-xs text-zinc-500 mt-1">{e.description}</p>
+            <button key={e.entity} type="button" onClick={() => { setEntity(e.entity); setStep(1); }} className={cn(card, "text-start transition hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500")}>
+              <FileSpreadsheet className="mb-2 h-5 w-5 text-amber-600" />
+              <p className="font-black">{t(`entity.${e.entity}`)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t(`entity.${e.entity}_desc`)}</p>
             </button>
           ))}
-        </CardContent>
-      </Card>
-
-      {entity && (
-        <Card>
-          <CardHeader><CardTitle>Source mode + file</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-wrap gap-2">
-              <Button variant={sourceMode === 'template' ? 'default' : 'outline'} className={sourceMode === 'template' ? 'bg-amber-600 hover:bg-amber-500' : ''} onClick={() => setSourceMode('template')}><Download className="h-4 w-4 mr-1" />Template mode</Button>
-              <Button variant={sourceMode === 'arbitrary' ? 'default' : 'outline'} className={sourceMode === 'arbitrary' ? 'bg-amber-600 hover:bg-amber-500' : ''} onClick={() => setSourceMode('arbitrary')}><FileUp className="h-4 w-4 mr-1" />Arbitrary file mode</Button>
-              <Button variant="outline" onClick={onDownloadTemplate}><Download className="h-4 w-4 mr-1" />Download {selected?.label} template</Button>
-            </div>
-
-            <div className="rounded-xl border border-dashed border-amber-400/40 p-4">
-              <label className="text-sm font-medium">Upload CSV/XLSX</label>
-              <input type="file" accept=".csv,.xlsx" className="mt-2 block w-full text-sm" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-              <Button onClick={onParse} disabled={!file || loading} className="mt-3 bg-amber-600 hover:bg-amber-500 text-white"><UploadCloud className="h-4 w-4 mr-1" />{loading ? 'Parsing...' : 'Parse file'}</Button>
-            </div>
-          </CardContent>
-        </Card>
+        </section>
       )}
 
-      {headers.length > 0 && (
-        <Card>
-          <CardHeader><CardTitle>Column mapping</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            {aiNotice ? (
-              <div className="rounded-lg border border-amber-300/50 bg-amber-50/70 p-3 text-sm text-amber-900 dark:bg-amber-950/20 dark:text-amber-200">{aiNotice}</div>
-            ) : (
-              <div className="rounded-lg border border-emerald-300/40 bg-emerald-50/60 p-3 text-sm text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-200 flex items-center gap-2"><Bot className="h-4 w-4" />AI-assisted suggestions are active for this workspace.</div>
-            )}
-            <div className="grid gap-2 md:grid-cols-2">
-              {headers.map((h, idx) => {
-                const selectedMap = mappings.find((m) => m.sourceHeader === h)?.targetField ?? 'ignore';
-                return (
-                  <div key={h + idx} className="rounded-xl border p-3 flex items-center justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-medium">{h}</p>
-                      <p className="text-xs text-zinc-500">{rows[0]?.[idx] ?? ''}</p>
-                    </div>
-                    <Select value={selectedMap || 'ignore'} onValueChange={(value) => setMappings((prev) => prev.map((m) => m.sourceHeader === h ? { ...m, targetField: value === 'ignore' ? null : value, source: 'manual' } : m))}>
-                      <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ignore">Ignore</SelectItem>
-                        {selected?.fields.map((field) => (
-                          <SelectItem key={field.key} value={field.key}>{field.label}{field.required ? ' *' : ''}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={onPreview} disabled={loading} className="bg-amber-600 hover:bg-amber-500 text-white">Validate & Preview <ArrowRight className="h-4 w-4 ml-1" /></Button>
-              <p className="text-xs text-zinc-500 self-center">Required: {requiredFields.join(', ')}</p>
-            </div>
-          </CardContent>
-        </Card>
+      {step === 1 && selected && entity && (
+        <section className={cn(card, "space-y-4")}>
+          <h2 className="font-black">{t(`entity.${entity}`)}</h2>
+          <div className="flex flex-wrap gap-2">
+            {(["template", "arbitrary"] as const).map((m) => <Button key={m} type="button" variant={sourceMode === m ? "default" : "outline"} onClick={() => setSourceMode(m)} className={sourceMode === m ? "bg-amber-600 text-white hover:bg-amber-500" : ""}>{t(`source.${m}`)}</Button>)}
+            <Button type="button" variant="ghost" onClick={() => window.open(`/api/imports/templates?entity=${entity}`, "_blank")}><Download className="me-1.5 h-4 w-4" />{t("downloadTemplate")}</Button>
+          </div>
+          <label className="block rounded-xl border border-dashed border-amber-400/50 p-5 text-sm">
+            <span className="font-semibold">{t("chooseFile")}</span>
+            <input type="file" accept=".csv,.xlsx" className="mt-2 block w-full text-sm" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+          </label>
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => setStep(0)}><ArrowLeft className="me-1.5 h-4 w-4 rtl:rotate-180" />{t("back")}</Button>
+            <Button onClick={() => void parse()} disabled={!file || loading} className="bg-amber-600 text-white hover:bg-amber-500"><UploadCloud className="me-1.5 h-4 w-4" />{loading ? t("reading") : t("readFile")}</Button>
+          </div>
+        </section>
       )}
 
-      {preview && (
-        <Card>
-          <CardHeader><CardTitle>Validation preview</CardTitle></CardHeader>
-          <CardContent className="space-y-3">
-            <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-sm">
-              <Badge variant="outline">Parsed {preview.counts.parsed}</Badge>
-              <Badge variant="outline">Ready {preview.counts.ready}</Badge>
-              <Badge variant="outline">Warnings {preview.counts.warnings}</Badge>
-              <Badge variant="outline">Errors {preview.counts.errors}</Badge>
-              <Badge variant="outline">Duplicates {preview.counts.duplicates}</Badge>
-              <Badge variant="outline">Skipped {preview.counts.skipped}</Badge>
-            </div>
-            <div className="max-h-64 overflow-auto rounded-xl border">
-              <table className="w-full text-xs">
-                <thead className="bg-zinc-50 dark:bg-zinc-900"><tr><th className="p-2 text-left">Row</th><th className="p-2 text-left">Status</th><th className="p-2 text-left">Issues</th></tr></thead>
-                <tbody>
-                  {preview.rows.slice(0, 50).map((r) => (
-                    <tr key={r.rowNumber} className="border-t"><td className="p-2">{r.rowNumber}</td><td className="p-2">{r.issues.some((i) => i.severity === 'error') ? 'Error' : r.issues.length ? 'Warning' : 'Ready'}</td><td className="p-2">{r.issues.map((i) => i.message).join('; ') || '—'}</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={mode} onValueChange={(value) => setMode(value as ImportExecutionMode)}>
-                <SelectTrigger className="w-[180px]"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="create_only">Create only</SelectItem>
-                  <SelectItem value="upsert">Upsert</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button onClick={onExecute} disabled={loading || preview.counts.errors > 0} className="bg-amber-600 hover:bg-amber-500 text-white">Execute import</Button>
-            </div>
-          </CardContent>
-        </Card>
+      {step === 2 && selected && (
+        <section className={cn(card, "space-y-4")}>
+          <h2 className="font-black">{t("mappingTitle")}</h2>
+          <p className={cn("rounded-lg border p-3 text-sm", aiNotice ? "border-amber-300/50 bg-amber-50/70 text-amber-900 dark:bg-amber-950/20 dark:text-amber-200" : "border-emerald-300/40 bg-emerald-50/60 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-200")}>{aiNotice ?? t("aiOn")}</p>
+          <div className="grid gap-2 md:grid-cols-2">
+            {headers.map((h, idx) => {
+              const current = mappings.find((m) => m.sourceHeader === h)?.targetField ?? "";
+              return (
+                <label key={h + idx} className="flex items-center justify-between gap-3 rounded-xl border border-border/70 p-3">
+                  <span className="min-w-0"><span className="block truncate text-sm font-semibold">{h}</span><span className="block truncate text-xs text-muted-foreground">{rows[0]?.[idx] ?? ""}</span></span>
+                  <select value={current} onChange={(e) => setMappings((prev) => prev.map((m) => (m.sourceHeader === h ? { ...m, targetField: e.target.value || null, source: "manual" } : m)))} className="h-9 w-44 rounded-lg border border-input bg-transparent px-2 text-sm">
+                    <option value="">{t("ignore")}</option>
+                    {selected.fields.map((f) => <option key={f.key} value={f.key}>{f.label}{f.required ? " *" : ""}</option>)}
+                  </select>
+                </label>
+              );
+            })}
+          </div>
+          {missingRequired.length > 0 ? <p className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300"><AlertTriangle className="h-4 w-4" />{t("missingRequired", { fields: missingRequired.map((f) => f.label).join(", ") })}</p> : <p className="text-xs text-muted-foreground">{t("required", { fields: required.map((f) => f.label).join(", ") })}</p>}
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => setStep(1)}><ArrowLeft className="me-1.5 h-4 w-4 rtl:rotate-180" />{t("back")}</Button>
+            <Button onClick={() => void runPreview()} disabled={loading || missingRequired.length > 0} className="bg-amber-600 text-white hover:bg-amber-500">{t("validate")}<ArrowRight className="ms-1.5 h-4 w-4 rtl:rotate-180" /></Button>
+          </div>
+        </section>
       )}
 
-      {result && (
-        <Card>
-          <CardHeader><CardTitle>Import summary</CardTitle></CardHeader>
-          <CardContent className="grid gap-2 md:grid-cols-5 text-sm">
-            <Badge variant="outline">Imported {String(result.imported ?? 0)}</Badge>
-            <Badge variant="outline">Updated {String(result.updated ?? 0)}</Badge>
-            <Badge variant="outline">Skipped {String(result.skipped ?? 0)}</Badge>
-            <Badge variant="outline">Failed {String(result.failed ?? 0)}</Badge>
-            <Badge variant="outline">Rows {String(result.totalRowsParsed ?? 0)}</Badge>
-            {Number(result.failed ?? 0) > 0 && previewRunId ? (
-              <a className="text-xs underline text-amber-600" href={`/api/imports/history/${previewRunId}/errors.csv`}>
-                Download error CSV
-              </a>
-            ) : null}
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between"><CardTitle>Import history</CardTitle><Button variant="outline" size="sm" onClick={loadHistory}>Refresh</Button></CardHeader>
-        <CardContent>
-          <div className="overflow-auto rounded-xl border">
+      {step === 3 && preview && (
+        <section className={cn(card, "space-y-4")}>
+          <h2 className="font-black">{t("previewTitle")}</h2>
+          <dl className="grid grid-cols-3 gap-2 text-center sm:grid-cols-6">
+            {(["parsed", "ready", "warnings", "errors", "duplicates", "skipped"] as const).map((k) => (
+              <div key={k} className={cn("rounded-xl border border-border/70 p-2", k === "errors" && preview.counts.errors > 0 && "border-rose-400/60 bg-rose-500/5")}>
+                <dt className="text-[11px] text-muted-foreground">{t(`count.${k}`)}</dt><dd className="text-lg font-black tabular-nums">{preview.counts[k]}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="max-h-72 overflow-auto rounded-xl border border-border/70">
             <table className="w-full text-xs">
-              <thead className="bg-zinc-50 dark:bg-zinc-900"><tr><th className="p-2 text-left">Entity</th><th className="p-2 text-left">File</th><th className="p-2 text-left">Mode</th><th className="p-2 text-left">AI</th><th className="p-2 text-left">Counts</th><th className="p-2 text-left">Status</th></tr></thead>
+              <thead className="sticky top-0 bg-muted/80 backdrop-blur"><tr><th className="p-2 text-start">{t("row")}</th><th className="p-2 text-start">{t("history.status")}</th><th className="p-2 text-start">·</th></tr></thead>
               <tbody>
-                {history.length === 0 ? (
-                  <tr><td className="p-3 text-zinc-500" colSpan={6}>No import runs yet.</td></tr>
-                ) : history.map((run, i) => (
-                  <tr key={String(run.id ?? i)} className="border-t"><td className="p-2">{String(run.entityKey ?? '')}</td><td className="p-2">{String(run.fileName ?? '')}</td><td className="p-2">{String(run.executionMode ?? run.sourceMode ?? '')}</td><td className="p-2">{run.aiUsed ? 'Yes' : 'No'}</td><td className="p-2">I:{String(run.importedCount ?? 0)} U:{String(run.updatedCount ?? 0)} S:{String(run.skippedCount ?? 0)} F:{String(run.failedCount ?? 0)} <span className="text-zinc-400">({String(run.lastProcessedRow ?? 0)})</span></td><td className="p-2 space-x-2">{String(run.status ?? '')}{Number(run.failedCount ?? 0) > 0 ? <a className="underline text-amber-600" href={`/api/imports/history/${String(run.id)}/errors.csv`}>Errors</a> : null}</td></tr>
-                ))}
+                {preview.rows.slice(0, 50).map((r) => {
+                  const err = r.issues.some((i) => i.severity === "error");
+                  const warn = !err && r.issues.length > 0;
+                  return (
+                    <tr key={r.rowNumber} className="border-t border-border/60 align-top">
+                      <td className="p-2 tabular-nums">{r.rowNumber}</td>
+                      <td className={cn("p-2 font-semibold", err ? "text-rose-600" : warn ? "text-amber-600" : "text-emerald-600")}>{err ? t("statusError") : warn ? t("statusWarning") : t("statusReady")}</td>
+                      <td className="p-2 text-muted-foreground">{r.issues.map((i) => i.message).join(" · ")}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
-        </CardContent>
-      </Card>
+          {preview.rows.length > 50 && <p className="text-xs text-muted-foreground">{t("firstRows", { count: 50 })}</p>}
+          {preview.counts.errors > 0 ? (
+            <p className="flex items-center gap-2 text-sm text-rose-600"><AlertTriangle className="h-4 w-4" />{t("fixErrors")}</p>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {(["create_only", "upsert"] as const).map((m) => <Button key={m} type="button" variant={mode === m ? "default" : "outline"} onClick={() => setMode(m)} className={mode === m ? "bg-amber-600 text-white hover:bg-amber-500" : ""}>{t(`mode.${m}`)}</Button>)}
+              </div>
+              <p className="text-xs text-muted-foreground">{t(`mode.${mode}_hint`)}</p>
+            </div>
+          )}
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => setStep(2)}><ArrowLeft className="me-1.5 h-4 w-4 rtl:rotate-180" />{t("back")}</Button>
+            <Button onClick={() => void execute()} disabled={loading || preview.counts.errors > 0} className="bg-amber-600 text-white hover:bg-amber-500">{loading ? t("running") : t("run")}</Button>
+          </div>
+        </section>
+      )}
+
+      {step === 4 && result && (
+        <section className={cn(card, "space-y-4")}>
+          <h2 className="flex items-center gap-2 font-black"><CheckCircle2 className="h-5 w-5 text-emerald-500" />{t("done")}</h2>
+          <dl className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+            {(["imported", "updated", "skipped", "failed"] as const).map((k) => <div key={k} className="rounded-xl border border-border/70 p-3"><dt className="text-[11px] text-muted-foreground">{t(`result.${k}`)}</dt><dd className="text-2xl font-black tabular-nums">{result[k] ?? 0}</dd></div>)}
+          </dl>
+          {Number(result.failed ?? 0) > 0 && runId && <a className="text-sm font-semibold text-amber-700 underline" href={`/api/imports/history/${runId}/errors.csv`}>{t("errorCsv")}</a>}
+          <div><Button onClick={restart} className="bg-amber-600 text-white hover:bg-amber-500">{t("another")}</Button></div>
+        </section>
+      )}
+
+      <section className={card} aria-labelledby="im-history">
+        <h2 id="im-history" className="mb-3 text-sm font-black">{t("history.title")}</h2>
+        {history.length === 0 ? <p className="text-sm text-muted-foreground">{t("history.empty")}</p> : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="text-muted-foreground"><th className="p-2 text-start">{t("history.what")}</th><th className="p-2 text-start">{t("history.file")}</th><th className="p-2 text-start">{t("history.when")}</th><th className="p-2 text-start">{t("history.counts")}</th><th className="p-2 text-start">{t("history.status")}</th></tr></thead>
+              <tbody>{history.map((h) => (
+                <tr key={h.id} className="border-t border-border/60"><td className="p-2">{h.entityKey in IMPORT_ADAPTERS ? t(`entity.${h.entityKey}`) : h.entityKey}</td><td className="max-w-48 truncate p-2">{h.fileName}</td><td className="p-2">{new Date(h.createdAt).toLocaleString(locale)}</td><td className="p-2 tabular-nums">{h.importedCount} / {h.failedCount}</td><td className="p-2">{h.status}</td></tr>
+              ))}</tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

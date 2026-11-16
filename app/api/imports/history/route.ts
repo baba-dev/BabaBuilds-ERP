@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireImportContext } from '@/lib/imports/core/auth';
+import { importErrorResponse, requireImportContext } from '@/lib/imports/core/auth';
 
 export async function GET() {
   try {
@@ -31,9 +31,6 @@ export async function GET() {
     });
     return NextResponse.json({ history });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'History failed';
-    if (message === 'UNAUTHORIZED') return NextResponse.json({ error: message }, { status: 401 });
-    if (message === 'FORBIDDEN') return NextResponse.json({ error: message }, { status: 403 });
-    return NextResponse.json({ error: message }, { status: 400 });
+    return importErrorResponse(error, 'History failed');
   }
 }

@@ -22,6 +22,8 @@ export type SharedImportPayload = {
   text: string | null;
   url: string | null;
   files: SharedImportFile[];
+  /** File index -> Document id, written once a file has been added to the Document Center. */
+  imported?: Record<string, string>;
 };
 
 const SHARE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -83,4 +85,30 @@ export async function loadSharedPayload(
   } catch {
     return null;
   }
+}
+
+/** Stored file name of a staged file (the last segment of its protected path). Null if it does not look like one. */
+export function stagedFileName(file: SharedImportFile): string | null {
+  const url = file.publicUrl || file.relativePath || '';
+  if (!url.startsWith(PROTECTED_PREFIX)) return null;
+  const name = url.split('/').pop() ?? '';
+  return name && !name.includes('..') && name === path.basename(name) ? name : null;
+}
+
+/** Remembers which staged files were added to the Document Center, so they cannot be imported twice. */
+export async function markSharedImported(workspaceId: string, shareId: string, index: number, documentId: string): Promise<void> {
+  const payloadPath = metadataPath(workspaceId, shareId);
+  if (!payloadPath) return;
+  const payload = await loadSharedPayload(workspaceId, shareId);
+  if (!payload) return;
+  payload.imported = { ...(payload.imported ?? {}), [String(index)]: documentId };
+  await fs.writeFile(payloadPath, JSON.stringify(payload, null, 2));
+}
+
+/** Deletes a staged share's metadata. The caller removes the staged files. */
+export async function discardShared(workspaceId: string, shareId: string): Promise<boolean> {
+  const payloadPath = metadataPath(workspaceId, shareId);
+  if (!payloadPath || !(await loadSharedPayload(workspaceId, shareId))) return false;
+  await fs.rm(payloadPath, { force: true });
+  return true;
 }
