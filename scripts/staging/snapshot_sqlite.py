@@ -36,7 +36,7 @@ def assert_destination(src: Path, dst: Path):
         raise RuntimeError("Refusing to overwrite existing snapshot or manifest")
     if src == dst or dst.parent == src.parent:
         raise RuntimeError("Snapshot must use a separate private directory")
-    if any(x in ("var", "www") for x in ()) or str(dst).startswith("/var/www/"):
+    if str(dst).startswith("/var/www/"):
         raise RuntimeError("Snapshot must not be created in a web-served directory")
     parent = dst.parent.resolve(strict=True)
     if stat.S_IMODE(parent.stat().st_mode) & 0o077:
