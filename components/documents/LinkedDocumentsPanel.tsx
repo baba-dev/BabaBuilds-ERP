@@ -80,7 +80,7 @@ export function LinkedDocumentsPanel({
         <div className="flex items-center justify-between gap-3">
           <div className="text-sm text-muted-foreground">No linked documents.</div>
           <Button asChild size="sm" variant="outline">
-            <Link href="/documents/inbox">Upload</Link>
+            <Link href="/documents">Upload</Link>
           </Button>
         </div>
       );

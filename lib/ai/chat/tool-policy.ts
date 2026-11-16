@@ -55,23 +55,67 @@ export type ToolName = (typeof TOOL_NAMES)[number];
 
 const TOOL_NAME_SET = new Set<string>(TOOL_NAMES);
 
-const MUTATING_TOOLS = new Set<ToolName>([
-  'create_task',
-  'mark_invoice_paid',
-  'send_invoice_reminder',
-  'create_client',
-  'update_client_status',
-  'log_expense',
-  'auto_reconcile',
-  'update_proposal_status',
-  'convert_to_invoice',
-  'add_service_to_catalog',
-  'create_retainer',
-  'update_retainer_status',
-  'log_investment',
-  'set_shop_status',
-  'update_shop_announcement',
-]);
+/**
+ * How the chat route executes each tool. Declared as an exhaustive Record so a
+ * newly advertised tool cannot compile until it is classified.
+ *  - read:     side-effect-free lookup served by a handler in the chat route
+ *  - mutation: changes data; only runs behind a fresh signed user confirmation
+ *  - inline:   UI action or draft the chat route builds itself (navigate, theme, drafts)
+ */
+export type ToolExecutionKind = 'read' | 'mutation' | 'inline';
+
+export const TOOL_EXECUTION_KIND = {
+  lookup_invoice_details: 'read',
+  get_client_summary: 'read',
+  get_tax_summary: 'read',
+  get_service_catalog: 'read',
+  get_proposals: 'read',
+  get_overdue_invoices: 'read',
+  search_clients: 'read',
+  get_client_ledger: 'read',
+  get_expenses_summary: 'read',
+  get_unreconciled_transactions: 'read',
+  get_active_retainers: 'read',
+  get_investments_list: 'read',
+  calculate_estimated_tax: 'read',
+  predict_stockouts: 'read',
+  get_shop_summary: 'read',
+  get_top_shop_products: 'read',
+  get_email_billing_summary: 'read',
+  list_email_billing_review_items: 'read',
+  list_unmapped_email_domains: 'read',
+  create_task: 'mutation',
+  mark_invoice_paid: 'mutation',
+  send_invoice_reminder: 'mutation',
+  create_client: 'mutation',
+  update_client_status: 'mutation',
+  log_expense: 'mutation',
+  auto_reconcile: 'mutation',
+  update_proposal_status: 'mutation',
+  convert_to_invoice: 'mutation',
+  add_service_to_catalog: 'mutation',
+  create_retainer: 'mutation',
+  update_retainer_status: 'mutation',
+  log_investment: 'mutation',
+  set_shop_status: 'mutation',
+  update_shop_announcement: 'mutation',
+  ui_navigate: 'inline',
+  set_ui_theme: 'inline',
+  draft_invoice: 'inline',
+  draft_proposal: 'inline',
+  list_reporting_presets: 'inline',
+  open_reporting_center: 'inline',
+  open_shop_dashboard: 'inline',
+  open_email_billing_dashboard: 'inline',
+} as const satisfies Record<ToolName, ToolExecutionKind>;
+
+export type ReadToolName = {
+  [K in ToolName]: (typeof TOOL_EXECUTION_KIND)[K] extends 'read' ? K : never;
+}[ToolName];
+
+const MUTATING_TOOLS: ReadonlySet<ToolName> = new Set(
+  TOOL_NAMES.filter((name) => TOOL_EXECUTION_KIND[name] === 'mutation'),
+);
 
 const emptyArgsSchema = z.object({}).strict();
 const shortText = z.string().trim().min(1).max(256);
@@ -346,6 +390,10 @@ export function getToolPermissionRequirements(
 
 export function isMutatingTool(toolName: string): toolName is ToolName {
   return isKnownTool(toolName) && MUTATING_TOOLS.has(toolName);
+}
+
+export function isReadTool(toolName: string): toolName is ReadToolName {
+  return isKnownTool(toolName) && TOOL_EXECUTION_KIND[toolName] === 'read';
 }
 
 /** Backwards-compatible name retained for callers and regression tests. */
