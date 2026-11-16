@@ -28,6 +28,10 @@ if ss -lnt | grep -Eq '(127[.]0[.]0[.]1|0[.]0[.]0[.]0|[::]):3101[[:space:]]'; th
   echo "Staging port 3101 already occupied" >&2; exit 1
 fi
 for program in rsync runuser node npm psql systemctl; do command -v "$program" >/dev/null; done
+# The repository explicitly requires Node 22. Avoid staging state/database
+# changes if the invoking shell would build using the system Node 20.
+[[ "$(node -p 'process.versions.node.split(".")[0]')" == "22" ]] ||
+ { echo "Stage requires Node 22 in PATH; production Node is left unchanged" >&2; exit 1; }
 state="/var/lib/bababuilds-erp/staging/$suffix"
 [[ ! -e "$state" ]] || { echo "Staging suffix exists: no reuse" >&2; exit 1; }
 install -d -m 0700 "$state"

@@ -80,6 +80,22 @@ SELECT count(*) FROM pg_roles WHERE rolname IN ('{migrator}', '{runtime}');
 """).splitlines()
     if present != ["0", "0"]:
         raise RuntimeError("Staging DB/roles already exist; never reuse or overwrite")
+    # Every PostgreSQL role implicitly belongs to PUBLIC. Revoking CONNECT only
+    # from the new role cannot override a PUBLIC database grant. Detect this
+    # BEFORE creating a staging DB/roles so the operator can review shared ACLs.
+    public_connect = pg("""
+SELECT datname FROM pg_database
+WHERE datname IN ('menuminute', 'clubkeep')
+  AND (datacl IS NULL OR EXISTS (
+    SELECT 1 FROM aclexplode(datacl) a
+    WHERE a.grantee=0 AND a.privilege_type='CONNECT'
+  ));
+""")
+    if public_connect:
+        raise RuntimeError(
+            "Other applications grant CONNECT to PUBLIC; first review shared "
+            "database ACLs and grant named application roles. No changes made."
+        )
     pw_m = secrets.token_hex(24)
     pw_r = secrets.token_hex(24)
     auth_secret = secrets.token_urlsafe(48)
