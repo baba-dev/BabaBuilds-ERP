@@ -92,7 +92,7 @@ stop_preview() {
   fi
 }
 on_error() {
-  local rc=$?
+  local rc="${1:-$?}"
   trap - ERR
   set +e
   stop_preview
@@ -201,7 +201,7 @@ case "$1" in
     SWITCHED=1
     "$PM2" delete erp >/dev/null
     start_erp "$NEW" >/dev/null
-    smoke 3000 || die "public new release HTTP smoke failed"
+    smoke 3000 || { echo 'Public ERP smoke failed; reverting previous release' >&2; on_error 1; }
     "$PM2" save >/dev/null
     printf '%s\n' "$SHA" > "$STATE/active.sha"
     printf '%s\n' "$NEW" > "$STATE/active-path"
