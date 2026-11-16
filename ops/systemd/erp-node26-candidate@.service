@@ -1,0 +1,37 @@
+# Install only after reviewed operator bootstrap. This is NOT the live ERP unit.
+[Unit]
+Description=Isolated Node 26 ERP release canary %i
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=erpstaging
+Group=erpstaging
+WorkingDirectory=/opt/bababuilds-erp/releases/%i
+EnvironmentFile=/etc/bababuilds-erp/canary.env
+Environment=NODE_ENV=production
+Environment=ERP_STAGING_MODE=1
+Environment=PORT=3101
+Environment=HOSTNAME=127.0.0.1
+ExecStart=/opt/bababuilds-erp/node26/bin/node /opt/bababuilds-erp/releases/%i/server.js
+Restart=no
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ReadWritePaths=/opt/bababuilds-erp/releases/%i
+InaccessiblePaths=/var/www/bababuilds-erp
+IPAddressDeny=any
+IPAddressAllow=localhost
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=3G
+TasksMax=100
+
+[Install]
+WantedBy=multi-user.target

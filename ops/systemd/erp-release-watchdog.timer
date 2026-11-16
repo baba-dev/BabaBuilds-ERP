@@ -1,0 +1,11 @@
+[Unit]
+Description=Check ERP release health every minute
+
+[Timer]
+OnBootSec=3min
+OnUnitInactiveSec=1min
+Persistent=true
+Unit=erp-release-watchdog.service
+
+[Install]
+WantedBy=timers.target

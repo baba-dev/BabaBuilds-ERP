@@ -1,0 +1,15 @@
+[Unit]
+Description=ERP immutable release health watchdog and recovery
+After=network-online.target postgresql.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/local/sbin/bababuilds-erp-promote monitor
+TimeoutStartSec=45
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=no
+ReadWritePaths=/root/.pm2 /var/lib/bababuilds-erp/release-manager

@@ -1,0 +1,23 @@
+{
+  "pm2_name": "erp",
+  "live_port": 3000,
+  "canary_port": 3101,
+  "pm2_node": "/root/.nvm/versions/node/v24.14.1/bin/node",
+  "pm2_cli": "/root/.nvm/versions/node/v24.14.1/lib/node_modules/pm2/bin/pm2",
+  "node26": "/opt/bababuilds-erp/node26/bin/node",
+  "legacy_node": "/opt/bababuilds-erp/node22/bin/node",
+  "legacy_release": "/opt/bababuilds-erp-cutover/cut1611b/app/.next/standalone",
+  "production_env": "/etc/bababuilds-erp/production-app.env",
+  "canary_env": "/etc/bababuilds-erp/canary.env",
+  "media_map": {
+    "private_uploads": "/var/www/bababuilds-erp/private_uploads",
+    "public/logos": "/var/www/bababuilds-erp/public/logos",
+    "public/invoices": "/var/www/bababuilds-erp/public/invoices",
+    "public/receipts": "/var/www/bababuilds-erp/public/receipts",
+    "public/signatures": "/var/www/bababuilds-erp/public/signatures",
+    "public/products": "/var/www/bababuilds-erp/public/products",
+    "public/uploads": "/var/www/bababuilds-erp/public/uploads",
+    "public/partner-kit": "/var/www/bababuilds-erp/public/partner-kit",
+    "tmp/share-target": "/var/www/bababuilds-erp/tmp/share-target"
+  }
+}
