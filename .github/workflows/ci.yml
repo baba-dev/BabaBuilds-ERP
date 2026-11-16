@@ -208,6 +208,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
+      - name: D1–D2 Python safety and financial invariants unit tests
+        run: python3 -m unittest discover -s tests/staging -p 'test_*.py' -v
+
       - name: Build PostgreSQL baseline
         run: npx prisma migrate deploy
       - name: Create isolated SQLite fixture and import into empty PostgreSQL
@@ -238,6 +241,11 @@ jobs:
           python3 scripts/sqlite-to-postgres.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --acknowledge-empty-target
           # Phase C: check every table, every scalar field, and exact per-workspace currency totals.
           python3 scripts/phase-c-verify.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --evidence "$tmp/pg-parity.json"
+          # D2: additional business-level financial and membership checks.
+          python3 scripts/staging/reconcile.py --output "$tmp/business-invariants.json"
+          # D4: run concurrent synthetic captures; assert cleanup and source parity.
+          ERP_STAGING_TESTS=1 npx --no-install tsx scripts/staging/d4-probe.ts
+          python3 scripts/phase-c-verify.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --evidence "$tmp/d4-parity.json"
           # The restore target is a second, newly created disposable PostgreSQL 17 CI database.
           PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 \
             -c 'CREATE DATABASE bababuilds_erp_drill'
