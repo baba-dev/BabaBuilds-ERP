@@ -1,5 +1,10 @@
-import { CompaniesPageTemplate } from "../_components/companies-page-template";
+import { CompaniesShell } from "@/components/companies/CompaniesShell";
+import { CompanyForm } from "@/components/companies/CompanyForm";
 
-export default function CompaniesPage() {
-  return <CompaniesPageTemplate pageKey="create" />;
+export default function Page() {
+  return (
+    <CompaniesShell>
+      <CompanyForm />
+    </CompaniesShell>
+  );
 }

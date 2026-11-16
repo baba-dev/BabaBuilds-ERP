@@ -1,5 +1,10 @@
-import { CompaniesPageTemplate } from "../_components/companies-page-template";
+import { CompaniesShell } from "@/components/companies/CompaniesShell";
+import { BillingView } from "@/components/companies/GroupViews";
 
-export default function CompaniesPage() {
-  return <CompaniesPageTemplate pageKey="billing" />;
+export default function Page() {
+  return (
+    <CompaniesShell>
+      <BillingView />
+    </CompaniesShell>
+  );
 }

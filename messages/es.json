@@ -9528,5 +9528,151 @@
       "employeesCount": "{count, plural, one {# empleado} other {# empleados}}",
       "holidaysInYear": "{count} en {year}"
     }
+  },
+  "CompaniesHub": {
+    "title": "Empresas",
+    "description": "Todas las empresas de tu grupo: cifras, configuración, personas y plan.",
+    "nav": {
+      "overview": "Resumen",
+      "create": "Nueva empresa",
+      "team": "Acceso y equipo",
+      "dashboard": "Panel del grupo",
+      "reports": "Informes del grupo",
+      "billing": "Facturación y uso",
+      "settings": "Ajustes"
+    },
+    "overview": {
+      "last30": "Últimos 30 días",
+      "revenue": "Facturado",
+      "outstanding": "Pendiente",
+      "overdue": "Vencido",
+      "expenses": "Gastos",
+      "attentionTitle": "Requiere atención",
+      "attention": {
+        "SETUP": "{name}: termina la configuración",
+        "OVERDUE": "{name}: tiene facturas vencidas"
+      },
+      "allGood": "Nada requiere atención.",
+      "totalsNote": "Los totales se muestran por moneda; las empresas con distintas monedas nunca se suman.",
+      "companiesCount": "{count, plural, one {# empresa} other {# empresas}}"
+    },
+    "card": {
+      "primary": "Principal",
+      "current": "Actual",
+      "archived": "Archivada",
+      "members": "{count, plural, one {# persona} other {# personas}}",
+      "modules": "{count, plural, one {# módulo} other {# módulos}}",
+      "setup": "Configuración {score}%",
+      "switch": "Cambiar a esta empresa",
+      "edit": "Editar datos",
+      "archive": "Archivar",
+      "restore": "Restaurar",
+      "switched": "Empresa cambiada",
+      "done": "Hecho"
+    },
+    "issue": {
+      "ADDRESS": "Añade la dirección registrada",
+      "EMAIL": "Añade un correo de contacto",
+      "PAN": "Añade el PAN",
+      "GSTIN": "Añade el GSTIN",
+      "BANK": "Añade datos bancarios",
+      "SETUP": "Termina el asistente de configuración"
+    },
+    "form": {
+      "createTitle": "Añadir una empresa",
+      "editTitle": "Editar empresa",
+      "name": "Nombre de la empresa",
+      "country": "Código de país",
+      "currency": "Moneda base",
+      "email": "Correo de contacto",
+      "phone": "Teléfono",
+      "website": "Sitio web",
+      "address": "Dirección registrada",
+      "proprietor": "Propietario / director",
+      "gstin": "GSTIN",
+      "pan": "PAN",
+      "relationLabel": "Relación con el grupo",
+      "relation": {
+        "MEMBER": "Miembro",
+        "SUBSIDIARY": "Filial",
+        "BRANCH": "Sucursal",
+        "AFFILIATE": "Afiliada"
+      },
+      "optionalHint": "Puedes completar el resto después; las facturas necesitan dirección, PAN y datos bancarios reales.",
+      "create": "Crear empresa",
+      "save": "Guardar cambios",
+      "created": "Empresa creada",
+      "saved": "Guardado"
+    },
+    "team": {
+      "title": "Personas del grupo",
+      "add": "Añadir una persona",
+      "email": "Correo de su cuenta",
+      "addHint": "Ya deben tener cuenta. Elige las empresas que pueden abrir.",
+      "groupRole": "Rol en el grupo",
+      "role": {
+        "GROUP_OWNER": "Propietario",
+        "GROUP_ADMIN": "Administrador",
+        "GROUP_FINANCE": "Finanzas",
+        "MEMBER": "Miembro"
+      },
+      "accessLabel": "Acceso",
+      "access": {
+        "ALL_COMPANIES": "Todas las empresas",
+        "SPECIFIC_COMPANIES": "Empresas elegidas"
+      },
+      "companyRole": "Rol en {name}",
+      "noAccess": "Sin acceso",
+      "remove": "Quitar",
+      "you": "Tú",
+      "added": "Persona añadida",
+      "updated": "Actualizado",
+      "removed": "Quitado",
+      "onlyOwn": "Solo ves tu propio acceso. Pide a un propietario o administrador que lo cambie."
+    },
+    "biz": {
+      "role": {
+        "OWNER": "Propietario",
+        "ADMIN": "Administrador",
+        "FINANCE_MANAGER": "Resp. de finanzas",
+        "ACCOUNTANT": "Contable",
+        "SALES_MANAGER": "Resp. de ventas",
+        "OPERATIONS_MANAGER": "Resp. de operaciones",
+        "INVENTORY_MANAGER": "Resp. de inventario",
+        "STAFF": "Personal",
+        "VIEWER": "Lector"
+      }
+    },
+    "dash": {
+      "compare": "Comparación de empresas",
+      "empty": "Aún no hay empresas para comparar."
+    },
+    "reports": {
+      "intro": "Los informes del grupo están en el Centro de informes. Las cifras siguen en la moneda de cada empresa.",
+      "revenue": "Ingresos del grupo por empresa",
+      "revenueDesc": "Ingresos facturados y saldos abiertos por empresa.",
+      "open": "Abrir informe",
+      "center": "Todos los informes",
+      "centerDesc": "Cambia de empresa y ejecuta cualquier informe, o crea el tuyo."
+    },
+    "billing": {
+      "plan": "Plan del grupo",
+      "status": "Estado",
+      "renews": "Renueva o termina",
+      "billedTo": "Empresa de facturación",
+      "none": "Sin definir",
+      "seats": "Personas del grupo",
+      "modules": "Módulos en uso",
+      "modulesCompanies": "{count, plural, one {# empresa} other {# empresas}}",
+      "companyPlans": "Plan por empresa",
+      "manage": "Los cambios de plan se hacen en Ajustes → Facturación, no aquí."
+    },
+    "settings": {
+      "groupName": "Nombre del grupo",
+      "save": "Guardar",
+      "note": "El nombre del grupo aparece en el selector de empresa y en los informes del grupo.",
+      "readOnly": "Solo un propietario o administrador puede cambiarlo."
+    },
+    "error": "Algo salió mal. Inténtalo de nuevo."
   }
 }

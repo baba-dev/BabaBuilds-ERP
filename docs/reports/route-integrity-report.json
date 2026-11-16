@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-16T09:30:37.293Z",
+  "generatedAt": "2026-11-16T15:31:57.445Z",
   "summary": {
-    "knownRoutes": 127,
-    "checkedReferencedRoutes": 99,
+    "knownRoutes": 128,
+    "checkedReferencedRoutes": 100,
     "brokenReferencedRoutes": 0
   },
   "gate": {
@@ -185,7 +185,8 @@
       "route": "/companies",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx",
+        "components/companies/CompaniesShell.tsx",
+        "components/companies/CompanyForm.tsx",
         "components/navigation/nav-config.ts"
       ]
     },
@@ -193,42 +194,42 @@
       "route": "/companies/access-team",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
       "route": "/companies/billing-usage",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
       "route": "/companies/consolidated-dashboard",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
       "route": "/companies/consolidated-reports",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
       "route": "/companies/create",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
       "route": "/companies/settings",
       "exists": true,
       "references": [
-        "app/(dashboard)/companies/_components/companies-page-template.tsx"
+        "components/companies/CompaniesShell.tsx"
       ]
     },
     {
@@ -772,7 +773,15 @@
         "app/(dashboard)/reporting/[reportId]/page.tsx",
         "app/(dashboard)/reporting/layout.tsx",
         "app/api/chat/route.ts",
+        "components/companies/GroupViews.tsx",
         "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/reporting/group_revenue",
+      "exists": true,
+      "references": [
+        "components/companies/GroupViews.tsx"
       ]
     },
     {

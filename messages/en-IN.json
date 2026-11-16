@@ -9499,5 +9499,151 @@
       "employeesCount": "{count, plural, one {# employee} other {# employees}}",
       "holidaysInYear": "{count} in {year}"
     }
+  },
+  "CompaniesHub": {
+    "title": "Companies",
+    "description": "Every company in your group: figures, setup, people and plan.",
+    "nav": {
+      "overview": "Overview",
+      "create": "New company",
+      "team": "Access & team",
+      "dashboard": "Group dashboard",
+      "reports": "Group reports",
+      "billing": "Billing & usage",
+      "settings": "Settings"
+    },
+    "overview": {
+      "last30": "Last 30 days",
+      "revenue": "Billed",
+      "outstanding": "Outstanding",
+      "overdue": "Overdue",
+      "expenses": "Expenses",
+      "attentionTitle": "Needs attention",
+      "attention": {
+        "SETUP": "{name}: finish setting up",
+        "OVERDUE": "{name}: has overdue invoices"
+      },
+      "allGood": "Nothing needs attention.",
+      "totalsNote": "Totals are shown per currency; companies in different currencies are never added together.",
+      "companiesCount": "{count, plural, one {# company} other {# companies}}"
+    },
+    "card": {
+      "primary": "Primary",
+      "current": "Current",
+      "archived": "Archived",
+      "members": "{count, plural, one {# person} other {# people}}",
+      "modules": "{count, plural, one {# module} other {# modules}}",
+      "setup": "Setup {score}%",
+      "switch": "Switch to this company",
+      "edit": "Edit details",
+      "archive": "Archive",
+      "restore": "Restore",
+      "switched": "Switched company",
+      "done": "Done"
+    },
+    "issue": {
+      "ADDRESS": "Add the registered address",
+      "EMAIL": "Add a contact email",
+      "PAN": "Add the PAN",
+      "GSTIN": "Add the GSTIN",
+      "BANK": "Add bank details",
+      "SETUP": "Finish the setup wizard"
+    },
+    "form": {
+      "createTitle": "Add a company",
+      "editTitle": "Edit company",
+      "name": "Company name",
+      "country": "Country code",
+      "currency": "Base currency",
+      "email": "Contact email",
+      "phone": "Phone",
+      "website": "Website",
+      "address": "Registered address",
+      "proprietor": "Proprietor / director",
+      "gstin": "GSTIN",
+      "pan": "PAN",
+      "relationLabel": "Relationship to the group",
+      "relation": {
+        "MEMBER": "Member",
+        "SUBSIDIARY": "Subsidiary",
+        "BRANCH": "Branch",
+        "AFFILIATE": "Affiliate"
+      },
+      "optionalHint": "You can fill in the rest later; invoices need a real address, PAN and bank details first.",
+      "create": "Create company",
+      "save": "Save changes",
+      "created": "Company created",
+      "saved": "Saved"
+    },
+    "team": {
+      "title": "People in this group",
+      "add": "Add a person",
+      "email": "Their account email",
+      "addHint": "They need an account already. Pick the companies they can open.",
+      "groupRole": "Group role",
+      "role": {
+        "GROUP_OWNER": "Owner",
+        "GROUP_ADMIN": "Admin",
+        "GROUP_FINANCE": "Finance",
+        "MEMBER": "Member"
+      },
+      "accessLabel": "Access",
+      "access": {
+        "ALL_COMPANIES": "All companies",
+        "SPECIFIC_COMPANIES": "Selected companies"
+      },
+      "companyRole": "Role in {name}",
+      "noAccess": "No access",
+      "remove": "Remove",
+      "you": "You",
+      "added": "Person added",
+      "updated": "Updated",
+      "removed": "Removed",
+      "onlyOwn": "You can only see your own access. Ask an owner or admin to change it."
+    },
+    "biz": {
+      "role": {
+        "OWNER": "Owner",
+        "ADMIN": "Admin",
+        "FINANCE_MANAGER": "Finance manager",
+        "ACCOUNTANT": "Accountant",
+        "SALES_MANAGER": "Sales manager",
+        "OPERATIONS_MANAGER": "Operations manager",
+        "INVENTORY_MANAGER": "Inventory manager",
+        "STAFF": "Staff",
+        "VIEWER": "Viewer"
+      }
+    },
+    "dash": {
+      "compare": "Company comparison",
+      "empty": "No companies to compare yet."
+    },
+    "reports": {
+      "intro": "Group reports live in the Reporting Center. Figures stay in each company's own currency.",
+      "revenue": "Group revenue by company",
+      "revenueDesc": "Billed revenue and open balances for each company.",
+      "open": "Open report",
+      "center": "All reports",
+      "centerDesc": "Switch company and run any report, or build your own."
+    },
+    "billing": {
+      "plan": "Group plan",
+      "status": "Status",
+      "renews": "Renews or ends",
+      "billedTo": "Billing company",
+      "none": "Not set",
+      "seats": "People in the group",
+      "modules": "Modules in use",
+      "modulesCompanies": "{count, plural, one {# company} other {# companies}}",
+      "companyPlans": "Plan by company",
+      "manage": "Plan changes are made through Settings → Billing, not here."
+    },
+    "settings": {
+      "groupName": "Group name",
+      "save": "Save",
+      "note": "The group name appears in the company switcher and in group reports.",
+      "readOnly": "Only a group owner or admin can change this."
+    },
+    "error": "Something went wrong. Try again."
   }
 }
