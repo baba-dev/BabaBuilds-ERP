@@ -35,6 +35,7 @@ type ProductFixture = {
   currentStock: number;
   showInShop: boolean;
   status: string;
+  gstRate?: number;
 };
 
 const products: ProductFixture[] = [
@@ -47,6 +48,7 @@ const products: ProductFixture[] = [
     currentStock: 10,
     showInShop: true,
     status: "IN_STOCK",
+    gstRate: 18,
   },
   {
     id: "prod_hidden",
@@ -131,6 +133,7 @@ async function postOrder(productId: string, quantity = 1) {
       body: JSON.stringify({
         buyerName: "Buyer One",
         buyerEmail: "buyer@example.com",
+        shippingAddress: "12 Market Road, Pune 411001",
         items: [{ productId, quantity }],
       }),
     }),
@@ -205,11 +208,35 @@ describe("shop order product eligibility", () => {
     expect(shopOrderCreate).toHaveBeenCalled();
   });
 
+  it("prices the basket from the catalogue and adds GST at the product's rate", async () => {
+    const res = await postOrder("prod_published", 2);
+    expect(res.status).toBe(200);
+    const data = (shopOrderCreate.mock.calls[0]![0] as { data: Record<string, unknown> }).data;
+    expect(Number(data.subtotal)).toBe(500);
+    expect(Number(data.taxTotal)).toBe(90);
+    expect(Number(data.amount)).toBe(590);
+    expect(razorpayOrderCreate).toHaveBeenCalledWith(expect.objectContaining({ amount: 59000, currency: "INR" }));
+  });
+
+  it("asks for a delivery address and a valid email", async () => {
+    const { POST } = await import("@/app/api/shop/[slug]/order/route");
+    const res = await POST(new Request("http://localhost/api/shop/demo-shop/order", { method: "POST", body: JSON.stringify({ buyerName: "B", buyerEmail: "not-an-email", items: [{ productId: "prod_published", quantity: 1 }] }) }), { params: Promise.resolve({ slug: "demo-shop" }) });
+    expect(res.status).toBe(422);
+    expect(shopOrderCreate).not.toHaveBeenCalled();
+  });
+
+  it("adds up the same product listed twice before checking stock", async () => {
+    const { POST } = await import("@/app/api/shop/[slug]/order/route");
+    const res = await POST(new Request("http://localhost/api/shop/demo-shop/order", { method: "POST", body: JSON.stringify({ buyerName: "B", buyerEmail: "b@example.com", shippingAddress: "12 Market Road, Pune", items: [{ productId: "prod_published", quantity: 6 }, { productId: "prod_published", quantity: 6 }] }) }), { params: Promise.resolve({ slug: "demo-shop" }) });
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe("INSUFFICIENT_STOCK");
+  });
+
   it("rejects a hidden product with a generic availability error", async () => {
     const res = await postOrder("prod_hidden");
 
     expect(res.status).toBe(404);
-    await expect(res.json()).resolves.toEqual({ error: "Product is not available in this shop." });
+    await expect(res.json()).resolves.toMatchObject({ code: "PRODUCT_UNAVAILABLE" });
     expect(shopOrderCreate).not.toHaveBeenCalled();
   });
 
@@ -217,7 +244,7 @@ describe("shop order product eligibility", () => {
     const res = await postOrder("prod_out");
 
     expect(res.status).toBe(404);
-    await expect(res.json()).resolves.toEqual({ error: "Product is not available in this shop." });
+    await expect(res.json()).resolves.toMatchObject({ code: "PRODUCT_UNAVAILABLE" });
     expect(shopOrderCreate).not.toHaveBeenCalled();
   });
 
@@ -225,7 +252,7 @@ describe("shop order product eligibility", () => {
     const res = await postOrder("prod_other_workspace");
 
     expect(res.status).toBe(404);
-    await expect(res.json()).resolves.toEqual({ error: "Product is not available in this shop." });
+    await expect(res.json()).resolves.toMatchObject({ code: "PRODUCT_UNAVAILABLE" });
     expect(shopOrderCreate).not.toHaveBeenCalled();
   });
 });

@@ -1,91 +1,43 @@
-/**
- * app/api/workforce/leave/requests/[id]/route.ts
- * PATCH — approve / reject a leave request
- */
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
-import { requireModule, ModuleDisabledError } from '@/lib/modules';
+import { NextResponse } from 'next/server';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
-import { resolveSessionMembership } from '@/lib/workspace-scope';
-
-// The workspace the user is in (session), not an arbitrary membership.
-async function getWid(session: Parameters<typeof resolveSessionMembership>[0]) {
-  return (await resolveSessionMembership(session))?.workspaceId ?? null;
-}
+import { logActivity } from '@/lib/security/activity-log';
+import { cancelLeave, decideLeave } from '@/lib/workforce/leave-service';
+import { leaveDecisionSchema } from '@/lib/workforce/schemas';
+import { can, readJson, requireWorkforce, workforceErrorResponse } from '../../../_guard';
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function PATCH(req: NextRequest, { params }: Ctx) {
-  const { id } = await params;
+/** Approve or reject a pending request. Balances move in the same transaction; nobody can decide their own request. */
+export async function PATCH(req: Request, ctx: Ctx) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const wid = await getWid(session);
-    if (!wid) return NextResponse.json({ error: 'No workspace' }, { status: 400 });
-
-    try {
-      await requireModule(wid, 'WORKFORCE');
-      await requirePermission(session.user.id, wid, 'workforce.leave.approve');
-    } catch (e) {
-      if (e instanceof ModuleDisabledError) return NextResponse.json({ error: 'Module disabled' }, { status: 403 });
-      if (e instanceof RbacDeniedError) return rbacDeniedResponse(e);
-      throw e;
+    const gate = await requireWorkforce('workforce.leave.approve');
+    if ('response' in gate) return gate.response;
+    const { workspaceId, userId, email } = gate.access;
+    const { id } = await ctx.params;
+    const d = leaveDecisionSchema.parse(await readJson(req));
+    const { request, status } = await decideLeave({ workspaceId, requestId: id, approverUserId: userId, action: d.action, rejectionReason: d.rejectionReason });
+    if (request.employee.userId) {
+      void dispatchNotification({ event: status === 'APPROVED' ? 'LEAVE_APPROVED' : 'LEAVE_REJECTED', workspaceId, userIds: [request.employee.userId], data: { leaveType: request.leaveType.name, employeeName: `${request.employee.firstName} ${request.employee.lastName}` } }).catch(() => undefined);
     }
+    void logActivity({ workspaceId, action: `workforce.leave_${status.toLowerCase()}`, status: 'SUCCESS', actor: { userId, email }, entity: { type: 'leave_request', id }, metadata: { days: request.days } });
+    return NextResponse.json({ success: true, status });
+  } catch (e) {
+    return workforceErrorResponse(e, 'leave.decide');
+  }
+}
 
-    const body = await req.json() as { action: 'APPROVE' | 'REJECT'; rejectionReason?: string };
-    if (!body.action || !['APPROVE', 'REJECT'].includes(body.action)) {
-      return NextResponse.json({ error: 'action must be APPROVE or REJECT' }, { status: 400 });
-    }
-
-    const existing = await prisma.leaveRequest.findFirst({ where: { id, workspaceId: wid }, include: { employee: { select: { userId: true, firstName: true, lastName: true } }, leaveType: { select: { name: true } } } });
-    if (!existing) return NextResponse.json({ error: 'Leave request not found' }, { status: 404 });
-    if (existing.status !== 'PENDING') {
-      return NextResponse.json({ error: 'Only PENDING requests can be approved or rejected' }, { status: 400 });
-    }
-
-    const updated = await prisma.leaveRequest.update({
-      where: { id },
-      data: {
-        status: body.action === 'APPROVE' ? 'APPROVED' : 'REJECTED',
-        approvedByUserId: session.user.id,
-        approvedAt: new Date(),
-        rejectionReason: body.action === 'REJECT' ? (body.rejectionReason ?? null) : null,
-      },
-    });
-
-    // Update leave balance if approved
-    if (body.action === 'APPROVE') {
-      const year = new Date(existing.startDate).getFullYear();
-      await prisma.leaveBalance.updateMany({
-        where: { employeeId: existing.employeeId, leaveTypeId: existing.leaveTypeId, year },
-        data: { used: { increment: existing.days }, pending: { decrement: existing.days } },
-      });
-    }
-
-    // Notify the employee (if they have a user account).
-    // Await for delivery reliability, but keep request success independent of notifier failures.
-    if (existing.employee?.userId) {
-      try {
-        await dispatchNotification({
-          event: body.action === 'APPROVE' ? 'LEAVE_APPROVED' : 'LEAVE_REJECTED',
-          workspaceId: wid,
-          userIds: [existing.employee.userId],
-          data: {
-            leaveType: existing.leaveType.name,
-            employeeName: `${existing.employee.firstName} ${existing.employee.lastName}`,
-          },
-        });
-      } catch (notifyErr) {
-        console.error('[leave/requests/[id]/PATCH] notification dispatch failed', notifyErr);
-      }
-    }
-
-    return NextResponse.json(updated);
-  } catch (err) {
-    console.error('[leave/requests/[id]/PATCH]', err);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+/** Cancel a request: the owner's own, or anyone's for a manager. Reserved or used days go back to the balance. */
+export async function DELETE(_req: Request, ctx: Ctx) {
+  try {
+    const gate = await requireWorkforce('workforce.leave.view');
+    if ('response' in gate) return gate.response;
+    const { workspaceId, userId, email } = gate.access;
+    const { id } = await ctx.params;
+    const isManager = (await can(gate.access, 'workforce.leave.manage')) || (await can(gate.access, 'workforce.leave.approve'));
+    const r = await cancelLeave({ workspaceId, requestId: id, byUserId: userId, isManager });
+    void logActivity({ workspaceId, action: 'workforce.leave_cancelled', status: 'SUCCESS', actor: { userId, email }, entity: { type: 'leave_request', id }, metadata: { wasApproved: r.wasApproved } });
+    return NextResponse.json({ success: true });
+  } catch (e) {
+    return workforceErrorResponse(e, 'leave.cancel');
   }
 }

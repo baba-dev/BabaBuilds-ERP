@@ -46,7 +46,7 @@ export async function getShopSummary(workspaceId: string): Promise<string> {
       _count: { _all: true },
     }),
     prisma.shopOrder.aggregate({
-      where: { workspaceId, status: 'PAID' },
+      where: { workspaceId, status: { in: ['PAID', 'SHIPPED', 'FULFILLED'] } },
       _sum: { amount: true },
     }),
     prisma.shopOrder.aggregate({
@@ -61,7 +61,7 @@ export async function getShopSummary(workspaceId: string): Promise<string> {
     }),
   ]);
 
-  const counts = { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0, FULFILLED: 0 };
+  const counts = { PAID: 0, PENDING: 0, FAILED: 0, REFUNDED: 0, FULFILLED: 0, SHIPPED: 0, REFUND_DUE: 0 };
   for (const row of statusCounts) {
     if (row.status in counts) counts[row.status as keyof typeof counts] = row._count._all;
   }
@@ -95,7 +95,7 @@ export async function getTopShopProducts(workspaceId: string): Promise<string> {
     where: {
       shopOrder: {
         workspaceId,
-        status: 'PAID',
+        status: { in: ['PAID', 'SHIPPED', 'FULFILLED'] },
         createdAt: { gte: start },
       },
     },

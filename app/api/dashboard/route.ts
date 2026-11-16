@@ -477,7 +477,7 @@ async function buildDashboardPayload(
       prisma.shopOrder.aggregate({
         where: {
           workspaceId,
-          status: "PAID",
+          status: { in: ["PAID", "SHIPPED", "FULFILLED"] },
           createdAt: { gte: monthStart, lt: nextMonthStart },
         },
         _sum: { amount: true },
@@ -488,7 +488,7 @@ async function buildDashboardPayload(
       prisma.shopOrder.aggregate({
         where: {
           workspaceId,
-          status: "PAID",
+          status: { in: ["PAID", "SHIPPED", "FULFILLED"] },
           createdAt: { gte: previousMonthStart, lt: monthStart },
         },
         _sum: { amount: true },
@@ -679,7 +679,7 @@ async function buildDashboardPayload(
     return acc;
   }, {});
 
-  const paidOrders = shopOrderByStatus.PAID ?? 0;
+  const paidOrders = (shopOrderByStatus.PAID ?? 0) + (shopOrderByStatus.SHIPPED ?? 0) + (shopOrderByStatus.FULFILLED ?? 0);
   const pendingOrders = shopOrderByStatus.PENDING ?? 0;
   const failedOrders = shopOrderByStatus.FAILED ?? 0;
   const pendingOrdersCount = pendingOrders + failedOrders;

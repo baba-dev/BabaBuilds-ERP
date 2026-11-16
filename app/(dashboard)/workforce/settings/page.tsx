@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { WorkforcePageShell } from "@/components/workforce/WorkforceLayout";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -14,9 +15,12 @@ type Department = { id: string; name: string; description?: string | null; _coun
 type Designation = { id: string; title: string; level?: number | null; _count?: { employees: number } };
 type LeaveType = { id: string; name: string; code: string; description?: string | null; color: string; defaultDays: number; isPaid: boolean; isActive: boolean };
 type Holiday = { id: string; name: string; date: string; isRecurring: boolean; year?: number | null };
+const DAYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] as const;
+const parseDays = (v: string): string[] => { try { const a = JSON.parse(v) as unknown; return Array.isArray(a) ? a.map(String) : []; } catch { return []; } };
 type WorkSchedule = { workingDays: string; workStartTime: string; workEndTime: string; timeZone: string };
 
 export default function WorkforceSettingsPage() {
+  const t = useTranslations("WorkforceHub");
   const [departments, setDepartments] = useState<Department[]>([]);
   const [newDeptName, setNewDeptName] = useState("");
   const [newDeptDesc, setNewDeptDesc] = useState("");
@@ -91,13 +95,13 @@ export default function WorkforceSettingsPage() {
       body: JSON.stringify({ name: newDeptName.trim(), description: newDeptDesc.trim() || undefined }),
     });
     if (res.ok) {
-      toast.success("Department added");
+      toast.success(t("settings.added"));
       setNewDeptName("");
       setNewDeptDesc("");
       void fetchAll();
     } else {
       const err = await res.json().catch(() => ({}));
-      toast.error(err.error || "Failed to add department");
+      toast.error(err.error || t("error"));
     }
     setAdding(false);
   };
@@ -113,13 +117,13 @@ export default function WorkforceSettingsPage() {
         body: JSON.stringify({ title: newDesigTitle.trim(), level: Number.isFinite(level) ? level : undefined }),
       });
       if (res.ok) {
-        toast.success("Designation added");
+        toast.success(t("settings.added"));
         setNewDesigTitle("");
         setNewDesigLevel("");
         void fetchAll();
       } else {
         const err = await res.json().catch(() => ({}));
-        toast.error(err.error || "Failed to add designation");
+        toast.error(err.error || t("error"));
       }
     } finally {
       setAddingDesignation(false);
@@ -143,12 +147,12 @@ export default function WorkforceSettingsPage() {
         }),
       });
       if (res.ok) {
-        toast.success("Leave type added");
+        toast.success(t("settings.added"));
         setNewLeaveType({ name: "", code: "", color: "indigo", defaultDays: "0", isPaid: true });
         void fetchAll();
       } else {
         const err = await res.json().catch(() => ({}));
-        toast.error(err.error || "Failed to add leave type");
+        toast.error(err.error || t("error"));
       }
     } finally {
       setAddingLeaveType(false);
@@ -165,7 +169,7 @@ export default function WorkforceSettingsPage() {
       void fetchAll();
     } else {
       const err = await res.json().catch(() => ({}));
-      toast.error(err.error || "Failed to update leave type");
+      toast.error(err.error || t("error"));
     }
   };
 
@@ -179,12 +183,12 @@ export default function WorkforceSettingsPage() {
         body: JSON.stringify({ ...newHoliday, name: newHoliday.name.trim() }),
       });
       if (res.ok) {
-        toast.success("Holiday added");
+        toast.success(t("settings.added"));
         setNewHoliday({ name: "", date: "", isRecurring: true });
         void fetchAll();
       } else {
         const err = await res.json().catch(() => ({}));
-        toast.error(err.error || "Failed to add holiday");
+        toast.error(err.error || t("error"));
       }
     } finally {
       setAddingHoliday(false);
@@ -194,11 +198,11 @@ export default function WorkforceSettingsPage() {
   const handleDeleteHoliday = async (id: string) => {
     const res = await fetch(`/api/workforce/settings/holidays/${id}`, { method: "DELETE" });
     if (res.ok) {
-      toast.success("Holiday deleted");
+      toast.success(t("settings.deleted"));
       void fetchAll();
     } else {
       const err = await res.json().catch(() => ({}));
-      toast.error(err.error || "Failed to delete holiday");
+      toast.error(err.error || t("error"));
     }
   };
 
@@ -207,16 +211,16 @@ export default function WorkforceSettingsPage() {
     setSavingSchedule(true);
     try {
       const res = await fetch("/api/workforce/settings/schedule", {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(schedule),
+        body: JSON.stringify({ workingDays: parseDays(schedule.workingDays), workStartTime: schedule.workStartTime, workEndTime: schedule.workEndTime, timeZone: schedule.timeZone }),
       });
       if (res.ok) {
-        toast.success("Schedule saved");
+        toast.success(t("settings.scheduleSaved"));
         void fetchAll();
       } else {
         const err = await res.json().catch(() => ({}));
-        toast.error(err.error || "Failed to save schedule");
+        toast.error(err.error || t("error"));
       }
     } finally {
       setSavingSchedule(false);
@@ -225,16 +229,16 @@ export default function WorkforceSettingsPage() {
 
   return (
     <WorkforcePageShell
-      title="Workforce Settings"
-      description="Configure departments, designations, holidays, and work schedule."
+      title={t("nav.settings")}
+      description={t("settings.description")}
     >
       <div className="space-y-8">
         {/* Departments */}
         <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 overflow-hidden shadow-sm backdrop-blur-sm">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-200/60 dark:border-zinc-800/60">
             <Building2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Departments</h3>
-            <span className="ml-auto text-xs text-zinc-500">{departments.length} total</span>
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t("settings.departments")}</h3>
+            <span className="ml-auto text-xs text-zinc-500">{t("settings.totalCount", { count: departments.length })}</span>
           </div>
 
           <div className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
@@ -245,7 +249,7 @@ export default function WorkforceSettingsPage() {
                 </div>
               ))
             ) : departments.length === 0 ? (
-              <div className="px-5 py-8 text-center text-zinc-500 text-sm">No departments yet.</div>
+              <div className="px-5 py-8 text-center text-zinc-500 text-sm">{t("settings.noDepartments")}</div>
             ) : (
               departments.map((dept) => (
                 <div key={dept.id} className="flex items-center justify-between px-5 py-3">
@@ -254,7 +258,7 @@ export default function WorkforceSettingsPage() {
                     {dept.description && <p className="text-xs text-zinc-500 dark:text-zinc-400">{dept.description}</p>}
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs text-zinc-500">{dept._count?.employees ?? 0} employees</span>
+                    <span className="text-xs text-zinc-500">{t("settings.employeesCount", { count: dept._count?.employees ?? 0 })}</span>
                   </div>
                 </div>
               ))
@@ -265,7 +269,7 @@ export default function WorkforceSettingsPage() {
           <div className="border-t border-zinc-200/60 dark:border-zinc-800/60 px-5 py-4 bg-white/30 dark:bg-zinc-950/20">
             <div className="flex gap-2">
               <div className="flex-1 space-y-2">
-                <Label className="text-xs text-zinc-600 dark:text-zinc-400">Department Name</Label>
+                <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.deptName")}</Label>
                 <Input
                   id="new-dept-name"
                   value={newDeptName}
@@ -276,12 +280,12 @@ export default function WorkforceSettingsPage() {
                 />
               </div>
               <div className="flex-1 space-y-2">
-                <Label className="text-xs text-zinc-600 dark:text-zinc-400">Description (optional)</Label>
+                <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.descriptionOptional")}</Label>
                 <Input
                   id="new-dept-desc"
                   value={newDeptDesc}
                   onChange={(e) => setNewDeptDesc(e.target.value)}
-                  placeholder="Short description..."
+                  placeholder=""
                   className="h-8 text-sm"
                 />
               </div>
@@ -293,7 +297,7 @@ export default function WorkforceSettingsPage() {
                   disabled={adding || !newDeptName.trim()}
                   className="h-8"
                 >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> {adding ? "Adding..." : "Add"}
+                  <Plus className="h-3.5 w-3.5 mr-1" /> {adding ? t("settings.saving") : t("settings.add")}
                 </Button>
               </div>
             </div>
@@ -305,8 +309,8 @@ export default function WorkforceSettingsPage() {
           <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 overflow-hidden shadow-sm backdrop-blur-sm">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-200/60 dark:border-zinc-800/60">
               <Users2 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Designations</h3>
-              <span className="ml-auto text-xs text-zinc-500">{designations.length} total</span>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t("settings.designations")}</h3>
+              <span className="ml-auto text-xs text-zinc-500">{t("settings.totalCount", { count: designations.length })}</span>
             </div>
             <div className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
               {isLoading ? (
@@ -316,15 +320,15 @@ export default function WorkforceSettingsPage() {
                   </div>
                 ))
               ) : designations.length === 0 ? (
-                <div className="px-5 py-8 text-center text-zinc-500 text-sm">No designations yet.</div>
+                <div className="px-5 py-8 text-center text-zinc-500 text-sm">{t("settings.noDesignations")}</div>
               ) : (
                 designations.map((d) => (
                   <div key={d.id} className="flex items-center justify-between px-5 py-3">
                     <div>
                       <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{d.title}</p>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Level {d.level ?? "—"}</p>
+                      <p className="text-xs text-zinc-500 dark:text-zinc-400">{t("settings.level")} {d.level ?? "—"}</p>
                     </div>
-                    <span className="text-xs text-zinc-500">{d._count?.employees ?? 0} employees</span>
+                    <span className="text-xs text-zinc-500">{t("settings.employeesCount", { count: d._count?.employees ?? 0 })}</span>
                   </div>
                 ))
               )}
@@ -332,7 +336,7 @@ export default function WorkforceSettingsPage() {
             <div className="border-t border-zinc-200/60 dark:border-zinc-800/60 px-5 py-4 bg-white/30 dark:bg-zinc-950/20">
               <div className="flex gap-2">
                 <div className="flex-1 space-y-2">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">Title</Label>
+                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.titleLabel")}</Label>
                   <Input
                     id="new-desig-title"
                     value={newDesigTitle}
@@ -342,7 +346,7 @@ export default function WorkforceSettingsPage() {
                   />
                 </div>
                 <div className="w-28 space-y-2">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">Level</Label>
+                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.level")}</Label>
                   <Input
                     id="new-desig-level"
                     value={newDesigLevel}
@@ -360,7 +364,7 @@ export default function WorkforceSettingsPage() {
                     disabled={addingDesignation || !newDesigTitle.trim()}
                     className="h-8"
                   >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> {addingDesignation ? "Adding..." : "Add"}
+                    <Plus className="h-3.5 w-3.5 mr-1" /> {addingDesignation ? t("settings.saving") : t("settings.add")}
                   </Button>
                 </div>
               </div>
@@ -371,8 +375,8 @@ export default function WorkforceSettingsPage() {
           <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 overflow-hidden shadow-sm backdrop-blur-sm">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-200/60 dark:border-zinc-800/60">
               <Briefcase className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Leave Types</h3>
-              <span className="ml-auto text-xs text-zinc-500">{leaveTypes.length} total</span>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t("settings.leaveTypes")}</h3>
+              <span className="ml-auto text-xs text-zinc-500">{t("settings.totalCount", { count: leaveTypes.length })}</span>
             </div>
             <div className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
               {isLoading ? (
@@ -382,7 +386,7 @@ export default function WorkforceSettingsPage() {
                   </div>
                 ))
               ) : leaveTypes.length === 0 ? (
-                <div className="px-5 py-8 text-center text-zinc-500 text-sm">No leave types yet.</div>
+                <div className="px-5 py-8 text-center text-zinc-500 text-sm">{t("settings.noLeaveTypes")}</div>
               ) : (
                 leaveTypes.map((lt) => (
                   <div key={lt.id} className="flex items-center justify-between gap-3 px-5 py-3">
@@ -391,12 +395,12 @@ export default function WorkforceSettingsPage() {
                         {lt.name} <span className="text-xs text-zinc-500">({lt.code})</span>
                       </p>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        {lt.defaultDays} days · {lt.isPaid ? "Paid" : "Unpaid"}
+                        {lt.defaultDays} days · {lt.isPaid ? t("settings.paid") : t("settings.unpaid")}
                       </p>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-zinc-500">Active</span>
+                        <span className="text-xs text-zinc-500">{t("settings.active")}</span>
                         <Switch
                           checked={lt.isActive}
                           onCheckedChange={(v) => handleToggleLeaveType(lt, { isActive: v })}
@@ -410,7 +414,7 @@ export default function WorkforceSettingsPage() {
             <div className="border-t border-zinc-200/60 dark:border-zinc-800/60 px-5 py-4 bg-white/30 dark:bg-zinc-950/20">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">Name</Label>
+                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.name")}</Label>
                   <Input
                     id="new-leave-name"
                     value={newLeaveType.name}
@@ -420,7 +424,7 @@ export default function WorkforceSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">Code</Label>
+                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.code")}</Label>
                   <Input
                     id="new-leave-code"
                     value={newLeaveType.code}
@@ -430,7 +434,7 @@ export default function WorkforceSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">Default days</Label>
+                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.defaultDays")}</Label>
                   <Input
                     id="new-leave-days"
                     value={newLeaveType.defaultDays}
@@ -441,7 +445,7 @@ export default function WorkforceSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">Color</Label>
+                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.color")}</Label>
                   <Select value={newLeaveType.color} onValueChange={(v) => setNewLeaveType((s) => ({ ...s, color: v }))}>
                     <SelectTrigger className="h-8">
                       <SelectValue />
@@ -455,7 +459,7 @@ export default function WorkforceSettingsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch checked={newLeaveType.isPaid} onCheckedChange={(v) => setNewLeaveType((s) => ({ ...s, isPaid: v }))} />
-                  <span className="text-sm text-zinc-700 dark:text-zinc-300">Paid leave</span>
+                  <span className="text-sm text-zinc-700 dark:text-zinc-300">{t("settings.paidLeave")}</span>
                 </div>
                 <div className="flex items-end justify-end">
                   <Button
@@ -465,7 +469,7 @@ export default function WorkforceSettingsPage() {
                     disabled={addingLeaveType || !newLeaveType.name.trim() || !newLeaveType.code.trim()}
                     className="h-8"
                   >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> {addingLeaveType ? "Adding..." : "Add"}
+                    <Plus className="h-3.5 w-3.5 mr-1" /> {addingLeaveType ? t("settings.saving") : t("settings.add")}
                   </Button>
                 </div>
               </div>
@@ -478,8 +482,8 @@ export default function WorkforceSettingsPage() {
           <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 overflow-hidden shadow-sm backdrop-blur-sm">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-200/60 dark:border-zinc-800/60">
               <CalendarDays className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Holidays</h3>
-              <span className="ml-auto text-xs text-zinc-500">{holidays.length} in {new Date().getFullYear()}</span>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t("settings.holidays")}</h3>
+              <span className="ml-auto text-xs text-zinc-500">{t("settings.holidaysInYear", { count: holidays.length, year: new Date().getFullYear() })}</span>
             </div>
             <div className="divide-y divide-zinc-200/60 dark:divide-zinc-800/60">
               {isLoading ? (
@@ -489,14 +493,14 @@ export default function WorkforceSettingsPage() {
                   </div>
                 ))
               ) : holidays.length === 0 ? (
-                <div className="px-5 py-8 text-center text-zinc-500 text-sm">No holidays found.</div>
+                <div className="px-5 py-8 text-center text-zinc-500 text-sm">{t("settings.noHolidays")}</div>
               ) : (
                 holidays.map((h) => (
                   <div key={h.id} className="flex items-center justify-between gap-3 px-5 py-3">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100 truncate">{h.name}</p>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                        {new Date(h.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })} · {h.isRecurring ? "Recurring" : "One-off"}
+                        {new Date(h.date).toLocaleDateString(undefined, { month: "short", day: "numeric" })} · {h.isRecurring ? t("settings.recurring") : t("settings.oneOff")}
                       </p>
                     </div>
                     <Button size="sm" variant="ghost" className="h-8 text-rose-600 dark:text-rose-400" onClick={() => handleDeleteHoliday(h.id)}>
@@ -509,7 +513,7 @@ export default function WorkforceSettingsPage() {
             <div className="border-t border-zinc-200/60 dark:border-zinc-800/60 px-5 py-4 bg-white/30 dark:bg-zinc-950/20">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">Name</Label>
+                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.name")}</Label>
                   <Input
                     id="new-holiday-name"
                     value={newHoliday.name}
@@ -519,7 +523,7 @@ export default function WorkforceSettingsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">Date</Label>
+                  <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.date")}</Label>
                   <Input
                     id="new-holiday-date"
                     type="date"
@@ -530,7 +534,7 @@ export default function WorkforceSettingsPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch checked={newHoliday.isRecurring} onCheckedChange={(v) => setNewHoliday((s) => ({ ...s, isRecurring: v }))} />
-                  <span className="text-sm text-zinc-700 dark:text-zinc-300">Recurring yearly</span>
+                  <span className="text-sm text-zinc-700 dark:text-zinc-300">{t("settings.recurringYearly")}</span>
                 </div>
                 <div className="flex items-end justify-end">
                   <Button
@@ -540,7 +544,7 @@ export default function WorkforceSettingsPage() {
                     disabled={addingHoliday || !newHoliday.name.trim() || !newHoliday.date}
                     className="h-8"
                   >
-                    <Plus className="h-3.5 w-3.5 mr-1" /> {addingHoliday ? "Adding..." : "Add"}
+                    <Plus className="h-3.5 w-3.5 mr-1" /> {addingHoliday ? t("settings.saving") : t("settings.add")}
                   </Button>
                 </div>
               </div>
@@ -551,18 +555,18 @@ export default function WorkforceSettingsPage() {
           <div className="rounded-2xl border border-zinc-200/60 dark:border-zinc-800/60 bg-white/40 dark:bg-zinc-900/20 overflow-hidden shadow-sm backdrop-blur-sm">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-zinc-200/60 dark:border-zinc-800/60">
               <Clock className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Work schedule</h3>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{t("settings.schedule")}</h3>
             </div>
             <div className="p-5 space-y-4">
               {!schedule ? (
-                <p className="text-sm text-zinc-500">Schedule not configured yet.</p>
+                <p className="text-sm text-zinc-500">{t("settings.scheduleMissing")}</p>
               ) : (
                 <>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">Start</Label>
+                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.start")}</Label>
                       <Input
-                        id="schedule-start"
+                        id="schedule-start" type="time"
                         value={schedule.workStartTime}
                         onChange={(e) => setSchedule((s) => (s ? { ...s, workStartTime: e.target.value } : s))}
                         placeholder="09:00"
@@ -570,9 +574,9 @@ export default function WorkforceSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">End</Label>
+                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.end")}</Label>
                       <Input
-                        id="schedule-end"
+                        id="schedule-end" type="time"
                         value={schedule.workEndTime}
                         onChange={(e) => setSchedule((s) => (s ? { ...s, workEndTime: e.target.value } : s))}
                         placeholder="18:00"
@@ -580,17 +584,22 @@ export default function WorkforceSettingsPage() {
                       />
                     </div>
                     <div className="space-y-2 sm:col-span-2">
-                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">Working days (JSON)</Label>
-                      <Input
-                        id="schedule-days"
-                        value={schedule.workingDays}
-                        onChange={(e) => setSchedule((s) => (s ? { ...s, workingDays: e.target.value } : s))}
-                        className="h-8 text-sm font-mono"
-                      />
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400">Example: [&quot;MON&quot;,&quot;TUE&quot;,&quot;WED&quot;,&quot;THU&quot;,&quot;FRI&quot;]</p>
+                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.workingDays")}</Label>
+                      <div className="flex flex-wrap gap-2" role="group" aria-label={t("settings.workingDays")}>
+                        {DAYS.map((d) => {
+                          const on = parseDays(schedule.workingDays).includes(d);
+                          return (
+                            <button key={d} type="button" aria-pressed={on}
+                              onClick={() => setSchedule((sc) => { if (!sc) return sc; const cur = parseDays(sc.workingDays); return { ...sc, workingDays: JSON.stringify(on ? cur.filter((x) => x !== d) : [...cur, d]) }; })}
+                              className={`rounded-full border px-3 py-1 text-xs font-semibold ${on ? "border-teal-600 bg-teal-600 text-white" : "border-zinc-300 text-zinc-500 dark:border-zinc-700"}`}>
+                              {t(`settings.day.${d}`)}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                     <div className="space-y-2 sm:col-span-2">
-                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">Time zone</Label>
+                      <Label className="text-xs text-zinc-600 dark:text-zinc-400">{t("settings.timeZone")}</Label>
                       <Input
                         id="schedule-tz"
                         value={schedule.timeZone}
@@ -602,7 +611,7 @@ export default function WorkforceSettingsPage() {
                   </div>
                   <div className="flex justify-end">
                     <Button id="save-schedule-btn" size="sm" onClick={handleSaveSchedule} disabled={savingSchedule} className="h-8">
-                      {savingSchedule ? "Saving..." : "Save schedule"}
+                      {savingSchedule ? t("settings.saving") : t("settings.saveSchedule")}
                     </Button>
                   </div>
                 </>

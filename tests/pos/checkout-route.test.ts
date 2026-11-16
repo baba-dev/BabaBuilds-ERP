@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   getNextProposalNo: vi.fn(),
   prisma: {
     $transaction: vi.fn(),
+    invoicePayment: { findFirst: vi.fn() },
   },
   tx: {
     client: { findFirst: vi.fn(), create: vi.fn() },
@@ -153,6 +154,53 @@ describe("POST /api/pos/checkout", () => {
     });
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: "Discount cannot exceed subtotal" });
+    expect(tx.invoice.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/pos/checkout: payment and totals", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.getServerSession.mockResolvedValue({ workspaceId: "ws_current", user: { id: "user_1" } });
+    mocks.isModuleEnabled.mockResolvedValue(true);
+    mocks.withPermission.mockResolvedValue({ granted: true, role: "OWNER" });
+    mocks.getNextInvoiceNumber.mockResolvedValue({ invoiceNumber: "INV-0001", financialYear: "26-27" });
+    mocks.prisma.$transaction.mockImplementation(async (fn: (t: typeof tx) => unknown) => fn(tx));
+    tx.workspace.findUnique.mockResolvedValue({ id: "ws_current", countryCode: "IN", baseCurrency: "INR" });
+    tx.businessProfile.findUnique.mockResolvedValue({ invoicePrefix: "BB", gstRegistrationType: "REGULAR" });
+    tx.client.findFirst.mockResolvedValue({ id: "client_current", workspaceId: "ws_current", name: "Current Workspace Client", country: "India", countryCode: "IN" });
+    tx.invoice.create.mockResolvedValue({ id: "inv_1", invoiceDate: new Date("2026-11-15T10:00:00Z") });
+    tx.invoicePayment.create.mockResolvedValue({});
+  });
+
+  it("records the payment method, reference and key, and works out change for cash", async () => {
+    const response = await post({
+      action: "PAY_NOW", clientId: "client_current", idempotencyKey: "sale-key-12345",
+      payment: { method: "CASH", tendered: 500 },
+      items: [{ type: "CUSTOM", name: "Widget", price: 100, quantity: 2, taxRate: 18 }],
+    });
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.change).toBe(500 - 236);
+    expect(tx.invoicePayment.create).toHaveBeenCalledWith({ data: expect.objectContaining({ method: "CASH", idempotencyKey: "sale-key-12345", amount: expect.anything(), createdByUserId: "user_1" }) });
+    expect(tx.invoice.create).toHaveBeenCalledWith({ data: expect.objectContaining({ subtotal: expect.anything(), status: "PAID" }) });
+  });
+
+  it("refuses cash that does not cover the bill", async () => {
+    const response = await post({
+      action: "PAY_NOW", clientId: "client_current", payment: { method: "CASH", tendered: 100 },
+      items: [{ type: "CUSTOM", name: "Widget", price: 100, quantity: 2, taxRate: 18 }],
+    });
+    expect(response.status).toBe(422);
+    expect((await response.json()).code).toBe("SHORT_PAYMENT");
+  });
+
+  it("returns the earlier bill when the same sale key arrives again", async () => {
+    mocks.prisma.invoicePayment.findFirst.mockResolvedValueOnce({ invoice: { id: "inv_old", invoiceNumber: "INV-0007" } });
+    const response = await post({ action: "PAY_NOW", clientId: "client_current", idempotencyKey: "sale-key-12345", items: [{ type: "CUSTOM", name: "Widget", price: 10, quantity: 1 }] });
+    const body = await response.json();
+    expect(body).toMatchObject({ success: true, duplicate: true, invoice: { id: "inv_old" } });
     expect(tx.invoice.create).not.toHaveBeenCalled();
   });
 });
