@@ -28,6 +28,24 @@ def digest(path):
     return h.hexdigest()
 
 
+def assert_frozen_source_unchanged(path, manifest):
+    """Verify the exact frozen live SQLite file, not backup-API output bytes.
+
+    SQLite online backup can create a logically identical database whose
+    physical SHA256 differs from the original file. The snapshot SHA256 is
+    still independently checked against the off-host restore and parity data.
+    """
+    expected = manifest.get("frozen_source_sha256")
+    if not isinstance(expected, str) or not re.fullmatch(r"[a-f0-9]{64}", expected):
+        raise RuntimeError("Frozen live SQLite source hash missing from final manifest")
+    if digest(path) != expected:
+        raise RuntimeError("Live SQLite differs from frozen source: refuse promotion")
+    st = path.stat()
+    if (st.st_ino != manifest.get("source_inode")
+        or st.st_dev != manifest.get("source_device")):
+        raise RuntimeError("Live SQLite identity changed since snapshot")
+
+
 def postgres(sql, database="postgres"):
     p = subprocess.run(
         ["runuser", "-u", "postgres", "--", "psql", "-X", "-qAt",
@@ -112,8 +130,9 @@ def main():
         source_sha)
     if any(Path(str(LIVE) + ext).exists() for ext in ("-wal", "-shm", "-journal")):
         raise RuntimeError("Live SQLite journal/sidecar present; source not quiescent")
-    if not LIVE.is_file() or LIVE.is_symlink() or digest(LIVE) != source_sha:
-        raise RuntimeError("Live SQLite differs from frozen snapshot; refuse promotion")
+    if not LIVE.is_file() or LIVE.is_symlink():
+        raise RuntimeError("Frozen live SQLite file missing or symlinked")
+    assert_frozen_source_unchanged(LIVE, manifest)
     # A stopped TCP listener is not enough: background jobs can still hold
     # SQLite handles. Refuse promotion while any process has the live DB open.
     live_stat = LIVE.stat()
