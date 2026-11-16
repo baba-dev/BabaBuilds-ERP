@@ -78,7 +78,6 @@ export function PersonSheet({ open, onOpenChange, personId, meta, canEdit, money
     } catch (e) {
       if (build) toast.error(e instanceof Error ? e.message : t("person.previewFailed"));
     } finally { setBuilding(false); }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.annualCtc, form.basicPct, form.hraPct, form.pfEnabled, form.pfOnActualBasic, form.esiEnabled, form.ptState, form.taxRegime, form.oldRegimeDeductions, form.pan, form.components, rev?.panLast4, monthlyGross, t]);
 
   useEffect(() => {

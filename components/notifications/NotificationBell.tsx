@@ -21,7 +21,6 @@ export function NotificationBell({ className }: { className?: string }) {
   // Animate bell when new notification arrives
   useEffect(() => {
     if (unreadCount > prevCountRef.current) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time client-only state sync after mount (avoids SSR hydration mismatch)
       setHasRung(true);
       const t = setTimeout(() => setHasRung(false), 1500);
       return () => clearTimeout(t);

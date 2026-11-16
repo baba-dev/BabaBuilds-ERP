@@ -106,11 +106,6 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
   const [visibleColumns, setVisibleColumns] = useState<string[]>(["date", "asset", "category", "amount"]);
   const tableState = useUrlTableState("tax");
 
-  useEffect(() => {
-    fetchData();
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
-  }, []);
-
 
 
   // --- SMART AI AUTO-FILL HOOK ---
@@ -133,6 +128,26 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
       }
     }
   }, []);
+
+  const fetchTaxAuditLogs = async (page = 1, filters = taxAuditFilters) => {
+    const searchParams = new URLSearchParams({
+      page: String(page),
+      pageSize: "10",
+      action: filters.action,
+      scopeType: filters.scopeType,
+    });
+    if (filters.startDate) searchParams.set("startDate", filters.startDate);
+    if (filters.endDate) searchParams.set("endDate", filters.endDate);
+
+    const res = await fetch(`/api/tax/audit?${searchParams.toString()}`);
+    if (!res.ok) {
+      throw new Error("Failed to fetch tax audit history");
+    }
+    const payload = await res.json();
+    setTaxAuditRows(Array.isArray(payload?.data) ? payload.data : []);
+    setTaxAuditPage(payload?.pagination?.page ?? 1);
+    setTaxAuditTotalPages(payload?.pagination?.totalPages ?? 1);
+  };
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -164,32 +179,17 @@ export default function TaxDashboardClient({ taxAdvancedEnabled }: TaxDashboardC
   };
 
   useEffect(() => {
+    fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
+  }, []);
+
+  useEffect(() => {
     if (!taxAdvancedEnabled) {
       return;
     }
     void fetchTaxAuditLogs(1);
   // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional trigger list; callbacks are re-created each render and must not retrigger the effect
   }, [taxAdvancedEnabled]);
-
-  const fetchTaxAuditLogs = async (page = 1, filters = taxAuditFilters) => {
-    const searchParams = new URLSearchParams({
-      page: String(page),
-      pageSize: "10",
-      action: filters.action,
-      scopeType: filters.scopeType,
-    });
-    if (filters.startDate) searchParams.set("startDate", filters.startDate);
-    if (filters.endDate) searchParams.set("endDate", filters.endDate);
-
-    const res = await fetch(`/api/tax/audit?${searchParams.toString()}`);
-    if (!res.ok) {
-      throw new Error("Failed to fetch tax audit history");
-    }
-    const payload = await res.json();
-    setTaxAuditRows(Array.isArray(payload?.data) ? payload.data : []);
-    setTaxAuditPage(payload?.pagination?.page ?? 1);
-    setTaxAuditTotalPages(payload?.pagination?.totalPages ?? 1);
-  };
 
   const resolveDecisionBadgeClass = (source: string) => {
     const normalized = source?.toUpperCase();

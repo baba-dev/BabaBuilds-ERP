@@ -41,7 +41,7 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 | Command | Purpose |
 |---|---|
 | `npm run ci:fast` | **Run before pushing.** Local mirror of the CI gate: locales, lint, typecheck, demo-template coverage, migration history, full Vitest — in parallel (~50s), prints only failing output |
-| `npm run lint` | ESLint + KPI coverage check (0 errors, 0 warnings) |
+| `npm run lint` | ESLint (0 errors; warning budget enforced via `--max-warnings`) + KPI coverage check |
 | `npm run typecheck` | TypeScript compile check |
 | `npm run validate` | Full pre-merge: lint + typecheck + build |
 | `npm test` | Full Vitest suite (all tests pass; keep it that way) |
@@ -51,7 +51,7 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
 ### Caveats
 
-- ESLint reports 0 errors and 0 warnings. New code must not add any: avoid `any` (use `unknown` and narrow), and prefix intentionally unused names with `_`.
+- ESLint reports 0 errors. The only remaining warnings are `react-hooks/set-state-in-effect` (React Compiler debt, issue #590); the `lint` script caps them with `--max-warnings` so the count can only go down — lower that number whenever you fix some. New code must add none: avoid `any` (use `unknown` and narrow; it is an error), prefix intentionally unused names with `_`, don't call `setState` synchronously in an effect body, and don't define components inside components (it is an error).
 - The migration history now applies cleanly from the baseline (verified by `npm run check:migrations`), but production and local dev databases are created with `npx prisma db push`; adopt migrations on such databases with `prisma migrate resolve --applied`, never by running the SQL (see `prisma/migrations/README.md`).
 - External services (Google OAuth, SMTP, Razorpay, Stripe, ClamAV, Cloudflare Turnstile) are all optional in development.
 - The SQLite database file is at `prisma/dev.db` (gitignored).

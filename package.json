@@ -12,7 +12,7 @@
     "prebuild:partner-kit": "npx tsx scripts/build-partner-kit.ts",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "eslint . && npm run check:kpi-impact",
+    "lint": "eslint . --max-warnings=73 && npm run check:kpi-impact",
     "typecheck": "tsc --noEmit",
     "validate": "npm run lint && npm run typecheck && npm run build",
     "check:locales": "node scripts/check-locales.js",

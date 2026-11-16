@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -46,12 +46,12 @@ export function AccountDrawer({ id, onClose, onChanged }: { id: string | null; o
   const reasonOk = reason.trim().length >= 5;
   const daysOk = !needs.includes("days") || action === "SET_PLAN" ? true : !!daysNum && Number.isInteger(daysNum) && daysNum >= 1 && daysNum <= 730;
   const canSubmit = !!data && reasonOk && daysOk;
-  const summary = useMemo(() => {
+  const summary = (() => {
     if (action === "SET_PLAN") return `Set ${plan} (${interval.toLowerCase().replace("team_", "")}) for ${daysNum ?? (interval.includes("YEARLY") ? 365 : interval === "QUARTERLY" ? 90 : 30)} days`;
     if (action === "EXTEND") return `Extend by ${daysNum ?? "?"} days`;
     if (action === "GRANT_TRIAL") return `Grant a ${daysNum ?? "?"}-day trial`;
     return def.label;
-  }, [action, plan, interval, daysNum, def.label]);
+  })();
 
   async function submit() {
     if (!data) return;

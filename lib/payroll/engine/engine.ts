@@ -57,7 +57,6 @@ export function computePayslip(input: PayslipInput): PayslipResult {
     if (c.pfWage) pfWagesActual += amount;
   }
 
-  let oneOffTaxable = 0;
   let reimbursements = 0;
   for (const a of input.adjustments) {
     if (a.kind === 'LOP_DAYS' || a.kind === 'DEDUCTION' || !(a.amount > 0)) continue;
@@ -68,7 +67,6 @@ export function computePayslip(input: PayslipInput): PayslipResult {
     if (a.kind === 'REIMBURSEMENT') reimbursements += amount;
     if (taxable) {
       taxableGross += amount;
-      oneOffTaxable += amount;
     }
   }
   gross = r2(gross);

@@ -19,6 +19,8 @@ export default async function SharedReportPage({ params }: { params: Promise<{ t
   if (!/^[A-Za-z0-9_-]{30,80}$/.test(token)) notFound();
   const share = await prisma.reportShare.findUnique({ where: { tokenHash: hashShareToken(token) }, select: { id: true, status: true, expiresAt: true, snapshots: { orderBy: { createdAt: 'desc' }, take: 1, select: { generatedPayloadJson: true, createdAt: true } } } });
   if (!share || share.status !== 'ACTIVE') notFound();
+  // Async server component: runs once per request, so reading the clock is correct here.
+  // eslint-disable-next-line react-hooks/purity
   if (share.expiresAt && share.expiresAt.getTime() < Date.now()) {
     await prisma.reportShare.update({ where: { id: share.id }, data: { status: 'EXPIRED' } }).catch(() => null);
     notFound();

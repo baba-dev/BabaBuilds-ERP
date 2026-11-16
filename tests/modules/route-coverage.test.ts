@@ -7,7 +7,6 @@ import path from "node:path";
  * written by hand per route, so this reads the sources and fails when a route is added without one.
  */
 const ROOT = path.resolve(__dirname, "../..");
-const DIRECT = /requireModule\(|isModuleEnabled\(|getModuleAvailability\(/;
 
 const MODULES: Array<{ key: string; dirs: string[]; guard: RegExp; allow?: Record<string, string> }> = [
   { key: "WORKFORCE", dirs: ["app/api/workforce"], guard: /requireWorkforce\(|requireModule\(|isModuleEnabled\(|getModuleAvailability\(/ },

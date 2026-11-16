@@ -23,7 +23,7 @@ describe("login error mapping", () => {
       "OAuthAccountNotLinked", "CredentialsSignin", "AccessDenied", "Configuration", "OAuthSignin",
       "SessionRequired", "WORKSPACE_CONTEXT_MISSING", "unknown",
     ];
-    const messages = (en as any).LoginPage.errors as Record<string, string>;
+    const messages = (en as { LoginPage: { errors: Record<string, string> } }).LoginPage.errors;
     for (const code of codes) {
       const key = resolveLoginErrorKey(code)!;
       expect(messages[key], `${code} -> ${key}`).toBeTruthy();

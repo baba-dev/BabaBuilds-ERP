@@ -19,7 +19,6 @@ import {
   getEnabledModules,
   MODULE_DESCRIPTIONS,
   MODULE_LABELS,
-  type ModuleKey,
 } from "@/lib/modules";
 import {
   buildMonthlyChartBuckets,

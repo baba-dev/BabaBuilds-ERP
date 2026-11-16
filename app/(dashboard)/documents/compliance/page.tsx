@@ -41,7 +41,7 @@ export default async function DocumentsCompliancePage() {
         </div>
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link href="/documents/vault?scope=COMPLIANCE">Open Compliance docs</Link>
+            <Link href="/documents">Open Compliance docs</Link>
           </Button>
         </div>
       </div>

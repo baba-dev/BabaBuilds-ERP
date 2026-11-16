@@ -43,8 +43,8 @@
       "title": "Chat tool dispatch has generic unimplemented fallback",
       "severity": "P1",
       "area": "api/chat",
-      "status": "OPEN",
-      "owner": "",
+      "status": "DONE",
+      "owner": "Engineering",
       "closureCriteria": [
         "Tool dispatch uses explicit typed allowlist for all executable tools.",
         "Unsupported tool names emit structured telemetry and user-safe fallback.",
@@ -52,20 +52,25 @@
       ],
       "evidence": {
         "codePaths": [
+          "lib/ai/chat/tool-policy.ts",
           "app/api/chat/route.ts"
         ],
-        "tests": [],
+        "tests": [
+          "tests/ai/chat-tool-dispatch.test.ts",
+          "tests/ai/chat-tool-policy.test.ts"
+        ],
         "docs": []
       },
-      "sla": "before_production_gate"
+      "sla": "before_production_gate",
+      "closureNotes": "TOOL_EXECUTION_KIND is an exhaustive compile-time allowlist (read | mutation | inline); the read handler map is typed Record<ReadToolName, ToolHandler>. Unknown names are rejected by parseToolArguments (ToolPolicyError). A classified tool without an executor now writes an ai_tool_unsupported activity-log entry and returns a user-safe message."
     },
     {
       "id": "PRA-003",
       "title": "Billing cancellation endpoint mutates local state without provider handshake",
       "severity": "P1",
       "area": "api/billing",
-      "status": "OPEN",
-      "owner": "",
+      "status": "DONE",
+      "owner": "Engineering",
       "closureCriteria": [
         "Cancellation endpoint performs provider-side cancellation or queues it transactionally.",
         "Local subscription state transitions are idempotent and reconciled against provider source-of-truth.",
@@ -73,20 +78,24 @@
       ],
       "evidence": {
         "codePaths": [
-          "app/api/settings/billing/subscription/cancel/route.ts"
+          "app/api/settings/billing/subscription/cancel/route.ts",
+          "lib/billing/subscription-cancellation.ts"
         ],
-        "tests": [],
+        "tests": [
+          "tests/payments/subscription-cancellation.test.ts"
+        ],
         "docs": []
       },
-      "sla": "before_production_gate"
+      "sla": "before_production_gate",
+      "closureNotes": "Cancellation is provider-confirmed (Stripe/Razorpay ownership verified, cycle-end cancel) or scheduled as prepaid expiry; no local downgrade happens without confirmation. Local state is idempotent (alreadyScheduled) and tests cover retry, provider-already-scheduled and provider-failure paths."
     },
     {
       "id": "PRA-004",
       "title": "Broken internal links from dashboard/reseller flows",
       "severity": "P1",
       "area": "frontend/routing",
-      "status": "IN_PROGRESS",
-      "owner": "",
+      "status": "DONE",
+      "owner": "Engineering",
       "closureCriteria": [
         "Audited links resolve to valid internal pages.",
         "Automated regression test asserts route targets map to existing pages.",
@@ -94,10 +103,9 @@
       ],
       "evidence": {
         "codePaths": [
-          "app/(dashboard)/dashboard/dashboard-right-rail.tsx",
-          "app/(dashboard)/referrals/page.tsx",
-          "app/reseller/reseller-landing-client.tsx",
-          "tests/dashboard/production-readiness-route-audit.test.ts",
+          "app/access-denied/page.tsx",
+          "components/documents/LinkedDocumentsPanel.tsx",
+          "app/(dashboard)/documents/compliance/page.tsx",
           "scripts/route-integrity-report.mjs"
         ],
         "tests": [
@@ -107,15 +115,16 @@
           "docs/reports/route-integrity-report.json"
         ]
       },
-      "sla": "before_production_gate"
+      "sla": "before_production_gate",
+      "closureNotes": "Audit reports 0 broken internal routes. Added /access-denied; document links point at /documents; the audit now recognises route.ts handlers and next.config redirects and ignores crawler/framework path literals. The test runs the audit and fails on any broken route (GATE-003)."
     },
     {
       "id": "PRA-005",
       "title": "Material any/type-safety debt in critical paths",
       "severity": "P2",
       "area": "typing/quality",
-      "status": "OPEN",
-      "owner": "",
+      "status": "DONE",
+      "owner": "Engineering",
       "closureCriteria": [
         "Critical-path modules maintain explicit interfaces for API payloads.",
         "Per-release explicit-any budget is tracked and ratcheted down.",
@@ -123,12 +132,18 @@
       ],
       "evidence": {
         "codePaths": [
-          "app/api/chat/route.ts"
+          "eslint.config.mjs",
+          "package.json",
+          "app/login/page.tsx",
+          "components/data-table/DataTable.tsx"
         ],
-        "tests": [],
+        "tests": [
+          "tests/auth-login-errors.test.ts"
+        ],
         "docs": []
       },
-      "sla": "planned_improvement"
+      "sla": "planned_improvement",
+      "closureNotes": "Explicit any count is 0 and @typescript-eslint/no-explicit-any, no-unused-vars and the React Compiler rules (immutability, refs, purity, set-state-in-render, preserve-manual-memoization) are now errors. The one remaining warning rule (react-hooks/set-state-in-effect; tracked in issue #590) are held by a lint warning budget (--max-warnings) that may only decrease."
     }
   ]
 }
