@@ -67,6 +67,7 @@ export async function POST(req: NextRequest) {
     const dept = await prisma.department.create({ data: { workspaceId: wid, name: name.trim(), description } });
     return NextResponse.json(dept, { status: 201 });
   } catch (err) {
+    if ((err as { code?: string })?.code === 'P2002') return NextResponse.json({ error: 'That name already exists.' }, { status: 409 });
     console.error('[departments/POST]', err);
     return NextResponse.json({ error: 'Internal error' }, { status: 500 });
   }

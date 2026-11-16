@@ -1,89 +1,32 @@
-/**
- * app/api/workforce/settings/schedule/route.ts
- * GET   — fetch work schedule
- * PATCH — update work schedule
- */
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
-import { RbacDeniedError, rbacDeniedResponse, requirePermission } from "@/lib/rbac";
-import { ModuleDisabledError, requireModule } from "@/lib/modules";
-import { resolveSessionMembership } from '@/lib/workspace-scope';
+import { NextRequest, NextResponse } from 'next/server';
 
-// The workspace the user is in (session), not an arbitrary membership.
-async function getWid(session: Parameters<typeof resolveSessionMembership>[0]) {
-  return (await resolveSessionMembership(session))?.workspaceId ?? null;
-}
+import { prisma } from '@/lib/prisma';
+import { logActivity } from '@/lib/security/activity-log';
+import { DEFAULT_WORKING_DAYS } from '@/lib/workforce/calendar';
+import { scheduleSchema } from '@/lib/workforce/settings-schemas';
+import { readJson, requireWorkforce, workforceErrorResponse } from '../../_guard';
 
-export async function GET(__req: NextRequest) {
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const wid = await getWid(session);
-    if (!wid) return NextResponse.json({ error: "No workspace" }, { status: 400 });
-
-    try {
-      await requireModule(wid, "WORKFORCE");
-      await requirePermission(session.user.id, wid, "workforce.view");
-    } catch (e) {
-      if (e instanceof ModuleDisabledError) return NextResponse.json({ error: "Module disabled" }, { status: 403 });
-      if (e instanceof RbacDeniedError) return rbacDeniedResponse(e);
-      throw e;
-    }
-
-    const schedule = await prisma.workSchedule.findUnique({ where: { workspaceId: wid } });
-    return NextResponse.json({ schedule });
-  } catch (err) {
-    console.error("[schedule/GET]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+    const g = await requireWorkforce('workforce.view');
+    if ('response' in g) return g.response;
+    const schedule = await prisma.workSchedule.findUnique({ where: { workspaceId: g.access.workspaceId } });
+    return NextResponse.json({ schedule: schedule ?? { workingDays: JSON.stringify(DEFAULT_WORKING_DAYS), workStartTime: '09:00', workEndTime: '18:00', timeZone: 'Asia/Kolkata' } });
+  } catch (error) {
+    return workforceErrorResponse(error, 'schedule.get');
   }
 }
 
 export async function PATCH(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    const wid = await getWid(session);
-    if (!wid) return NextResponse.json({ error: "No workspace" }, { status: 400 });
-
-    try {
-      await requireModule(wid, "WORKFORCE");
-      await requirePermission(session.user.id, wid, "workforce.settings.manage");
-    } catch (e) {
-      if (e instanceof ModuleDisabledError) return NextResponse.json({ error: "Module disabled" }, { status: 403 });
-      if (e instanceof RbacDeniedError) return rbacDeniedResponse(e);
-      throw e;
-    }
-
-    const body = (await req.json()) as Partial<{
-      workingDays: string[];
-      workStartTime: string;
-      workEndTime: string;
-      timeZone: string;
-    }>;
-
-    const schedule = await prisma.workSchedule.upsert({
-      where: { workspaceId: wid },
-      update: {
-        ...(body.workingDays ? { workingDays: JSON.stringify(body.workingDays) } : {}),
-        ...(body.workStartTime ? { workStartTime: body.workStartTime } : {}),
-        ...(body.workEndTime ? { workEndTime: body.workEndTime } : {}),
-        ...(body.timeZone ? { timeZone: body.timeZone } : {}),
-      },
-      create: {
-        workspaceId: wid,
-        workingDays: body.workingDays ? JSON.stringify(body.workingDays) : undefined,
-        workStartTime: body.workStartTime ?? undefined,
-        workEndTime: body.workEndTime ?? undefined,
-        timeZone: body.timeZone ?? undefined,
-      },
-    });
-
+    const g = await requireWorkforce('workforce.settings.manage');
+    if ('response' in g) return g.response;
+    const b = scheduleSchema.parse(await readJson(req));
+    const data = { ...(b.workingDays ? { workingDays: JSON.stringify(b.workingDays) } : {}), ...(b.workStartTime ? { workStartTime: b.workStartTime } : {}), ...(b.workEndTime ? { workEndTime: b.workEndTime } : {}), ...(b.timeZone ? { timeZone: b.timeZone } : {}) };
+    const schedule = await prisma.workSchedule.upsert({ where: { workspaceId: g.access.workspaceId }, update: data, create: { workspaceId: g.access.workspaceId, ...data } });
+    void logActivity({ workspaceId: g.access.workspaceId, action: 'workforce.schedule_updated', status: 'SUCCESS', actor: { userId: g.access.userId, email: g.access.email }, entity: { type: 'work_schedule', id: schedule.id }, metadata: data });
     return NextResponse.json({ schedule });
-  } catch (err) {
-    console.error("[schedule/PATCH]", err);
-    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  } catch (error) {
+    return workforceErrorResponse(error, 'schedule.patch');
   }
 }
-

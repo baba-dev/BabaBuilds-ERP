@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { LifecycleActions } from "@/components/workforce/hub/LifecycleActions";
 import { StatusBadge, EmployeeAvatar } from "@/components/workforce/StatusBadge";
 import { WorkforcePageShell } from "@/components/workforce/WorkforceLayout";
 import { format } from "date-fns";
@@ -80,7 +81,8 @@ export default function EmployeeProfilePage() {
       setEditing(false);
       void fetchEmployee();
     } else {
-      toast.error("Failed to save changes");
+      const err = (await res.json().catch(() => ({}))) as { error?: string };
+      toast.error(err.error ?? "Failed to save changes");
     }
     setSaving(false);
   };
@@ -145,6 +147,8 @@ export default function EmployeeProfilePage() {
                   {tenure !== null && <span>{tenure} months tenure</span>}
                 </div>
               </div>
+              <div className="flex flex-wrap items-start gap-2">
+              <LifecycleActions employeeId={employee.id} status={employee.status} onDone={() => void fetchEmployee()} />
               <Button
                 id="edit-employee-btn"
                 size="sm"
@@ -154,6 +158,7 @@ export default function EmployeeProfilePage() {
               >
                 {editing ? <><X className="h-3.5 w-3.5 mr-1" /> Cancel</> : <><Edit2 className="h-3.5 w-3.5 mr-1" /> Edit</>}
               </Button>
+              </div>
             </div>
           </div>
         </div>
