@@ -5,6 +5,7 @@ from pathlib import Path
 import sys
 import tarfile
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "ops" / "erp-release"))
 import package as release_package
@@ -97,6 +98,17 @@ class PreflightSafetyTests(unittest.TestCase):
                 release_promote.valid_pg_url(url, production=True)
         with self.assertRaises(RuntimeError):
             release_promote.valid_pg_url("postgresql://localhost/bababuilds_erp", production=False)
+
+    def test_migration_checksum_guard(self):
+        digest = "a" * 64
+        with patch.object(release_promote, "run", return_value="20261116000000_postgresql_baseline|" + digest):
+            self.assertTrue(release_promote.check_schema_contract(
+                {"20261116000000_postgresql_baseline": digest}
+            ))
+            with self.assertRaises(RuntimeError):
+                release_promote.check_schema_contract(
+                    {"20261116000000_postgresql_baseline": "b" * 64}
+                )
 
     def test_prior_process_only_approved_node_and_directory(self):
         cfg = {
