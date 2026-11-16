@@ -70,6 +70,13 @@ def verify(archive, manifest, *, expected_sha=None):
         raise ValueError("Release manifest does not match pinned contract")
     if expected_sha and meta["sha"] != assert_sha(expected_sha):
         raise ValueError("Release SHA mismatch")
+    migrations = meta.get("migrations")
+    if not isinstance(migrations, dict) or not migrations:
+        raise ValueError("Migration checksum contract missing")
+    if any(not re.fullmatch(r"[a-zA-Z0-9_-]+", name) or
+           not re.fullmatch(r"[a-f0-9]{64}", str(checksum))
+           for name, checksum in migrations.items()):
+        raise ValueError("Invalid PostgreSQL migration checksum contract")
     if digest(archive) != meta.get("sha256"):
         raise ValueError("Archive SHA256 mismatch")
     with tarfile.open(archive, "r:gz") as bundle:
@@ -106,10 +113,15 @@ def stage(sha, destination, root):
                 raise RuntimeError("Unexpected private or cached build file in standalone output")
         with tarfile.open(archive, "w:gz", compresslevel=6) as bundle:
             bundle.add(release, arcname="release", recursive=True)
+    migration_files = sorted((root / "prisma" / "migrations").glob("*/migration.sql"))
+    if not migration_files:
+        raise RuntimeError("Required PostgreSQL migration history absent")
+    migrations = {f.parent.name: digest(f) for f in migration_files}
     info = {
         "schema": 1, "repo": REPO, "sha": sha, "node": VERSION, "npm": NPM,
         "platform": "linux", "arch": ARCH,
         "sha256": digest(archive),
+        "migrations": migrations,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     manifest.write_text(json.dumps(info, sort_keys=True, indent=2) + "\n")
