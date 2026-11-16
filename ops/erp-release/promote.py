@@ -34,7 +34,7 @@ PM2_NAME = "erp"
 MEDIA_TARGETS = (
     "private_uploads", "public/logos", "public/invoices", "public/receipts",
     "public/signatures", "public/products", "public/uploads",
-    "public/partner-kit", "tmp/share-target",
+    "public/partner-kit", "backups", "tmp/share-target",
 )
 NAME_RE = re.compile(r"^[A-Z_][A-Z0-9_]*$")
 RESTIC_RE = re.compile(r"^[a-f0-9]{64}$")
@@ -240,6 +240,9 @@ def health(port, *, retries=5):
             with urlopen(f"http://127.0.0.1:{port}/api/auth/session", timeout=8) as response:
                 if response.status != 200 or "json" not in response.headers.get("Content-Type", ""):
                     raise RuntimeError("Session unhealthy")
+            with urlopen(f"http://127.0.0.1:{port}/sw.js", timeout=8) as response:
+                if response.status != 200 or "javascript" not in response.headers.get("Content-Type", ""):
+                    raise RuntimeError("Service worker unhealthy")
             duration = round((time.monotonic() - started) * 1000)
             if duration > 8000:
                 raise RuntimeError("Health latency exceeded")
@@ -280,6 +283,8 @@ def materialize(cfg, archive, manifest, sha):
             fail("Existing release path is not a valid immutable release")
         return dest
     RELEASES.mkdir(mode=0o755, parents=True, exist_ok=True)
+    if shutil.disk_usage(RELEASES).free < 12 * 1024**3:
+        fail("Less than 12 GiB available for safe immutable release and rollback")
     staging = RELEASES / (".incoming-" + sha)
     if staging.exists():
         fail("Partial release present; operator intervention required")
