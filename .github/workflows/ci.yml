@@ -214,6 +214,11 @@ jobs:
       - name: D1–D2 Python safety and financial invariants unit tests
         run: python3 -m unittest discover -s tests/staging -p 'test_*.py' -v
 
+      - name: Phase E protected production cutover tool tests
+        run: |
+          python3 -m py_compile scripts/production/provision_candidate.py scripts/production/promote_candidate.py
+          python3 -m unittest discover -s tests/production -p 'test_*.py' -v
+
       - name: Build PostgreSQL baseline
         run: npx prisma migrate deploy
       - name: Create isolated SQLite fixture and import into empty PostgreSQL
