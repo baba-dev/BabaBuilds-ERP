@@ -275,6 +275,24 @@ def restore(cfg, previous):
     pm2(cfg, "save", "--force")
     return True
 
+def check_schema_contract(expected):
+    # The legacy Node22 deploy operator enforced this exact PostgreSQL safety
+    # check. Node26 promotion must never trigger an implicit schema migration.
+    query = ('SELECT migration_name, checksum FROM public."_prisma_migrations" '
+             'WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL '
+             'ORDER BY migration_name')
+    result = run([
+        "/usr/sbin/runuser", "-u", "postgres", "--",
+        "psql", "-X", "-At", "-F", "|", "-d", "bababuilds_erp", "-c", query
+    ], timeout=60)
+    lines = result.splitlines()
+    if any(line.count("|") != 1 for line in lines):
+        fail("Unrecognized PostgreSQL migration inventory")
+    actual = dict(line.split("|", 1) for line in lines)
+    if actual != expected:
+        fail("PostgreSQL migration checksums differ from release; schema change must be reviewed separately")
+    return True
+
 def materialize(cfg, archive, manifest, sha):
     verify(archive, manifest, expected_sha=sha)
     dest = RELEASES / sha
@@ -359,6 +377,8 @@ def promote(cfg, *, archive, manifest, sha):
     if not SHA_RE.fullmatch(sha):
         fail("Invalid requested commit")
     preflight(cfg)
+    release_info = verify(archive, manifest, expected_sha=sha)
+    check_schema_contract(release_info["migrations"])
     previous = snapshot_app(current_app(cfg), cfg)
     dest = materialize(cfg, archive, manifest, sha)
     if previous["cwd"] == str(dest):
