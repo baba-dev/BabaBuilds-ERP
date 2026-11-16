@@ -102,7 +102,16 @@ def stage(sha, destination, root):
     manifest = target / "manifest.json"
     with tempfile.TemporaryDirectory(prefix="erp-release-") as temp:
         release = Path(temp) / "release"
-        shutil.copytree(source, release, symlinks=False)
+        def ignore_build_outputs(folder, names):
+            # Next.js standalone may contain a copied .env and .next/cache.
+            # Neither belongs in a distributable or immutable release.
+            current = Path(folder)
+            if current == source:
+                return {".env", ".env.local", ".env.production"} & set(names)
+            if current == source / ".next":
+                return {"cache"} & set(names)
+            return set()
+        shutil.copytree(source, release, symlinks=False, ignore=ignore_build_outputs)
         static = release / ".next" / "static"
         static.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(root / ".next" / "static", static, dirs_exist_ok=True, symlinks=False)
