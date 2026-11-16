@@ -257,6 +257,17 @@ def pm2_start(cfg, spec, *, env=None):
     inherited = {**os.environ, **spec.get("env", {})}
     if env:
         inherited.update(env)
+    if spec["exec"] == cfg["node26"]:
+        # Node --env-file never overrides an already exported variable.
+        # An old PM2/root shell must not take precedence over the reviewed
+        # Node26 production-app.env (especially PostgreSQL/auth settings).
+        for name in (
+            "DATABASE_URL", "RESTORE_DATABASE_URL", "ERP_STAGING_MODE",
+            "NEXTAUTH_URL", "NEXTAUTH_SECRET", "GOOGLE_CLIENT_ID",
+            "GOOGLE_CLIENT_SECRET", "AUTH_GOOGLE_ENABLED",
+            "AUTH_EMAIL_ENABLED", "EMAIL_SERVER_HOST", "EMAIL_SERVER_PASSWORD"
+        ):
+            inherited.pop(name, None)
     inherited.update({"HOME": "/root", "PM2_HOME": "/root/.pm2"})
     args = [
         cfg["pm2_node"], cfg["pm2_cli"], "start", spec["exec"],
