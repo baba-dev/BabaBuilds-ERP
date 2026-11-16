@@ -77,7 +77,8 @@ jobs:
 
             # PostgreSQL migrations only. No db push, SQLite snapshots or
             # automatic replay of historical SQLite backfills.
-            node --env-file=/etc/bababuilds-erp/production-database.env -e '
+            export DATABASE_URL="$(node --env-file=/etc/bababuilds-erp/production-database.env -p 'process.env.DATABASE_URL || ""')"
+            node -e '
               const u=new URL(process.env.DATABASE_URL||"");
               if(!["postgres:","postgresql:"].includes(u.protocol) ||
                  decodeURIComponent(u.pathname.slice(1))!=="bababuilds_erp")
@@ -112,7 +113,10 @@ jobs:
             chmod -R 775 public/receipts
             chmod -R 775 public/invoices
 
-            npx pm2 restart erp || npx pm2 start npm --name "erp" -- start
+            # Do not silently create an unrelated PM2 daemon or duplicate ERP.
+            command -v pm2 >/dev/null || { echo 'Reviewed ERP PM2 owner/runtime required' >&2; exit 1; }
+            pm2 describe erp >/dev/null || { echo 'Existing ERP PM2 process missing' >&2; exit 1; }
+            pm2 restart erp --update-env
 
             sw_url="https://erp.bababuilds.com/sw.js"
             purge_cloudflare_sw() {
