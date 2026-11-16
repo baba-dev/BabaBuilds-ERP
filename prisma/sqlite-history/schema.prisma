@@ -3559,7 +3559,17 @@ model ShopOrder {
   stripeSessionId       String?
 
   // Status lifecycle
-  status String @default("PENDING") // PENDING | PAID | FAILED | REFUNDED
+  status String @default("PENDING") // PENDING | PAID | SHIPPED | FULFILLED | FAILED | REFUND_DUE | REFUNDED
+
+  // Delivery
+  shippingAddress String?
+  courier         String?
+  trackingRef     String?
+  internalNote    String?
+  paidAt          DateTime?
+  shippedAt       DateTime?
+  fulfilledAt     DateTime?
+  refundedAt      DateTime?
 
   // Linked ERP invoice (auto-generated on payment success, nulled if invoice deleted)
   linkedInvoiceId String?
@@ -5408,4 +5418,39 @@ model ReportView {
 
   @@index([workspaceId, createdByUserId])
   @@index([scheduleNextAt])
+}
+
+/// A sale put on hold at the counter so another customer can be served. Kept on the server so any till can pick it up.
+model PosHeldSale {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  label       String?
+  clientId    String?
+  /// The cart as the register saved it: lines, quantities and the discount that was applied.
+  cartJson    Json
+  itemCount   Int      @default(0)
+  total       Decimal  @default(0)
+  createdAt   DateTime @default(now())
+
+  @@index([workspaceId, createdAt])
+}
+
+/// An end-of-shift cash count at the counter: what the till should hold against what was counted.
+model PosCloseout {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  userId       String
+  /// The shift covers sales from the previous close (or the start of the day) up to this moment.
+  periodStart  DateTime
+  closedAt     DateTime @default(now())
+  salesCount   Int      @default(0)
+  totalSales   Decimal  @default(0)
+  expectedCash Decimal  @default(0)
+  countedCash  Decimal  @default(0)
+  variance     Decimal  @default(0)
+  byMethodJson Json?
+  notes        String?
+
+  @@index([workspaceId, closedAt])
 }
