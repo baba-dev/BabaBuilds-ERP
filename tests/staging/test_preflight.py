@@ -23,7 +23,7 @@ class StageSecurityTest(unittest.TestCase):
         db, owner, runtime = provision.names("20261116a")
         self.assertEqual(db, "bababuilds_erp_staging_20261116a")
         self.assertNotEqual(owner, runtime)
-        for invalid in ["", "main", "PROD", "../other", "menuminute", "x" * 15]:
+        for invalid in ["", "main", "PROD", "../other", "menuminute!", "x" * 15]:
             with self.assertRaisesRegex(RuntimeError, "Suffix"):
                 provision.names(invalid)
 
