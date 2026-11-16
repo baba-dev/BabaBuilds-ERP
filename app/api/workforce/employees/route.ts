@@ -1,153 +1,76 @@
 /**
- * app/api/workforce/employees/route.ts
- * GET  — list employees (with pagination + filtering)
- * POST — create a new employee
+ * GET  — list employees (search, department, status, pagination)
+ * POST — add an employee
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
-import { requirePermission, RbacDeniedError, rbacDeniedResponse } from '@/lib/rbac';
-import { requireModule, ModuleDisabledError } from '@/lib/modules';
-import { generateEmployeeCode } from '@/lib/workforce/index';
-import { resolveSessionMembership } from '@/lib/workspace-scope';
+import { z } from 'zod';
 
-// The workspace the user is in (session), not an arbitrary membership.
-async function getWid(session: Parameters<typeof resolveSessionMembership>[0]) {
-  return (await resolveSessionMembership(session))?.workspaceId ?? null;
-}
+import { prisma } from '@/lib/prisma';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
+import { logActivity } from '@/lib/security/activity-log';
+import { utcDay } from '@/lib/workforce/calendar';
+import { createEmployeeWithCode, validateEmployeeLinks } from '@/lib/workforce/employee-service';
+import { generateEmployeeCode } from '@/lib/workforce/index';
+import { ensureBalances } from '@/lib/workforce/leave-service';
+import { employeeCreateSchema } from '@/lib/workforce/schemas';
+import { readJson, requireWorkforce, workforceErrorResponse } from '../_guard';
+
+const listQuery = z.object({
+  search: z.string().trim().max(80).optional(),
+  department: z.string().max(40).optional(),
+  status: z.enum(['ACTIVE', 'ON_LEAVE', 'INACTIVE']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+});
 
 export async function GET(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const wid = await getWid(session);
-    if (!wid) return NextResponse.json({ error: 'No workspace' }, { status: 400 });
-
-    try {
-      await requireModule(wid, 'WORKFORCE');
-      await requirePermission(session.user.id, wid, 'workforce.people.view');
-    } catch (e) {
-      if (e instanceof ModuleDisabledError) return NextResponse.json({ error: 'Workforce module is disabled' }, { status: 403 });
-      if (e instanceof RbacDeniedError) return rbacDeniedResponse(e);
-      throw e;
-    }
-
-    const { searchParams } = new URL(req.url);
-    const search = searchParams.get('search') ?? '';
-    const department = searchParams.get('department') ?? '';
-    const status = searchParams.get('status') ?? '';
-    const page = Math.max(1, parseInt(searchParams.get('page') ?? '1'));
-    const limit = Math.min(100, parseInt(searchParams.get('limit') ?? '25'));
-
+    const g = await requireWorkforce('workforce.people.view');
+    if ('response' in g) return g.response;
+    const q = listQuery.parse(Object.fromEntries(new URL(req.url).searchParams));
     const where = {
-      workspaceId: wid,
-      ...(search ? {
-        OR: [
-          { firstName: { contains: search, mode: 'insensitive' } },
-          { lastName: { contains: search, mode: 'insensitive' } },
-          { email: { contains: search, mode: 'insensitive' } },
-          { employeeCode: { contains: search, mode: 'insensitive' } },
-        ],
-      } : {}),
-      ...(department ? { departmentId: department } : {}),
-      ...(status ? { status: status as 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE' } : {}),
+      workspaceId: g.access.workspaceId,
+      ...(q.search ? { OR: [{ firstName: { contains: q.search } }, { lastName: { contains: q.search } }, { email: { contains: q.search } }, { employeeCode: { contains: q.search } }] } : {}),
+      ...(q.department ? { departmentId: q.department } : {}),
+      ...(q.status ? { status: q.status } : {}),
     };
-
     const [employees, total] = await Promise.all([
       prisma.employee.findMany({
         where,
-        include: {
-          department: { select: { id: true, name: true } },
-          designation: { select: { id: true, title: true } },
-          manager: { select: { id: true, firstName: true, lastName: true } },
-        },
-        orderBy: [{ firstName: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
+        include: { department: { select: { id: true, name: true } }, designation: { select: { id: true, title: true } }, manager: { select: { id: true, firstName: true, lastName: true } } },
+        orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+        skip: (q.page - 1) * q.limit,
+        take: q.limit,
       }),
       prisma.employee.count({ where }),
     ]);
-
-    return NextResponse.json({ employees, total, page, limit, totalPages: Math.ceil(total / limit) });
-  } catch (err) {
-    console.error('[employees/GET]', err);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+    return NextResponse.json({ employees, total, page: q.page, limit: q.limit, totalPages: Math.ceil(total / q.limit) });
+  } catch (error) {
+    return workforceErrorResponse(error, 'employees.list');
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const wid = await getWid(session);
-    if (!wid) return NextResponse.json({ error: 'No workspace' }, { status: 400 });
-
-    try {
-      await requireModule(wid, 'WORKFORCE');
-      await requirePermission(session.user.id, wid, 'workforce.people.manage');
-    } catch (e) {
-      if (e instanceof ModuleDisabledError) return NextResponse.json({ error: 'Workforce module is disabled' }, { status: 403 });
-      if (e instanceof RbacDeniedError) return rbacDeniedResponse(e);
-      throw e;
-    }
-
-    const body = await req.json() as Record<string, unknown>;
-    const { firstName, lastName, email, phone, departmentId, designationId, managerId, joinDate, location, userId: linkedUserId, notes } = body;
-
-    if (!firstName || !lastName) {
-      return NextResponse.json({ error: 'firstName and lastName are required' }, { status: 400 });
-    }
-
-    const deptId = departmentId ? String(departmentId) : null;
-    const desigId = designationId ? String(designationId) : null;
-    const mgrId = managerId ? String(managerId) : null;
-    const linkUid = linkedUserId ? String(linkedUserId) : null;
-
-    // Validate workspace-scoped foreign keys (prevent cross-workspace links)
-    if (deptId) {
-      const ok = await prisma.department.findFirst({ where: { id: deptId, workspaceId: wid }, select: { id: true } });
-      if (!ok) return NextResponse.json({ error: 'Invalid departmentId' }, { status: 400 });
-    }
-    if (desigId) {
-      const ok = await prisma.designation.findFirst({ where: { id: desigId, workspaceId: wid }, select: { id: true } });
-      if (!ok) return NextResponse.json({ error: 'Invalid designationId' }, { status: 400 });
-    }
-    if (mgrId) {
-      const ok = await prisma.employee.findFirst({ where: { id: mgrId, workspaceId: wid }, select: { id: true } });
-      if (!ok) return NextResponse.json({ error: 'Invalid managerId' }, { status: 400 });
-    }
-    if (linkUid) {
-      const ok = await prisma.workspaceUser.findFirst({ where: { userId: linkUid, workspaceId: wid, isActive: true }, select: { id: true } });
-      if (!ok) return NextResponse.json({ error: 'Invalid userId for this workspace' }, { status: 400 });
-    }
-
-    const employeeCode = await generateEmployeeCode(wid);
-    const employee = await prisma.employee.create({
-      data: {
-        workspaceId: wid,
-        firstName: String(firstName),
-        lastName: String(lastName),
-        email: email ? String(email) : undefined,
-        phone: phone ? String(phone) : undefined,
-        departmentId: deptId ?? undefined,
-        designationId: desigId ?? undefined,
-        managerId: mgrId ?? undefined,
-        joinDate: joinDate ? new Date(String(joinDate)) : undefined,
-        location: location ? String(location) : undefined,
-        userId: linkUid ?? undefined,
-        notes: notes ? String(notes) : undefined,
-        employeeCode,
-      },
-      include: {
-        department: { select: { id: true, name: true } },
-        designation: { select: { id: true, title: true } },
-      },
-    });
-
+    const g = await requireWorkforce('workforce.people.manage');
+    if ('response' in g) return g.response;
+    const { workspaceId, userId, email } = g.access;
+    const limit = enforceRouteRateLimit({ request: req, route: '/api/workforce/employees', scope: workspaceId, max: 60, windowMs: 10 * 60_000 });
+    if (!limit.ok) return limit.response;
+    const d = employeeCreateSchema.parse(await readJson(req));
+    await validateEmployeeLinks(workspaceId, d);
+    const { joinDate, ...rest } = d;
+    const employee = await createEmployeeWithCode(
+      (employeeCode) => prisma.employee.create({
+        data: { ...rest, workspaceId, employeeCode, joinDate: joinDate ? utcDay(joinDate) : utcDay(new Date()) },
+        include: { department: { select: { id: true, name: true } }, designation: { select: { id: true, title: true } } },
+      }),
+      () => generateEmployeeCode(workspaceId),
+    );
+    await ensureBalances(workspaceId, employee.id, new Date().getUTCFullYear());
+    void logActivity({ workspaceId, action: 'workforce.employee_created', status: 'SUCCESS', actor: { userId, email }, entity: { type: 'employee', id: employee.id }, metadata: { code: employee.employeeCode } });
     return NextResponse.json(employee, { status: 201 });
-  } catch (err) {
-    console.error('[employees/POST]', err);
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 });
+  } catch (error) {
+    return workforceErrorResponse(error, 'employees.create');
   }
 }

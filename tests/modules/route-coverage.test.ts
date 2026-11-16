@@ -10,7 +10,7 @@ const ROOT = path.resolve(__dirname, "../..");
 const DIRECT = /requireModule\(|isModuleEnabled\(|getModuleAvailability\(/;
 
 const MODULES: Array<{ key: string; dirs: string[]; guard: RegExp; allow?: Record<string, string> }> = [
-  { key: "WORKFORCE", dirs: ["app/api/workforce"], guard: DIRECT },
+  { key: "WORKFORCE", dirs: ["app/api/workforce"], guard: /requireWorkforce\(|requireModule\(|isModuleEnabled\(|getModuleAvailability\(/ },
   { key: "PAYROLL", dirs: ["app/api/payroll"], guard: /requirePayrollModuleAndAction|requirePayrollSettingsAccess|isModuleEnabled\(|requireModule\(/ },
   { key: "DOCUMENTS", dirs: ["app/api/documents"], guard: /requireDocumentsModule|requireModule\(|isModuleEnabled\(|DOCUMENTS/ },
   { key: "CASH_FLOW", dirs: ["app/api/cash-flow"], guard: /requireCashFlowAccess/ },
