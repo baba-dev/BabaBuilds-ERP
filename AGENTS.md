@@ -51,7 +51,7 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
 ### Caveats
 
-- ESLint reports 0 errors. The only remaining warnings are `react-hooks/set-state-in-effect` and `react-hooks/static-components` (React Compiler debt, issue #590); the `lint` script caps them with `--max-warnings` so the count can only go down — lower that number whenever you fix some. New code must add none: avoid `any` (use `unknown` and narrow; it is an error), prefix intentionally unused names with `_`, don't call `setState` synchronously in an effect body, and don't define components inside components.
+- ESLint reports 0 errors. The only remaining warnings are `react-hooks/set-state-in-effect` (React Compiler debt, issue #590); the `lint` script caps them with `--max-warnings` so the count can only go down — lower that number whenever you fix some. New code must add none: avoid `any` (use `unknown` and narrow; it is an error), prefix intentionally unused names with `_`, don't call `setState` synchronously in an effect body, and don't define components inside components (it is an error).
 - The migration history now applies cleanly from the baseline (verified by `npm run check:migrations`), but production and local dev databases are created with `npx prisma db push`; adopt migrations on such databases with `prisma migrate resolve --applied`, never by running the SQL (see `prisma/migrations/README.md`).
 - External services (Google OAuth, SMTP, Razorpay, Stripe, ClamAV, Cloudflare Turnstile) are all optional in development.
 - The SQLite database file is at `prisma/dev.db` (gitignored).

@@ -47,6 +47,10 @@ import { StartWithRealBusinessCTA } from "@/components/demo/StartWithRealBusines
 import { getErrorMessage } from "@/lib/error-utils";
 import { createTranslator } from "@/lib/i18n/translator";
 
+function SkeletonBlock({ className }: { className?: string }) {
+  return <div className={`rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse ${className}`} />;
+}
+
 export default function Dashboard() {
   const t = useTranslations("Dashboard");
   const router = useRouter();
@@ -367,10 +371,6 @@ export default function Dashboard() {
   const selectedInvoiceBilled = Number(selectedInvoice?.totalAmount ?? 0);
   const selectedInvoiceReceived = Number(selectedInvoice?.amountReceived ?? 0);
   const selectedInvoiceRemaining = Math.max(0, selectedInvoiceBilled - selectedInvoiceReceived);
-
-  const SkeletonBlock = ({ className }: { className?: string }) => (
-    <div className={`rounded-2xl bg-zinc-100 dark:bg-zinc-800 animate-pulse ${className}`} />
-  );
 
   // 2.3 FIX: show a getting-started checklist for new workspaces (zero revenue = fresh account)
   const fromSignup = searchParams.get("fromSignup") === "1";

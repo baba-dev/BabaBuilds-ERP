@@ -34,6 +34,16 @@ function fromClient(c: ClientRowData): Form {
   };
 }
 
+function L({ id, children, hint }: { id: string; children: React.ReactNode; hint?: string }) {
+  return (
+    <div className="space-y-1"><Label htmlFor={id} className="text-xs font-medium text-muted-foreground">{children}</Label>{hint ? <span className="sr-only">{hint}</span> : null}</div>
+  );
+}
+
+function FieldError({ message }: { message: string | null | undefined }) {
+  return message ? <p role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{message}</p> : null;
+}
+
 export function ClientFormDialog({ open, onOpenChange, client, workspaceCountry, locale, onSaved }: {
   open: boolean; onOpenChange: (v: boolean) => void; client: ClientRowData | null; workspaceCountry: string; locale: string; onSaved: (id: string) => void;
 }) {
@@ -115,11 +125,6 @@ export function ClientFormDialog({ open, onOpenChange, client, workspaceCountry,
     toast.error(r.data.error ?? t("toast.failed"));
   }
 
-  const L = ({ id, children, hint }: { id: string; children: React.ReactNode; hint?: string }) => (
-    <div className="space-y-1"><Label htmlFor={id} className="text-xs font-medium text-muted-foreground">{children}</Label>{hint ? <span className="sr-only">{hint}</span> : null}</div>
-  );
-  const Err = ({ k }: { k: string }) => (msg(k) ? <p role="alert" className="mt-1 text-xs text-rose-600 dark:text-rose-400">{msg(k)}</p> : null);
-
   return (
     <ResponsiveDialog
       open={open}
@@ -147,27 +152,27 @@ export function ClientFormDialog({ open, onOpenChange, client, workspaceCountry,
           <div className="sm:col-span-2">
             <L id="cf-name">{t("form.name")} *</L>
             <Input id="cf-name" ref={firstRef} className={fieldClass} value={form.name} onChange={(e) => set("name", e.target.value)} aria-invalid={Boolean(msg("name"))} autoComplete="organization" maxLength={160} />
-            <Err k="name" />
+            <FieldError message={msg("name")} />
           </div>
           <div>
             <L id="cf-email">{t("form.email")}</L>
             <Input id="cf-email" type="email" className={fieldClass} value={form.email} onChange={(e) => set("email", e.target.value)} aria-invalid={Boolean(msg("email"))} autoComplete="off" />
-            <Err k="email" />
+            <FieldError message={msg("email")} />
           </div>
           <div>
             <L id="cf-phone">{t("form.phone")}</L>
             <Input id="cf-phone" type="tel" className={fieldClass} value={form.phone} onChange={(e) => set("phone", e.target.value)} aria-invalid={Boolean(msg("phone"))} />
-            <Err k="phone" />
+            <FieldError message={msg("phone")} />
           </div>
           <div>
             <L id="cf-web">{t("form.website")}</L>
             <Input id="cf-web" className={fieldClass} value={form.website} onChange={(e) => set("website", e.target.value)} placeholder="example.com" aria-invalid={Boolean(msg("website"))} />
-            <Err k="website" />
+            <FieldError message={msg("website")} />
           </div>
           <div>
             <L id="cf-industry">{t("form.industry")}</L>
             <Input id="cf-industry" className={fieldClass} value={form.industry} onChange={(e) => set("industry", e.target.value)} />
-            <Err k="industry" />
+            <FieldError message={msg("industry")} />
           </div>
         </section>
 
@@ -179,7 +184,7 @@ export function ClientFormDialog({ open, onOpenChange, client, workspaceCountry,
               {form.country && !resolvedCode && <option value={form.country}>{form.country}</option>}
               {regions.map((r) => (<option key={r.code} value={r.code}>{r.name}</option>))}
             </select>
-            <Err k="country" />
+            <FieldError message={msg("country")} />
             {suggestion?.field === "country" && (
               <button type="button" className="mt-1 text-xs text-indigo-600 underline-offset-2 hover:underline dark:text-indigo-400" onClick={() => { set("country", suggestion.code); setSuggestion(undefined); setErrors({}); }}>
                 {t("form.didYouMean", { name: suggestion.name })}
@@ -196,14 +201,14 @@ export function ClientFormDialog({ open, onOpenChange, client, workspaceCountry,
                 </Button>
               )}
             </div>
-            <Err k="taxId" />
+            <FieldError message={msg("taxId")} />
             {gstinCheck && !gstinCheck.valid && <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{t("errors.GSTIN_INVALID")}</p>}
             {verify.text && <p className={`mt-1 text-xs ${verify.state === "ok" ? "text-emerald-600" : "text-amber-700 dark:text-amber-400"}`} role="status">{verify.text}</p>}
           </div>
           <div className="sm:col-span-2">
             <L id="cf-address">{t("form.address")} *</L>
             <Textarea id="cf-address" rows={2} value={form.address} onChange={(e) => set("address", e.target.value)} aria-invalid={Boolean(msg("address"))} maxLength={400} />
-            <Err k="address" />
+            <FieldError message={msg("address")} />
           </div>
           {domesticIndia && (
             <>
@@ -221,7 +226,7 @@ export function ClientFormDialog({ open, onOpenChange, client, workspaceCountry,
                   <option value="SEZ_WP">{t("form.sezWith")}</option>
                   <option value="SEZ_WOP">{t("form.sezWithout")}</option>
                 </select>
-                <Err k="gstSupplyOverride" />
+                <FieldError message={msg("gstSupplyOverride")} />
               </div>
             </>
           )}
@@ -247,17 +252,17 @@ export function ClientFormDialog({ open, onOpenChange, client, workspaceCountry,
           <div>
             <L id="cf-terms">{t("form.terms")}</L>
             <Input id="cf-terms" inputMode="numeric" className={fieldClass} value={form.paymentTermsDays} onChange={(e) => set("paymentTermsDays", e.target.value.replace(/[^\d]/g, ""))} placeholder={t("form.termsDefault")} aria-invalid={Boolean(msg("paymentTermsDays"))} />
-            <Err k="paymentTermsDays" />
+            <FieldError message={msg("paymentTermsDays")} />
           </div>
           <div>
             <L id="cf-currency">{t("form.currency")}</L>
             <Input id="cf-currency" className={`${fieldClass} uppercase placeholder:normal-case`} value={form.currency} onChange={(e) => set("currency", e.target.value.toUpperCase().slice(0, 3))} placeholder={t("form.currencyDefault")} aria-invalid={Boolean(msg("currency"))} />
-            <Err k="currency" />
+            <FieldError message={msg("currency")} />
           </div>
           <div>
             <L id="cf-credit">{t("form.creditLimit")}</L>
             <Input id="cf-credit" inputMode="decimal" className={fieldClass} value={form.creditLimit} onChange={(e) => set("creditLimit", e.target.value.replace(/[^\d.]/g, ""))} placeholder={t("form.noLimit")} aria-invalid={Boolean(msg("creditLimit"))} />
-            <Err k="creditLimit" />
+            <FieldError message={msg("creditLimit")} />
           </div>
           <div>
             <L id="cf-tags">{t("form.tags")}</L>

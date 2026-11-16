@@ -143,7 +143,7 @@
         "docs": []
       },
       "sla": "planned_improvement",
-      "closureNotes": "Explicit any count is 0 and @typescript-eslint/no-explicit-any, no-unused-vars and the React Compiler rules (immutability, refs, purity, set-state-in-render, preserve-manual-memoization) are now errors. The two remaining warning rules (react-hooks/set-state-in-effect, static-components; tracked in issue #590) are held by a lint warning budget (--max-warnings) that may only decrease."
+      "closureNotes": "Explicit any count is 0 and @typescript-eslint/no-explicit-any, no-unused-vars and the React Compiler rules (immutability, refs, purity, set-state-in-render, preserve-manual-memoization) are now errors. The one remaining warning rule (react-hooks/set-state-in-effect; tracked in issue #590) are held by a lint warning budget (--max-warnings) that may only decrease."
     }
   ]
 }

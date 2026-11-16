@@ -23,10 +23,10 @@ export default defineConfig([
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/no-require-imports": "error",
       "@next/next/no-html-link-for-pages": "error",
-      // Remaining React Compiler debt (tracked in #590). These two are the only rules
-      // still downgraded; `npm run lint` enforces a warning budget so they cannot grow.
+      // Remaining React Compiler debt (tracked in #590). set-state-in-effect is the only rule
+      // still downgraded; `npm run lint` enforces a warning budget so it cannot grow.
       // Ratchet the --max-warnings value of the `lint` script in package.json down as call sites are fixed.
-      "react-hooks/static-components": "warn",
+      "react-hooks/static-components": "error",
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/immutability": "error",
       "react-hooks/preserve-manual-memoization": "error",
