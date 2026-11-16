@@ -85,6 +85,14 @@ source "$state/credentials/runtime.env"
 set +a
 python3 scripts/staging/runtime_preflight.py --config-only
 runuser -u erpstaging -- env HOME="$app" PATH="$NODE22_BIN:/usr/bin:/bin" npm_config_cache="$app/.npm-cache" npm run build
+# Next output:standalone excludes static/public assets by design. Supply those
+# in its self-contained release root without following media symlinks.
+[[ -s "$app/.next/standalone/server.js" ]] ||
+ { echo "Missing Next standalone server.js" >&2; exit 1; }
+install -d -o erpstaging -g erpstaging -m 0750 "$app/.next/standalone/public"
+install -d -o erpstaging -g erpstaging -m 0750 "$app/.next/standalone/.next/static"
+runuser -u erpstaging -- rsync -r --no-links --safe-links -- "$app/public/" "$app/.next/standalone/public/"
+runuser -u erpstaging -- rsync -r --no-links --safe-links -- "$app/.next/static/" "$app/.next/standalone/.next/static/"
 
 # D4 only creates/cleans up a synthetic workspace.
 export ERP_STAGING_TESTS=1

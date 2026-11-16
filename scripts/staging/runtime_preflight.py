@@ -60,8 +60,12 @@ if __name__ == "__main__":
         help="Operator build-time check only. Never used by the systemd service."
     )
     args = parser.parse_args()
-    if not preflight(config_only=args.config_only):
-        print("Staging configuration/egress isolation invalid; refusing to start", file=sys.stderr)
+    if not valid():
+        print("ERP staging configuration invalid; refusing to start", file=sys.stderr)
+        sys.exit(1)
+    if not args.config_only and not network_egress_blocked():
+        print("ERP staging kernel network egress denial cannot be verified; "
+              "refusing to start (check systemd IPAddressDeny support)", file=sys.stderr)
         sys.exit(1)
     print("ERP staging configuration PASS" if args.config_only
           else "ERP staging configuration and kernel egress isolation PASS")

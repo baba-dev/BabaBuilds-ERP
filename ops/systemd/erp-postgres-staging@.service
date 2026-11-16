@@ -20,8 +20,8 @@ Environment=HOSTNAME=127.0.0.1
 # ERP stage uses its own Node 22 binary, never the live ERP system Node 20.
 Environment=PATH=/opt/bababuilds-erp/node22/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 ExecStartPre=/usr/bin/python3 /opt/bababuilds-erp-staging/%i/app/scripts/staging/runtime_preflight.py
-ExecStart=/opt/bababuilds-erp/node22/bin/node /opt/bababuilds-erp-staging/%i/app/node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port 3101
-Restart=on-failure
+ExecStart=/opt/bababuilds-erp/node22/bin/node /opt/bababuilds-erp-staging/%i/app/.next/standalone/server.js
+Restart=no
 RestartSec=5
 UMask=0077
 NoNewPrivileges=yes
