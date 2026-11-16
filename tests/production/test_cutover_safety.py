@@ -152,15 +152,14 @@ class CutoverSafetyTests(unittest.TestCase):
         self.assertNotIn('ALTER DATABASE', script)
 
     def test_runtime_audit_only_returns_environment_key_names(self):
-        from unittest.mock import patch as local_patch
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / ".env"
             path.write_text(
-                "DATABASE_URL=postgresql://admin:secret@127.0.0.1:5432/private\\n"
-                "NEXTAUTH_SECRET=supersecret\\n"
-                "CRON_SECRET=abc123\\n"
-                "# PRIVATE_UPLOADS_DIR=/ignored\\n"
-                "export NEXTAUTH_URL=https://erp.example.test\\n"
+                "DATABASE_URL=postgresql://admin:secret@127.0.0.1:5432/private\n"
+                "NEXTAUTH_SECRET=supersecret\n"
+                "CRON_SECRET=abc123\n"
+                "# PRIVATE_UPLOADS_DIR=/ignored\n"
+                "export NEXTAUTH_URL=https://erp.example.test\n"
             )
             keys = runtime.env_keys(path)
             self.assertEqual(keys, {"DATABASE_URL", "NEXTAUTH_SECRET", "CRON_SECRET", "NEXTAUTH_URL"})
@@ -169,9 +168,9 @@ class CutoverSafetyTests(unittest.TestCase):
 
     def test_runtime_audit_counts_active_erp_jobs(self):
         raw = (
-            "*/10 * * * * /var/www/bababuilds-erp/scripts/run-cron.sh documents-ocr\\n"
-            "# 0 1 * * * /var/www/bababuilds-erp/scripts/run-cron.sh disabled\\n"
-            "0 4 * * * /usr/bin/true\\n"
+            "*/10 * * * * /var/www/bababuilds-erp/scripts/run-cron.sh documents-ocr\n"
+            "# 0 1 * * * /var/www/bababuilds-erp/scripts/run-cron.sh disabled\n"
+            "0 4 * * * /usr/bin/true\n"
         )
         self.assertEqual(runtime.cron_counts(raw), (1, 2))
 
