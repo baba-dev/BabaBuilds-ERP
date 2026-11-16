@@ -1,0 +1,49 @@
+# Reviewed template only — not automatically installed/enabled by any PR.
+# Run: install -m 0644 ops/systemd/erp-postgres-staging@.service
+#      /etc/systemd/system/erp-postgres-staging@.service
+# Instance ID must be 4–12 alphanumeric chars, e.g. 20261116a.
+[Unit]
+Description=BabaBuilds ERP PostgreSQL data-copy staging %i
+After=postgresql.service network.target
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=erpstaging
+Group=erpstaging
+WorkingDirectory=/opt/bababuilds-erp-staging/%i/app
+EnvironmentFile=/var/lib/bababuilds-erp/staging/%i/credentials/runtime.env
+Environment=NODE_ENV=production
+Environment=ERP_STAGING_MODE=1
+Environment=PORT=3101
+Environment=HOSTNAME=127.0.0.1
+# ERP stage uses its own Node 22 binary, never the live ERP system Node 20.
+Environment=PATH=/opt/bababuilds-erp/node22/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+# Check secrets/configuration every start. Kernel packet filters are enforced by
+# systemd itself, and must be independently verified with a positive-control
+# systemd-run connectivity probe before enabling this unit (see runbook).
+# A timed-out TCP connect to a random Internet address is not proof of BPF denial.
+ExecStartPre=/usr/bin/python3 /opt/bababuilds-erp-staging/%i/app/scripts/staging/runtime_preflight.py --config-only
+ExecStart=/opt/bababuilds-erp/node22/bin/node /opt/bababuilds-erp-staging/%i/app/.next/standalone/server.js
+Restart=no
+RestartSec=5
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectControlGroups=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ReadWritePaths=/opt/bababuilds-erp-staging/%i/app
+InaccessiblePaths=/var/www/bababuilds-erp
+# No public network egress; localhost only to the host PostgreSQL daemon and SSH forwarding.
+IPAddressDeny=any
+IPAddressAllow=localhost
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+MemoryMax=3G
+TasksMax=100
+
+[Install]
+WantedBy=multi-user.target

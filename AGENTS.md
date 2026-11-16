@@ -4,7 +4,7 @@
 
 ### Overview
 
-BabaBuilds ERP is a full-stack Next.js 16 application (TypeScript, Prisma/SQLite, NextAuth) using the App Router with React Server Components. The package manager is **npm** (`package-lock.json`).
+BabaBuilds ERP is a full-stack Next.js 16 application (TypeScript, Prisma/PostgreSQL 17, NextAuth) using the App Router with React Server Components. The package manager is **npm** (`package-lock.json`).
 
 ### Cloud agent runtime requirement
 
@@ -15,18 +15,18 @@ When running in Cursor Cloud, ensure the environment base image/startup config p
 
 ### Environment setup
 
-A `.env` file is needed at the workspace root. Required variables: `DATABASE_URL` (SQLite file path), `NEXTAUTH_URL` (local dev URL), `NEXTAUTH_SECRET` (any random string). Set `AUTH_GOOGLE_ENABLED=false` and `AUTH_EMAIL_ENABLED=false` to disable external auth providers.
+A `.env` file is needed at the workspace root. Required variables: `DATABASE_URL` (disposable PostgreSQL 17 URL), `NEXTAUTH_URL` (local dev URL), `NEXTAUTH_SECRET` (any random string). Set `AUTH_GOOGLE_ENABLED=false` and `AUTH_EMAIL_ENABLED=false` to disable external auth providers.
 
 After `npm install`, generate the Prisma client and push the schema:
 
 ```
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 ```
 
 Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 
-**Note:** `npx prisma migrate dev` does not work (its shadow database is built from the migrations alone, which start from a baseline). Use `npx prisma db push` for local development. Every `schema.prisma` change also needs a migration: see `prisma/migrations/README.md`; `npm run check:migrations` (part of `ci:fast` and CI) fails if the schema and the migration history disagree.
+**Note:** `npx prisma migrate dev` does not work (its shadow database is built from the migrations alone, which start from a baseline). Use `npx prisma migrate deploy` for local development. Every `schema.prisma` change also needs a migration: see `prisma/migrations/README.md`; `npm run check:migrations` (part of `ci:fast` and CI) fails if the schema and the migration history disagree.
 
 ### Running the app
 
@@ -52,9 +52,9 @@ Optionally seed compliance dictionaries: `npx ts-node prisma/seed.ts`
 ### Caveats
 
 - ESLint reports 0 errors and 0 warnings. New code must not add any: avoid `any` (use `unknown` and narrow), and prefix intentionally unused names with `_`.
-- The migration history now applies cleanly from the baseline (verified by `npm run check:migrations`), but production and local dev databases are created with `npx prisma db push`; adopt migrations on such databases with `prisma migrate resolve --applied`, never by running the SQL (see `prisma/migrations/README.md`).
+- The new PostgreSQL baseline is entirely independent. Old SQLite migrations are archived under prisma/sqlite-history; do not replay them against PostgreSQL.
 - External services (Google OAuth, SMTP, Razorpay, Stripe, ClamAV, Cloudflare Turnstile) are all optional in development.
-- The SQLite database file is at `prisma/dev.db` (gitignored).
+- The SQLite database file is at `a disposable PostgreSQL database` (gitignored).
 
 ### Scheduled jobs (production VPS cron)
 
@@ -88,3 +88,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+
+## Phase B PostgreSQL readiness (NOT production cutover)
+- PostgreSQL 17 / Prisma 6 is the new target. Do not run the old SQLite migrations or use db push.
+- Migrations require an isolated database, with CI target bababuilds_erp_ci.
+- Importer: scripts/sqlite-to-postgres.py; use only against empty, independently provisioned databases.
+- Production auto-deploy is gated by ERP_POSTGRES_CUTOVER_APPROVED and on-host marker. Do not merge before Phase C approval.
+- Protected backup runner and verified restore are prerequisites. See docs/postgres-backup-runbook.md.

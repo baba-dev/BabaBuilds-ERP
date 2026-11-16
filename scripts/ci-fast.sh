@@ -6,11 +6,20 @@
 #   npm run ci:fast            # everything
 #   CI_FAST_SKIP="lint" npm run ci:fast   # skip checks by name (space separated)
 #
-# Tests that use the real Prisma client need prisma/dev.db; it is created on first run.
+# Requires an isolated PostgreSQL 17 CI database and committed migrations.
 # Not covered here (CI-only, slower): production build, browser smoke.
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
+# No SQLite bootstrap. A caller must supply disposable PostgreSQL and migrate it first.
+node -e '
+ const u=new URL(process.env.DATABASE_URL||"");
+ if(u.protocol!=="postgresql:" || !["localhost","127.0.0.1","[::1]"].includes(u.hostname)
+  || decodeURIComponent(u.pathname.slice(1))!=="bababuilds_erp_ci")
+  process.exit(1);
+' || { echo 'ci:fast requires local bababuilds_erp_ci PostgreSQL' >&2; exit 1; }
+npx --no-install prisma migrate deploy || exit 1
+export CI_POSTGRES_FINANCE_TESTS=1
 
 declare -A COMMANDS=(
   [locales]="npm run --silent check:locales"
@@ -18,7 +27,7 @@ declare -A COMMANDS=(
   [typecheck]="npm run --silent typecheck"
   [demos]="npm run --silent validate:demos"
   [migrations]="npm run --silent check:migrations"
-  [tests]="{ [ -f prisma/dev.db ] || npx prisma db push --skip-generate >/dev/null; } && npm test --silent"
+  [tests]="npm test --silent"
 )
 ORDER=(locales lint typecheck demos migrations tests)
 

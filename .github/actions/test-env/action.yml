@@ -1,13 +1,12 @@
 name: Create Playwright test environment
-description: Writes a throwaway .env (random secrets, external auth off) and creates a fresh SQLite schema.
+description: Writes a throwaway .env (random secrets, external auth off) and creates a disposable PostgreSQL 17 schema.
 
 runs:
   using: composite
   steps:
-    - name: Write .env and push schema
+    - name: Write .env and apply PostgreSQL migrations
       shell: bash
       run: |
-        # The schema hardcodes file:./dev.db (DATABASE_URL is ignored), so db push creates prisma/dev.db.
         {
           echo 'NEXTAUTH_URL="http://localhost:3000"'
           echo "NEXTAUTH_SECRET=\"$(openssl rand -hex 32)\""
@@ -15,7 +14,7 @@ runs:
           echo 'AUTH_GOOGLE_ENABLED=false'
           echo 'AUTH_EMAIL_ENABLED=false'
         } > .env
-        npx prisma db push --skip-generate
+        npx prisma migrate deploy
 
     - name: Cache Playwright browsers
       uses: actions/cache@v4
