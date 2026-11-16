@@ -42,6 +42,14 @@ class StageSecurityTest(unittest.TestCase):
             sock.connect.side_effect = None
             self.assertFalse(preflight.network_egress_blocked())
 
+    def test_service_template_keeps_kernel_deny_and_separate_config_guard(self):
+        unit = (BASE / "ops/systemd/erp-postgres-staging@.service").read_text()
+        self.assertIn("IPAddressDeny=any", unit)
+        self.assertIn("IPAddressAllow=localhost", unit)
+        self.assertIn("RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6", unit)
+        self.assertIn("runtime_preflight.py --config-only", unit)
+        self.assertIn("Restart=no", unit)
+
     def test_config_only_does_not_require_kernel_guard_but_full_preflight_does(self):
         env = {
             "ERP_STAGING_MODE": "1",

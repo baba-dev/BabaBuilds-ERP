@@ -57,7 +57,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--config-only", action="store_true",
-        help="Operator build-time check only. Never used by the systemd service."
+        help="Validate app configuration only; used at build and service startup after controlled systemd egress verification."
     )
     args = parser.parse_args()
     if not valid():

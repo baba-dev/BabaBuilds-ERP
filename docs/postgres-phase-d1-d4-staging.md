@@ -25,6 +25,28 @@ No `/usr/bin/node` replacement, PM2 restart or Node 24 changes are necessary.
 
 Do not execute from /var/www/bababuilds-erp or use the live ERP PostgreSQL database name. The one-shot operator runner refuses an existing staging suffix. It cannot merge/cut over production or reset/drop databases. It creates a staging database, stage roles, sensitive snapshot, local media clone and staging-only systemd unit. It does not back up or restart production services.
 
+### Kernel egress verification before staging service activation
+
+On the actual VPS, independently verify the stage unit's kernel IP filter with
+a **positive control**: open a temporary TCP listener on a private, non-loopback
+address, verify an unrestricted `systemd-run` probe can connect, then verify a
+sandboxed `systemd-run` with `IPAddressDeny=any` /
+`IPAddressAllow=localhost` cannot connect; finally verify the same sandbox
+can reach PostgreSQL via `127.0.0.1:5432`. All three checks must pass.
+
+The staging unit always retains `IPAddressDeny=any`,
+`IPAddressAllow=localhost` and `RestrictAddressFamilies`. The service's
+`ExecStartPre` uses `runtime_preflight.py --config-only` to reject unsafe
+database, origin, provider secrets and ports. The kernel enforces actual packet
+filtering. A TCP timeout to an arbitrary public IP is **not** a reliable
+attribution of BPF denial, and should not be used as a service startup gate.
+If a known-reachable positive control fails or egress succeeds inside the
+sandbox, do not activate staging.
+
+Existing successful D1–D4 import runs should **not be repeated** to repair
+only the systemd service: retain the staging database and reconciliation
+evidence, apply the updated unit, and run the HTTP smoke separately.
+
 Root/OS restrictions: Snapshot, credentials, and evidence are stored under /var/lib/bababuilds-erp/staging/SUFFIX mode 0700 with sensitive files 0600. The Next.js staging process runs as erpstaging, not root. No outgoing payment, email, push or webhook processing may be permitted. Verify systemd network BPF restrictions are actually supported on the host before starting the staging service.
 
 Even copied customer records remain confidential. Do not upload source snapshots, logs with customer records, password hashes, Stripe credentials, or raw detailed financial data to GitHub or chat.

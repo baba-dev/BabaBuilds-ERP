@@ -19,7 +19,11 @@ Environment=PORT=3101
 Environment=HOSTNAME=127.0.0.1
 # ERP stage uses its own Node 22 binary, never the live ERP system Node 20.
 Environment=PATH=/opt/bababuilds-erp/node22/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-ExecStartPre=/usr/bin/python3 /opt/bababuilds-erp-staging/%i/app/scripts/staging/runtime_preflight.py
+# Check secrets/configuration every start. Kernel packet filters are enforced by
+# systemd itself, and must be independently verified with a positive-control
+# systemd-run connectivity probe before enabling this unit (see runbook).
+# A timed-out TCP connect to a random Internet address is not proof of BPF denial.
+ExecStartPre=/usr/bin/python3 /opt/bababuilds-erp-staging/%i/app/scripts/staging/runtime_preflight.py --config-only
 ExecStart=/opt/bababuilds-erp/node22/bin/node /opt/bababuilds-erp-staging/%i/app/.next/standalone/server.js
 Restart=no
 RestartSec=5
