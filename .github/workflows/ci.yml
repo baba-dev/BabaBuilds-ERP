@@ -222,16 +222,36 @@ jobs:
           import sqlite3,sys
           db=sqlite3.connect(sys.argv[1])
           ms=1794760000000
-          db.execute('INSERT INTO "Workspace" ("id","name","createdAt","updatedAt") VALUES (?,?,?,?)',
-             ("workspace_fixture","Test Workspace",ms,ms))
+          db.execute('INSERT INTO "Workspace" ("id","name","createdAt","updatedAt","isDemo","isSetupComplete") VALUES (?,?,?,?,?,?)',
+             ("workspace_fixture","Test Workspace",ms,ms,1,1))
           db.execute('INSERT INTO "Invoice" ("id","workspaceId","invoiceNumber","financialYear","invoiceDate","clientName","serviceDescription","totalAmount","grandTotal","amountReceived","pdfPath") VALUES (?,?,?,?,?,?,?,?,?,?,?)',
              ("invoice_fixture","workspace_fixture","TEST-1","2026-27",ms,"Fixture","PG import test",100,100,20,"/test.pdf"))
           db.execute('INSERT INTO "InvoicePayment" ("id","workspaceId","invoiceId","amount","receivedAt") VALUES (?,?,?,?,?)',
              ("payment_fixture","workspace_fixture","invoice_fixture",20,ms))
+          db.execute('INSERT INTO "Expense" ("id","workspaceId","date","category","vendor","amount","itcHeld") VALUES (?,?,?,?,?,?,?)',
+             ("expense_fixture","workspace_fixture",ms,"Operations","Vendor",51.25,1))
+          db.execute('INSERT INTO "FinancialOperationIdempotency" ("id","workspaceId","operation","idempotencyKey","requestHash","responseBody","expiresAt","createdAt","updatedAt") VALUES (?,?,?,?,?,?,?,?,?)',
+             ("idempotency_fixture","workspace_fixture","INVOICE_PAYMENT_CAPTURE","k1","hash1",'{"nested":{"ok":true},"amount":1.05}',ms+60000,ms,ms))
           db.commit()
           db.close()
           PY
           python3 scripts/sqlite-to-postgres.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --acknowledge-empty-target
+          # Phase C: check every table, every scalar field, and exact per-workspace currency totals.
+          python3 scripts/phase-c-verify.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --evidence "$tmp/pg-parity.json"
+          # The restore target is a second, newly created disposable PostgreSQL 17 CI database.
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -c 'CREATE DATABASE bababuilds_erp_drill'
+          RESTORE_DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:5432/bababuilds_erp_drill' \
+            python3 scripts/phase-c-restore-drill.py \
+              --source-db bababuilds_erp_ci --drill-db bababuilds_erp_drill \
+              --sqlite "$tmp/dev.db" --evidence "$tmp/drill-parity.json" \
+              --acknowledge-empty-drill
+          # The verifier must detect tampering, not merely count records.
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d bababuilds_erp_ci \
+            -v ON_ERROR_STOP=1 -c 'UPDATE "Invoice" SET "amountReceived"=21 WHERE "id"='\''invoice_fixture'\''' >/dev/null
+          if python3 scripts/phase-c-verify.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci 2>/dev/null; then
+            echo 'Phase C parity checker failed to detect changed financial data' >&2; exit 1
+          fi
           # Existing target must be rejected; verify no reset or truncate occurs.
           if python3 scripts/sqlite-to-postgres.py --sqlite "$tmp/dev.db" --target-db bababuilds_erp_ci --acknowledge-empty-target 2>/dev/null; then
             echo 'Importer improperly accepted a populated target' >&2; exit 1
