@@ -140,15 +140,23 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .next/cache
-          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx', '!node_modules/**', '!.next/**') }}
+          key: nextjs-${{ runner.os }}-${{ runner.arch }}-node-${{ hashFiles('.nvmrc') }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('**/*.ts', '**/*.tsx', '!node_modules/**', '!.next/**') }}
           restore-keys: |
-            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+            nextjs-${{ runner.os }}-${{ runner.arch }}-node-${{ hashFiles('.nvmrc') }}-${{ hashFiles('package-lock.json') }}-
 
       - name: Prepare PostgreSQL for build-time data dependencies
         run: npx prisma migrate deploy
 
       - name: Build
         run: npm run build
+
+      # Exercise the actual packaged standalone entrypoint, never next dev.
+      # PostgreSQL is an isolated, disposable CI service; all external effects disabled.
+      - name: Node 26 standalone runtime smoke
+        env:
+          AUTH_GOOGLE_ENABLED: "false"
+          AUTH_EMAIL_ENABLED: "false"
+        run: node scripts/ci/standalone-smoke.mjs
 
   e2e-smoke:
     name: Browser smoke (demo)

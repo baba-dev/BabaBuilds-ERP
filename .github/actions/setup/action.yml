@@ -9,6 +9,12 @@ runs:
         node-version-file: .nvmrc
         cache: npm
 
+    - name: Assert pinned Node and npm
+      shell: bash
+      run: |
+        node -e 'const fs = require("node:fs"); const expected = fs.readFileSync(".nvmrc", "utf8").trim(); if (process.version !== "v" + expected) { throw new Error("Unexpected Node runtime " + process.version + "; expected " + expected); }'
+        test "$(npm --version)" = "11.20.0" || { echo "::error::npm must be 11.20.0"; exit 1; }
+
     - name: Install dependencies
       shell: bash
       # postinstall runs `prisma generate`, so the client is ready after this step.

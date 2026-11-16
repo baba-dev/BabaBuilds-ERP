@@ -8,8 +8,9 @@ BabaBuilds ERP is a full-stack Next.js 16 application (TypeScript, Prisma/Postgr
 
 ### Cloud agent runtime requirement
 
-- Node.js `22.x`
-- npm `10+` (bundled with Node 22)
+- Node.js `26.13.1` (from `.nvmrc`)
+- npm `11.20.0` (bundled with Node 26.13.1; enforced in shared CI setup)
+- Use `npm ci --no-audit --no-fund` for reproducible installations.
 
 When running in Cursor Cloud, ensure the environment base image/startup config provides Node/npm before project setup commands are executed.
 
@@ -76,7 +77,7 @@ The Android app is a Trusted Web Activity over the PWA; see `docs/android-play-s
 - `CI` workflow (`.github/workflows/ci.yml`) runs on GitHub-hosted runners as parallel jobs: static checks (locale parity, lint, typecheck, demo coverage), full Vitest, migration history vs schema (`check:migrations`), production build, and the Playwright browser smoke test. The single required check is **`CI gate`**. Pull requests also get an advisory dependency review, and `codeql.yml` runs CodeQL (advisory).
 - **Never run pull-request workflows on the self-hosted runner**: the repo is public, so that would run strangers' code on our server. Self-hosted (`[self-hosted, linux, x64, erp-ci]`) is only for `deploy.yml`, `backup.yml` and `security-audit.yml`, which run on a schedule, by hand, or after CI succeeds on `main`.
 - Legacy automatic deployment is disabled after cutover; an immutable standalone release workflow is tracked in #640.
-- Node is pinned in `.nvmrc` (22). Shared setup lives in `.github/actions/`.
+- Development and CI Node are pinned in `.nvmrc` (26.13.1), with npm 11.20.0. Shared setup lives in `.github/actions/`. The existing production Node 22 release remains live until separately approved Stage 2 activation.
 - Agent workflow: make the change, run `npm run ci:fast`, fix everything it reports, then push. Add or update tests for behavior you change; mocks of shared modules should spread `importOriginal()` so new exports do not break them.
 
 <!-- BEGIN:nextjs-agent-rules -->
@@ -96,3 +97,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Use only isolated PostgreSQL 17 instances for local development and CI. Apply committed baseline with `npx prisma migrate deploy`; never regenerate or rewrite the applied baseline.
 - Production deploys are temporarily a no-op pending safe standalone release automation (#640). Do not use the previous in-place PM2 restart or mutate the active standalone tree.
 - Encrypt off-host PostgreSQL and media backups, test independent recovery, and never include customer records or credentials in CI logs. The migration history remains available in Git history and encrypted off-host snapshots.
+
+## Node 26 repository compatibility (Stage 1 only)
+
+- Development, CI and candidate build runtime: Node 26.13.1 and npm 11.20.0. Production activation is a separate reviewed operation; do not restart PM2 or change a live interpreter from this PR.
+- Run the PostgreSQL 17 financial and migration CI, development browser smoke, and the production standalone smoke using `scripts/ci/standalone-smoke.mjs`. See `docs/node26-compatibility.md`.
+- Existing Node 22 cutover references, the isolated legacy systemd staging template and the SQLite retirement guard deliberately describe the protected rollback artifact; do not globally rewrite them before Stage 2.

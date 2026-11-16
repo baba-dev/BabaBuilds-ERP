@@ -16,12 +16,12 @@ Distribution-ready **HTML + PDF** product overview with on-brand styling ([`broc
 
 ## One-shot build
 
-Requires Node 22, `.env` with `DATABASE_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, and Playwright Chromium (`npx playwright install chromium`).
+Requires Node 26.13.1 and npm 11.20.0, `.env` with `DATABASE_URL`, `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, and Playwright Chromium (`npx playwright install chromium`).
 
 ```bash
-npm install
+npm ci --no-audit --no-fund
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 npm run brochure:dist
 ```
 
