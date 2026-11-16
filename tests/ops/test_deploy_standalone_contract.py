@@ -37,12 +37,15 @@ class StandaloneDeploymentContractTests(unittest.TestCase):
 
     def test_workflow_only_accepts_green_main_ci(self):
         self.assertIn("workflow_run:", WORKFLOW)
-        self.assertIn("workflows: [CI]", WORKFLOW)
+        self.assertTrue('workflows: ["CI"]' in WORKFLOW or "workflows: [CI]" in WORKFLOW)
         self.assertIn("github.event.workflow_run.conclusion == 'success'", WORKFLOW)
         self.assertIn("github.event.workflow_run.event == 'push'", WORKFLOW)
         self.assertIn("github.event.workflow_run.head_repository.full_name == github.repository", WORKFLOW)
         self.assertIn("cancel-in-progress: false", WORKFLOW)
-        self.assertIn("sudo -n /usr/local/sbin/bababuilds-erp-release --deploy", WORKFLOW)
+        self.assertIn("sudo -n /usr/local/sbin/bababuilds-erp-promote promote", WORKFLOW)
+        self.assertIn("sudo -n /usr/local/sbin/bababuilds-erp-promote preflight", WORKFLOW)
+        self.assertIn("appleboy/ssh-action@", WORKFLOW)
+        self.assertIn("vars.ERP_AUTODEPLOY_ENABLED == 'true'", WORKFLOW)
         self.assertNotIn("pm2 restart erp --update-env", WORKFLOW)
         self.assertNotIn("git reset --hard", WORKFLOW)
 

@@ -153,7 +153,8 @@ Based on static inspection of app modules, Prisma enums/models, scripts, and hel
 ```bash
 git clone <your-repo-url>
 cd BabaBuilds-ERP
-npm install
+nvm install && nvm use
+npm ci --no-audit --no-fund
 ```
 
 ### 2) Create `.env` at repo root
@@ -173,7 +174,7 @@ AUTH_EMAIL_ENABLED=false
 
 ```bash
 npx prisma generate
-npx prisma db push
+npx prisma migrate deploy
 ```
 
 (Optional) seed compliance dictionaries:
@@ -301,3 +302,7 @@ If you want, next PR can add:
 ### PostgreSQL 17 production
 
 The production ERP uses PostgreSQL 17 exclusively. Prisma migrations live in `prisma/migrations/` and are applied with `npx prisma migrate deploy`. Use a disposable local PostgreSQL database for development; see `docs/postgres-backup-runbook.md` for encrypted backup and recovery expectations. The original data migration and rollback evidence is retained in Git history and encrypted off-host recovery snapshots, not in the live application tree.
+
+### ERP production release automation (opt-in)
+
+The repository targets Node 26.13.1/npm 11.20.0. See [the Stage 2 release and rollback runbook](docs/erp-node26-release-activation.md) for GitHub-hosted ARM64 production artifacts, the existing authenticated SSH transport, verified PostgreSQL/media recovery gates, the root-owned canary/promoter and monitoring. Merge alone does **not** activate the VPS; the retained Node22 cutover release remains the rollback anchor.

@@ -75,8 +75,8 @@ The Android app is a Trusted Web Activity over the PWA; see `docs/android-play-s
 ### CI (GitHub Actions)
 
 - `CI` workflow (`.github/workflows/ci.yml`) runs on GitHub-hosted runners as parallel jobs: static checks (locale parity, lint, typecheck, demo coverage), full Vitest, migration history vs schema (`check:migrations`), production build, and the Playwright browser smoke test. The single required check is **`CI gate`**. Pull requests also get an advisory dependency review, and `codeql.yml` runs CodeQL (advisory).
-- **Never run pull-request workflows on the self-hosted runner**: the repo is public, so that would run strangers' code on our server. Self-hosted (`[self-hosted, linux, x64, erp-ci]`) is only for `deploy.yml`, `backup.yml` and `security-audit.yml`, which run on a schedule, by hand, or after CI succeeds on `main`.
-- Legacy automatic deployment is disabled after cutover; an immutable standalone release workflow is tracked in #640.
+- **Never run pull-request workflows on a self-hosted runner**: the repo is public. ERP deployment uses a GitHub-hosted job and protected SSH access; backup/audit may use separate trusted runners.
+- PR #643 restored guarded PostgreSQL-only Node22 SSH deployment; its follow-up rejects Node26 source until approved Stage 2 activation. New Node26 promotion is opt-in after independently verified recovery (#640).
 - Development and CI Node are pinned in `.nvmrc` (26.13.1), with npm 11.20.0. Shared setup lives in `.github/actions/`. The existing production Node 22 release remains live until separately approved Stage 2 activation.
 - Agent workflow: make the change, run `npm run ci:fast`, fix everything it reports, then push. Add or update tests for behavior you change; mocks of shared modules should spread `importOriginal()` so new exports do not break them.
 
@@ -95,7 +95,7 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 - SQLite-to-PostgreSQL cutover completed 2026-11-16. Production runs on PostgreSQL 17 under the independently prepared Node 22 standalone release. Do not access or recreate `prisma/dev.db`.
 - Use only isolated PostgreSQL 17 instances for local development and CI. Apply committed baseline with `npx prisma migrate deploy`; never regenerate or rewrite the applied baseline.
-- Production deploys are temporarily a no-op pending safe standalone release automation (#640). Do not use the previous in-place PM2 restart or mutate the active standalone tree.
+- The restored Node22 standalone deployment is deliberately fail-closed on Node26 source. New Node26 promotion is gated on fresh backup/restore proof, a safe candidate and rollback. Do not use the former in-place deployment or mutate the protected cutover artifact.
 - Encrypt off-host PostgreSQL and media backups, test independent recovery, and never include customer records or credentials in CI logs. The migration history remains available in Git history and encrypted off-host snapshots.
 
 ## Node 26 repository compatibility (Stage 1 only)
@@ -103,3 +103,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Development, CI and candidate build runtime: Node 26.13.1 and npm 11.20.0. Production activation is a separate reviewed operation; do not restart PM2 or change a live interpreter from this PR.
 - Run the PostgreSQL 17 financial and migration CI, development browser smoke, and the production standalone smoke using `scripts/ci/standalone-smoke.mjs`. See `docs/node26-compatibility.md`.
 - Existing Node 22 cutover references, the isolated legacy systemd staging template and the SQLite retirement guard deliberately describe the protected rollback artifact; do not globally rewrite them before Stage 2.
+
+## Stage 2 ERP Node 26 deployment safeguards
+
+- Release workflow is triggered only by a successful full `main` CI push. GitHub-hosted Linux ARM64 builds an immutable Node26 release; existing SSH secrets transfer the artifact to the ERP VPS. No pull-request execution on the server.
+- Autoactivation requires `ERP_AUTODEPLOY_ENABLED=true`, `ERP_RECOVERY_VERIFIED=true`, a reviewed installed root-only operator, current encrypted PG17+media backup/restore evidence, a disposable staging database and validated media map. See `docs/erp-node26-release-activation.md`.
+- Promotion saves and can restore **both** the previous PM2 release and its exact Node22 interpreter. It never rewinds PostgreSQL data. Do not alter MenuMinute, ClubKeep, global Node or other PM2 apps.

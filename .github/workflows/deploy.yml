@@ -1,83 +1,172 @@
-name: Deploy ERP to Production
+name: ERP immutable Node 26 release
 
-# The source-to-production path was restored after the PostgreSQL cutover.
-# Every validated main CI commit builds inside a NEW Node22 release directory.
+# Only completed, successful, repository-owned CI pushes to latest main qualify.
+# Production is opt-in via an explicit repository variable and recovery gate.
 on:
   workflow_run:
-    workflows: [CI]
+    workflows: ["CI"]
     types: [completed]
-    branches: [main]
-  workflow_dispatch:
-
-concurrency:
-  group: erp-production-standalone-deploy
-  cancel-in-progress: false
 
 permissions:
   contents: read
+  actions: read
+
+concurrency:
+  group: erp-immutable-production
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  provenance:
+    name: Verify latest trusted main CI
     if: >-
-      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
-      (github.event_name == 'workflow_run' &&
-       github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_branch == 'main' &&
-       github.event.workflow_run.head_repository.full_name == github.repository)
-    runs-on: ubuntu-latest
-    timeout-minutes: 70
-    env:
-      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      ${{ github.event.workflow_run.event == 'push' &&
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.head_repository.full_name == github.repository &&
+          github.event.workflow_run.conclusion == 'success' &&
+          vars.ERP_AUTODEPLOY_ENABLED == 'true' &&
+          vars.ERP_RECOVERY_VERIFIED == 'true' &&
+          vars.CI_SMOKE_ADVISORY != 'true' }}
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.check.outputs.sha }}
     steps:
-      - name: Validate immutable main commit
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          [[ "$DEPLOY_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
-          echo "Validated source SHA ${DEPLOY_SHA:0:12}"
+      - name: Verify current main SHA and all CI gates
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const run = context.payload.workflow_run;
+            const ref = await github.rest.git.getRef({owner, repo, ref:"heads/main"});
+            if (run.head_sha !== ref.data.object.sha) throw Error("Superseded CI run");
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              owner, repo, run_id:run.id, per_page:100
+            });
+            for (const name of [
+              "Static checks", "Unit and integration tests", "Prisma migrations",
+              "Production build", "Browser smoke (demo)", "CI gate"
+            ]) {
+              if (jobs.filter(j => j.name === name && j.conclusion === "success").length !== 1)
+                throw Error("Missing or failed required CI check: " + name);
+            }
+            core.setOutput("sha", run.head_sha);
 
-      - name: Build, preview and promote exact commit on ERP ARM64 VPS
+  arm64-build:
+    name: Native ARM64 immutable candidate
+    needs: provenance
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/bababuilds_erp_ci
+      NEXTAUTH_URL: http://127.0.0.1:3000
+      NEXTAUTH_SECRET: release-only-ci-key-00000000000000000000
+      AUTH_GOOGLE_ENABLED: "false"
+      AUTH_EMAIL_ENABLED: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+      NODE_OPTIONS: --max-old-space-size=4096
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bababuilds_erp_ci
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bababuilds_erp_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.provenance.outputs.sha }}
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Build and smoke isolated ARM64 PostgreSQL standalone
+        run: |
+          test "$(uname -m)" = "aarch64"
+          npx prisma migrate deploy
+          npm run build
+          node scripts/ci/standalone-smoke.mjs
+      - name: Create verified release bundle
+        run: |
+          python3 ops/erp-release/package.py build \
+            --sha "${{ needs.provenance.outputs.sha }}" \
+            --dest "$RUNNER_TEMP/erp-release"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: erp-arm64-${{ needs.provenance.outputs.sha }}
+          path: ${{ runner.temp }}/erp-release/
+          if-no-files-found: error
+          retention-days: 14
+
+  promote:
+    name: Guarded ERP activation through existing SSH route
+    needs: [provenance, arm64-build]
+    runs-on: ubuntu-24.04
+    environment: erp-production
+    timeout-minutes: 30
+    env:
+      DEPLOY_SHA: ${{ needs.provenance.outputs.sha }}
+    steps:
+      - name: Download verified ARM64 candidate
+        uses: actions/download-artifact@v4
+        with:
+          name: erp-arm64-${{ needs.provenance.outputs.sha }}
+          path: erp-release
+
+      - name: Recheck latest main SHA before transfer
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const ref = await github.rest.git.getRef({owner, repo, ref:"heads/main"});
+            if (ref.data.object.sha !== process.env.DEPLOY_SHA)
+              throw Error("Newer main commit exists; outdated release refused");
+
+      - name: Copy exact release into isolated incoming directory on ERP VPS
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "erp-release/erp-release.tar.gz,erp-release/manifest.json"
+          target: /tmp/erp-node26-${{ needs.provenance.outputs.sha }}
+          strip_components: 1
+
+      - name: Preflight, activate and verify through protected operator
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           envs: DEPLOY_SHA
-          command_timeout: 60m
+          command_timeout: 25m
           script_stop: true
           script: |
             set -euo pipefail
             [[ "$DEPLOY_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
-            # Bootstrap the reviewed release operator from the SAME green main SHA.
-            # This avoids a manual prerequisite after the prior workflow was disabled.
+            # Existing trusted SSH deploy path from PR #643 is preserved.
             app=/opt/bababuilds-erp-cutover/cut1611b/app
-            state=/var/lib/bababuilds-erp/deployment
-            sudo -n install -d -o root -g root -m 0700 /opt/bababuilds-erp/releases "$state"
-            sudo -n git -C "$app" fetch --no-tags \
-              https://github.com/baba-dev/BabaBuilds-ERP.git refs/heads/main
-            sudo -n git -C "$app" merge-base --is-ancestor "$DEPLOY_SHA" FETCH_HEAD
-            # Stage 1 Node26 landed in main before this deploy workflow.
-            # Until the separately approved ARM64 Node26 runtime activation,
-            # refuse to deploy a Node26-only source tree under production Node22.
-            required_node="$(sudo -n git -C "$app" show "$DEPLOY_SHA:.nvmrc" | tr -d '[:space:]')"
-            case "$required_node" in
-              22|22.*) ;;
-              *)
-                echo "BLOCKED: main requires Node $required_node but production operator is Node22; Node26 Stage 2 must be activated separately." >&2
-                exit 1
-                ;;
-            esac
-            sudo -n git -C "$app" show "$DEPLOY_SHA:scripts/operations/deploy-erp-standalone.sh" \
-              | sudo -n tee "$state/operator.next" >/dev/null
-            sudo -n bash -n "$state/operator.next"
-            sudo -n install -o root -g root -m 0700 \
-              "$state/operator.next" /usr/local/sbin/bababuilds-erp-release
-            sudo -n rm -f "$state/operator.next"
-            sudo -n /usr/local/sbin/bababuilds-erp-release --check
-            sudo -n /usr/local/sbin/bababuilds-erp-release --deploy "$DEPLOY_SHA"
+            sudo -n git -C "$app" fetch --no-tags https://github.com/baba-dev/BabaBuilds-ERP.git refs/heads/main
+            live_sha="$(sudo -n git -C "$app" rev-parse FETCH_HEAD)"
+            [[ "$DEPLOY_SHA" == "$live_sha" ]] || { echo 'Newer main commit exists; skip'; exit 1; }
+            # Remove transferred artifact after execution; no customer files touched.
+            incoming="/tmp/erp-node26-$DEPLOY_SHA"
+            trap 'rm -rf -- "$incoming"' EXIT
+            # Monitor must already be enabled, or activation is refused.
+            sudo -n systemctl is-active --quiet erp-release-watchdog.timer
+            # The root-owned operator is installed separately from reviewed source,
+            # with protected environment and recovery attestations on the host.
+            sudo -n /usr/local/sbin/bababuilds-erp-promote preflight
+            sudo -n /usr/local/sbin/bababuilds-erp-promote promote \
+              --archive "/tmp/erp-node26-$DEPLOY_SHA/erp-release.tar.gz" \
+              --manifest "/tmp/erp-node26-$DEPLOY_SHA/manifest.json" \
+              --sha "$DEPLOY_SHA"
+            sudo -n /usr/local/sbin/bababuilds-erp-promote monitor
 
-      - name: Purge only the service worker from Cloudflare (when configured)
+      - name: Purge only ERP service-worker URL (when configured)
         shell: bash
         env:
           CF_ZONE: ${{ secrets.CLOUDFLARE_ZONE_ID }}
@@ -85,12 +174,11 @@ jobs:
         run: |
           set -Eeuo pipefail
           if [[ -z "$CF_ZONE" || -z "$CF_TOKEN" ]]; then
-            echo "Cloudflare credentials absent; skipping optional /sw.js purge."
+            echo 'Cloudflare service-worker purge is not configured'
             exit 0
           fi
           curl --fail-with-body --silent --show-error --retry 2 \
-            --request POST \
-            "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/purge_cache" \
+            --request POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/purge_cache" \
             --header "Authorization: Bearer $CF_TOKEN" \
             --header 'Content-Type: application/json' \
             --data '{"files":["https://erp.bababuilds.com/sw.js"]}'

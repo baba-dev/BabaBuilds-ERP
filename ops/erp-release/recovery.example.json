@@ -1,0 +1,18 @@
+{
+  "snapshot": "REPLACE_WITH_VERIFIED_64_HEX_RESTIC_SNAPSHOT",
+  "backup_at": "2026-11-17T00:00:00+00:00",
+  "restore_at": "2026-11-17T00:00:00+00:00",
+  "checks": {
+    "recurring_backup": false,
+    "independent_database_restore": false,
+    "media_restore": false,
+    "existing_media": false,
+    "new_private_upload": false,
+    "pdf_report": false,
+    "service_worker": false,
+    "authentication_rbac": false,
+    "payment_idempotency": false,
+    "webhooks": false,
+    "scheduled_jobs": false
+  }
+}

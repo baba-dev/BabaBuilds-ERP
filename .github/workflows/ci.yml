@@ -202,6 +202,53 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  arm64-release:
+    name: Native ARM64 release candidate
+    # Build a native candidate before merging PRs. The post-merge deployment
+    # workflow re-builds the exact trusted main SHA on another ARM64 VM.
+    if: ${{ github.event_name != 'push' }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: bababuilds_erp_ci
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d bababuilds_erp_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/bababuilds_erp_ci
+      NEXTAUTH_URL: http://127.0.0.1:3000
+      NEXTAUTH_SECRET: node26-arm-ci-fixture-only-000000000000000000
+      AUTH_EMAIL_ENABLED: "false"
+      AUTH_GOOGLE_ENABLED: "false"
+      NODE_OPTIONS: --max-old-space-size=4096
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: Initialize disposable PostgreSQL
+        run: npx prisma migrate deploy
+      - name: Native ARM64 production build
+        run: |
+          test "$(uname -m)" = "aarch64"
+          npm run build
+      - name: Boot packaged production mode
+        run: node scripts/ci/standalone-smoke.mjs
+      - name: Package and verify immutable artifact
+        run: |
+          python3 ops/erp-release/package.py build --sha "${{ github.sha }}" --dest "$RUNNER_TEMP/erp-release"
+          python3 ops/erp-release/package.py verify \
+            --archive "$RUNNER_TEMP/erp-release/erp-release.tar.gz" \
+            --manifest "$RUNNER_TEMP/erp-release/manifest.json" \
+            --sha "${{ github.sha }}"
+
   # Pull requests only: flags newly added dependencies with known vulnerabilities or disallowed licences.
   # Advisory (not in the gate): it needs the repository's dependency graph, which is on for public repos.
   dependency-review:
@@ -223,7 +270,7 @@ jobs:
   gate:
     name: CI gate
     if: ${{ always() }}
-    needs: [static, test, prisma, build, e2e-smoke]
+    needs: [static, test, prisma, build, e2e-smoke, arm64-release]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
