@@ -143,8 +143,8 @@ def main():
     run = state / "backups" / options.run_id
     protected(run, directory=True)
     snapshot = Path(options.snapshot)
-    if snapshot != run / "source.sqlite":
-        raise RuntimeError("Snapshot must be the unique operator-created run-local source.sqlite")
+    if snapshot not in (run / "source.sqlite", state / "final-sqlite.db"):
+        raise RuntimeError("Use a run-local online snapshot or the immutable final frozen SQLite snapshot")
     protected(snapshot)
     manifest_file = Path(str(snapshot) + ".manifest.json")
     protected(manifest_file)
