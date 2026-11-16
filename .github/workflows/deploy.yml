@@ -1,34 +1,70 @@
-name: ERP production deployment (standalone handoff)
+name: Deploy ERP to Production
 
-# The PostgreSQL cutover on 2026-11-16 activated a Node 22 standalone
-# release outside /var/www/bababuilds-erp. The prior workflow rebuilt that
-# SQLite-era checkout and restarted a different PM2 command. It must NOT run
-# after cutover: doing so could silently leave the application on stale code
-# and disturb media permissions.
-#
-# This is intentionally a non-deploying workflow until an independently
-# tested, immutable standalone release promoter replaces it. A green CI
-# merge must NEVER automatically rewrite or restart the live PG ERP.
+# The source-to-production path was restored after the PostgreSQL cutover.
+# Every validated main CI commit builds inside a NEW Node22 release directory.
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
+
+concurrency:
+  group: erp-production-standalone-deploy
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
-  manual-handoff:
-    name: Standalone deployment handoff (no server changes)
+  deploy:
+    if: >-
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
+    timeout-minutes: 70
+    env:
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
-      - name: Explain current release controls
+      - name: Validate immutable main commit
         shell: bash
         run: |
-          cat <<'EOF'
-          No deployment was performed.
-          The live ERP is a Node 22 standalone release backed by PostgreSQL 17.
-          The former in-place /var/www/bababuilds-erp deployment is disabled.
-          Changes require a separately reviewed build, health check, writable
-          media mapping, and a controlled PM2 activation with forward recovery.
-          Track replacement deployment automation under the ERP post-cutover
-          operations issue. Do not restart the existing PM2 command from here.
-          EOF
+          set -Eeuo pipefail
+          [[ "$DEPLOY_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          echo "Validated source SHA ${DEPLOY_SHA:0:12}"
+
+      - name: Build, preview and promote exact commit on ERP ARM64 VPS
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: DEPLOY_SHA
+          command_timeout: 60m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            [[ "$DEPLOY_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+            sudo -n /usr/local/sbin/bababuilds-erp-release --deploy "$DEPLOY_SHA"
+
+      - name: Purge only the service worker from Cloudflare (when configured)
+        shell: bash
+        env:
+          CF_ZONE: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          if [[ -z "$CF_ZONE" || -z "$CF_TOKEN" ]]; then
+            echo "Cloudflare credentials absent; skipping optional /sw.js purge."
+            exit 0
+          fi
+          curl --fail-with-body --silent --show-error --retry 2 \
+            --request POST \
+            "https://api.cloudflare.com/client/v4/zones/$CF_ZONE/purge_cache" \
+            --header "Authorization: Bearer $CF_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data '{"files":["https://erp.bababuilds.com/sw.js"]}'
