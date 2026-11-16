@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """D3 stage service preflight: never boot with a production or shared DB URL."""
+import errno
 import os
 import re
+import socket
 import sys
 from urllib.parse import unquote, urlsplit
 
@@ -29,8 +31,24 @@ def valid():
     except (ValueError, TypeError):
         return False
 
+def network_egress_blocked():
+    """Prove the cgroup IPAddressDeny rule is active, not merely configured.
+
+    The test process shares the stage service's systemd network restrictions.
+    A TCP connect to a reserved public IP must be denied with EPERM/EACCES.
+    A timeout or refused connection is NOT proof of isolation.
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.settimeout(1.5)
+            probe.connect(("1.1.1.1", 443))
+    except OSError as error:
+        return error.errno in (errno.EACCES, errno.EPERM)
+    return False
+
+
 if __name__ == "__main__":
-    if not valid():
-        print("Staging runtime preflight failed; refusing to start", file=sys.stderr)
+    if not valid() or not network_egress_blocked():
+        print("Staging configuration/egress isolation invalid; refusing to start", file=sys.stderr)
         sys.exit(1)
     print("ERP PostgreSQL staging runtime preflight PASS")

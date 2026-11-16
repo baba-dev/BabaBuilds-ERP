@@ -1,4 +1,5 @@
 """D1/D3 stage provisioning and runtime gates: no host/PG access required."""
+import errno
 import importlib.util
 from pathlib import Path
 import unittest
@@ -30,6 +31,16 @@ class StageSecurityTest(unittest.TestCase):
     def test_fail_closed_without_protected_env(self):
         with patch.dict("os.environ", {}, clear=True):
             self.assertFalse(preflight.valid())
+
+    def test_public_egress_must_be_denied_by_kernel_not_network_timeout(self):
+        with patch.object(preflight.socket, "socket") as factory:
+            sock = factory.return_value.__enter__.return_value
+            sock.connect.side_effect = PermissionError(errno.EACCES, "blocked")
+            self.assertTrue(preflight.network_egress_blocked())
+            sock.connect.side_effect = OSError(errno.ETIMEDOUT, "timeout")
+            self.assertFalse(preflight.network_egress_blocked())
+            sock.connect.side_effect = None
+            self.assertFalse(preflight.network_egress_blocked())
 
     def test_reject_production_database_and_external_host(self):
         standard = {
