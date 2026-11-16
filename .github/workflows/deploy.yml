@@ -152,6 +152,11 @@ jobs:
             sudo -n git -C "$app" fetch --no-tags https://github.com/baba-dev/BabaBuilds-ERP.git refs/heads/main
             live_sha="$(sudo -n git -C "$app" rev-parse FETCH_HEAD)"
             [[ "$DEPLOY_SHA" == "$live_sha" ]] || { echo 'Newer main commit exists; skip'; exit 1; }
+            # Remove transferred artifact after execution; no customer files touched.
+            incoming="/tmp/erp-node26-$DEPLOY_SHA"
+            trap 'rm -rf -- "$incoming"' EXIT
+            # Monitor must already be enabled, or activation is refused.
+            sudo -n systemctl is-active --quiet erp-release-watchdog.timer
             # The root-owned operator is installed separately from reviewed source,
             # with protected environment and recovery attestations on the host.
             sudo -n /usr/local/sbin/bababuilds-erp-promote preflight
@@ -160,7 +165,6 @@ jobs:
               --manifest "/tmp/erp-node26-$DEPLOY_SHA/manifest.json" \
               --sha "$DEPLOY_SHA"
             sudo -n /usr/local/sbin/bababuilds-erp-promote monitor
-            sudo -n systemctl enable --now erp-release-watchdog.timer
 
       - name: Purge only ERP service-worker URL (when configured)
         shell: bash
