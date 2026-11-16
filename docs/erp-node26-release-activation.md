@@ -12,7 +12,7 @@ This is intentionally an **opt-in automated release system**. Merging the code b
 4. The root operator validates runtime, PM2 process `erp`, PostgreSQL-only production and staging environment files, **fresh recovery proof**, media inventory and artifact hash/path safety.
 5. A sandboxed `erp-node26-candidate@<sha>.service` runs as `erpstaging`, restricted to localhost with its own disposable PG17 database on port 3101. **It does not mount production media.** Production media symlinks are attached only after the canary passes and stops.
 6. The operator snapshots the exact existing PM2 command and environment (mode 0600), switches only `erp` to Node 26 and the immutable release on port 3000, checks HTTP session/login and the **actual process executable**, then saves root PM2 state.
-7. Failures during promotion automatically restore the saved **old artifact + interpreter**, without rewinding PostgreSQL. The 1-minute systemd watchdog monitors health, PID, memory and restart count. Three failures within 45 minutes cause automatic rollback and freeze future auto-deploy; later failures freeze and alert through failed systemd/journal status for operator action.
+7. Failures during promotion automatically restore the saved **old artifact + interpreter**, without rewinding PostgreSQL. The 1-minute systemd watchdog monitors login, authentication-session and service-worker HTTP health, PID, memory and restart count. Three failures within 45 minutes cause automatic rollback and freeze future auto-deploy; later failures freeze and alert through failed systemd/journal status for operator action.
 8. Each deployment is serialized; stale CI SHA, missing operator, incomplete backup attestation, missing stage database, missing media mapping, or unavailable SSH access or missing protected operator **blocks deployment**.
 
 ### Prerequisites to enable the opt-in
@@ -59,7 +59,7 @@ No production data, credentials or interpreter changes occur while installing th
 
 ### Protected configuration
 
-Review `ops/erp-release/release-manager.example.json`. Place the modified configuration at `/etc/bababuilds-erp/release-manager.json` (root:root 0600). Its nine **required media mappings** must point to the verified real persistent directories outside any release tree. Do not create empty placeholders over missing production media. Confirm generated `public/partner-kit` assets are present in its persistent mapping.
+Review `ops/erp-release/release-manager.example.json`. Place the modified configuration at `/etc/bababuilds-erp/release-manager.json` (root:root 0600). Its ten **required media mappings** must point to the verified real persistent directories outside any release tree. Do not create empty placeholders over missing production media. Confirm generated `public/partner-kit` assets are present in its persistent mapping.
 
 Create `/etc/bababuilds-erp/production-app.env` (root:root 0600) containing the exact working production environment including **PostgreSQL `bababuilds_erp`**, NextAuth configuration, SMTP/provider and webhook credentials, and runtime settings; inspect current PM2 settings without printing secrets. Node 26 starts only from this root-owned file. Reconcile it with the original cutover Node 22 `--env-file` configuration.
 
@@ -77,7 +77,7 @@ sudo systemctl enable --now erp-release-watchdog.timer
 sudo systemctl list-timers erp-release-watchdog.timer
 ```
 
-Run an isolated canary rehearsal and a **full artifact + interpreter rollback** using an approved ARM64 release artifact before first activation. Inspect `/proc/<erp-pid>/exe`, PM2 path/args, persistent media paths, auth/session, payment webhooks, scheduled jobs and Nginx public behavior. Keep the original Node 22 cutover directory and binary.
+Run an isolated canary rehearsal and a **full artifact + interpreter rollback** using an approved ARM64 release artifact before first activation. Before calling the promoter, compare the SHA256 manifest and the packaged PostgreSQL migration history with the current PostgreSQL 17 `_prisma_migrations` checksums; the promoter rejects mismatches without applying database migrations. Inspect `/proc/<erp-pid>/exe`, PM2 path/args, persistent media paths, auth/session, payment webhooks, scheduled jobs and Nginx public behavior. Keep the original Node 22 cutover directory and binary.
 
 Finally, after these prerequisites and independent human approval, set **both** GitHub repository variables to the exact strings:
 
@@ -99,7 +99,7 @@ For diagnosis, inspect `/var/lib/bababuilds-erp/release-manager/{status,rollback
 
 ### Release-specific cautions
 
-- A green CI run alone does not prove that scheduled backups, finance/webhook checks and media mounts work on the VPS.
+- A green CI run alone does not prove that scheduled backups, finance/webhook checks and media mounts work on the VPS. This workflow also checks that the stored release migration checksums exactly equal the applied production PostgreSQL migration ledger; it never performs a production migration.
 - The rollout involves a brief PM2 process replacement, not zero-downtime traffic switching; use an approved low-traffic window for the **first** migration and rehearse rollback.
 - Never trigger `prisma migrate deploy` on the production database from this pipeline. No Node runtime schema changes are included.
 - Do not run `deploy.sh`, reinstall global Node, or touch MenuMinute/ClubKeep process configuration.
