@@ -49,6 +49,21 @@ jobs:
           script: |
             set -euo pipefail
             [[ "$DEPLOY_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+            # Bootstrap the reviewed release operator from the SAME green main SHA.
+            # This avoids a manual prerequisite after the prior workflow was disabled.
+            app=/opt/bababuilds-erp-cutover/cut1611b/app
+            state=/var/lib/bababuilds-erp/deployment
+            sudo -n install -d -o root -g root -m 0700 /opt/bababuilds-erp/releases "$state"
+            sudo -n git -C "$app" fetch --no-tags \
+              https://github.com/baba-dev/BabaBuilds-ERP.git refs/heads/main
+            sudo -n git -C "$app" merge-base --is-ancestor "$DEPLOY_SHA" FETCH_HEAD
+            sudo -n git -C "$app" show "$DEPLOY_SHA:scripts/operations/deploy-erp-standalone.sh" \
+              | sudo -n tee "$state/operator.next" >/dev/null
+            sudo -n bash -n "$state/operator.next"
+            sudo -n install -o root -g root -m 0700 \
+              "$state/operator.next" /usr/local/sbin/bababuilds-erp-release
+            sudo -n rm -f "$state/operator.next"
+            sudo -n /usr/local/sbin/bababuilds-erp-release --check
             sudo -n /usr/local/sbin/bababuilds-erp-release --deploy "$DEPLOY_SHA"
 
       - name: Purge only the service worker from Cloudflare (when configured)
