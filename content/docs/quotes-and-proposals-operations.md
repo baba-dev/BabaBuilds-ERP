@@ -12,11 +12,10 @@ dateModified: "2026-06-08"
 
 This module allows you to draft, send, track, and convert professional quotes and proposals into actionable invoices with a single click, eliminating double data entry.
 
-<HelpImage src="/help/screenshots/help-proposals-01-overview.png" alt="Proposals overview page" caption="Proposals list and lifecycle visibility." />
+<HelpImage src="/product-images/light/proposals.png" alt="Current Proposals workspace" caption="Track each proposal from draft through acceptance and invoice conversion." />
 
 ## Drafting a Proposal
 
-<HelpImage src="/help/screenshots/help-proposals-02-primary-action.png" alt="Proposals primary action area" caption="Primary actions for drafting and conversion workflows." />
 
 <Steps>
   <Step title="Create a New Quote">
@@ -35,7 +34,6 @@ This module allows you to draft, send, track, and convert professional quotes an
 
 ## Converting to Revenue
 
-<HelpImage src="/help/screenshots/help-proposals-03-detail.png" alt="Proposals detail view" caption="Detailed proposal context for deal management." />
 
 - **One-Click Conversion:** Once a client approves a quote, click "Convert to Invoice". The system will automatically generate a draft invoice matching the exact scope and pricing of the quote.
 - **Pipeline Tracking:** Quotes in the "Sent" status automatically update your Revenue Pipeline module.

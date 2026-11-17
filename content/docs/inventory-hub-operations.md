@@ -12,11 +12,10 @@ dateModified: "2026-06-08"
 
 The Inventory Hub centralizes your stock posture, providing real-time visibility into stock movement, procurement needs, and fulfillment status to prevent stockouts and over-ordering.
 
-<HelpImage src="/help/screenshots/help-inventory-01-overview.png" alt="Inventory overview page" caption="Inventory overview across available stock and movement." />
+<HelpImage src="/product-images/light/inventory.png" alt="Current Inventory Hub workspace" caption="Review stock position, movements, and purchasing from one inventory workspace." />
 
 ## Tracking Stock Movement
 
-<HelpImage src="/help/screenshots/help-inventory-02-primary-action.png" alt="Inventory primary actions" caption="Primary inventory update and management actions." />
 
 <Steps>
   <Step title="Access Inventory Hub">
@@ -32,7 +31,6 @@ The Inventory Hub centralizes your stock posture, providing real-time visibility
 
 ## Procurement Context
 
-<HelpImage src="/help/screenshots/help-inventory-03-detail.png" alt="Inventory detailed section" caption="Detailed inventory records and operational context." />
 
 - **Low Stock Alerts:** Items that drop below their defined minimum threshold will appear in the dashboard action queue.
 - **Purchase Orders:** Link inventory items directly to Purchase Orders to track incoming shipments and update stock automatically upon receipt.

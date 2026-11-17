@@ -1,79 +1,46 @@
-# Help Center Screenshot Plan
+# Product and Help screenshot workflow
 
-This checklist helps the team capture production-grade screenshots for the Help Center quickly and consistently.
+The product image library is generated from the live demo experience, not assembled by hand. This keeps the README, Help Center, brochure, and future operations manual tied to the same current route map.
 
-## Capture standards
+## Capture standard
 
-- Use 16:9 viewport where possible
-- Keep sidebar visible for navigation context
-- Avoid sensitive customer data (use demo/safe records)
-- Capture in light mode unless article explicitly needs dark mode
-- File naming format: `help-<article-slug>-<step>.png`
+- Use the seeded **Software Company** demo only.
+- Capture every route in both light and dark mode at 1440×900.
+- Keep the desktop sidebar visible where it provides navigation context.
+- Wait for the page shell and requested theme, dismiss onboarding overlays, and reject blank images.
+- Store full-resolution masters in `docs/product-images/screenshots/<theme>/`.
+- Use stable, descriptive filename stems such as `proposals_pipeline.png` and `settings_security.png`.
+- Never capture a customer workspace, real email address, access token, uploaded document, or production balance.
 
-## Core guides screenshot checklist
+## Route coverage
 
-### Getting Started (`getting-started`)
-- `help-getting-started-01-login.png` (workspace entry/sign-in context)
-- `help-getting-started-02-settings-basics.png` (settings basics complete)
-- `help-getting-started-03-first-invoice.png` (first invoice form)
+`docs/sales-brochure/brochure-routes.ts` is the reviewed route manifest. It covers:
 
-### Invoicing (`generating-invoices`)
-- `help-invoicing-01-new-invoice-form.png`
-- `help-invoicing-02-review-totals.png`
-- `help-invoicing-03-generated-pdf-preview.png`
+1. Public marketing, sign-in, Help, reseller, privacy, and terms pages.
+2. Core workspace navigation and all enabled demo modules.
+3. Important secondary pages such as purchase orders, reconciliation import, workforce reports, and security settings.
+4. Seed-dependent proposal, payroll, and storefront detail pages resolved through the demo APIs.
 
-### Payments (`payment-gateways`)
-- `help-payments-01-gateway-settings.png`
-- `help-payments-02-keys-saved-state.png`
-- `help-payments-03-invoice-payment-link.png`
+When a page moves, update the route manifest first. Do not keep an obsolete path alive only for a screenshot.
 
-### Settings (`settings-guide`)
-- `help-settings-01-business-profile.png`
-- `help-settings-02-tax-and-bank.png`
-- `help-settings-03-workspace-modules.png`
+## Refresh and verify
 
-### Clients (`managing-clients`)
-- `help-clients-01-client-list.png`
-- `help-clients-02-add-client-form.png`
-- `help-clients-03-export-toggle-example.png`
+```bash
+npm run product-images:capture
+```
 
-### Retainers (`retainers-and-mrr`)
-- `help-retainers-01-retainers-list.png`
-- `help-retainers-02-new-retainer-form.png`
-- `help-retainers-03-mrr-widget.png`
+After capture:
 
-### Expenses & Tax (`expenses-and-tax`)
-- `help-tax-01-add-expense.png`
-- `help-tax-02-expense-category-view.png`
-- `help-tax-03-tax-estimate-widget.png`
+1. Confirm `docs/product-images/manifest.json` contains a light and dark path for every entry.
+2. Open a representative sample from every section and inspect text legibility, loading state, overlays, and synthetic data.
+3. Run the documentation reference check and the normal fast CI gate.
+4. Rebuild the sales brochure only after the canonical image library is approved.
 
-### BabaBot (`ai-bababot`)
-- `help-bababot-01-chat-open.png`
-- `help-bababot-02-finance-query-example.png`
-- `help-bababot-03-action-suggestion.png`
+## Writing guidance for Help articles
 
-## Optional Sub Systems screenshot checklist
-
-For each module article, capture exactly 3 images:
-
-1. Settings module card (toggle area)
-2. Module landing page after enable
-3. One high-value action screen
-
-Modules:
-- Workforce
-- Payroll
-- Revenue Pipeline
-- Document Vault
-- Cash Flow
-- AR Aging + Collections Centre
-- Reporting Center
-- Import Manager
-
-## Quick QA before upload
-
-- Text in screenshot is readable at article width
-- No clipped modals or half-loaded UI
-- No personal/sensitive data visible
-- Filename matches article and step
-
+- Start with the outcome the reader is trying to achieve.
+- Use the exact current navigation label and route.
+- Keep steps short, numbered, and observable: say what to select and what success looks like.
+- Explain irreversible or financially meaningful actions before the step that performs them.
+- Add troubleshooting beside the step where a reader is likely to get stuck.
+- Use one current overview image when it adds orientation. Add action-state images only when they show information that words cannot convey clearly.

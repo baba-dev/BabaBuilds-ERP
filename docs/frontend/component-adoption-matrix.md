@@ -29,7 +29,7 @@ This matrix tracks frontend component rollout readiness, delivery controls, and 
 | `/login` | Forms | Product UI Team | In progress | Auth error/lockout message states | Phase 1 |
 | `/dashboard` | Sidebar, charts, data-table | Frontend Platform + Reporting Team | In progress | Sidebar shell completion, KPI card token parity | Phase 2 |
 | `/clients` | Sidebar, data-table, forms, maps | Client Ops Team | Planned | Client table API alignment, map geocoding config | Phase 2 |
-| `/invoice` | Sidebar, forms, data-table | Billing Team | In progress | Validation matrix, line-item table interaction specs | Phase 2 |
+| `/income/new` | Sidebar, forms, data-table | Billing Team | In progress | Validation matrix, line-item table interaction specs | Phase 2 |
 | `/expenses` | Sidebar, forms, data-table | Finance Ops Team | Planned | Receipt upload/error handling states | Phase 2 |
 | `/ledger` | Sidebar, data-table, charts | Finance Ops Team | Planned | Reconciliation chart model + row-level status tags | Phase 3 |
 | `/reconciliation` | Sidebar, data-table, forms | Finance Ops Team | Planned | Matching-rule UX + unresolved-state flows | Phase 3 |

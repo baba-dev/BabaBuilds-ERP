@@ -12,11 +12,10 @@ dateModified: "2026-06-04"
 
 The AR (Accounts Receivable) Collections module improves cash recovery by surfacing aging buckets, building priority queues, and facilitating automated follow-up actions for overdue invoices.
 
-<HelpImage src="/help/screenshots/help-optional-ar-collections-01-overview.png" alt="AR Collections overview page" caption="Aging and collections overview." />
+<HelpImage src="/product-images/light/ar_collections.png" alt="Current AR Collections workspace" caption="Prioritize receivables follow-up by age, value, and the next action your team can take." />
 
 ## Setting Up Collection Workflows
 
-<HelpImage src="/help/screenshots/help-optional-ar-collections-02-primary-action.png" alt="AR Collections action screen" caption="Priority queue and reminder actions." />
 
 <Steps>
   <Step title="Enable the Module">
@@ -32,7 +31,6 @@ The AR (Accounts Receivable) Collections module improves cash recovery by surfac
 
 ## Executing Follow-ups
 
-<HelpImage src="/help/screenshots/help-optional-ar-collections-03-detail.png" alt="AR Collections detail view" caption="Detailed receivable follow-up context." />
 
 - **Priority Queue:** The system automatically flags high-value invoices that are severely overdue, creating a daily "call list" for your finance team.
 - **Promise to Pay:** Log notes when a client promises to pay on a specific date, pausing automated reminders until that date passes.

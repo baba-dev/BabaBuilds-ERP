@@ -12,11 +12,10 @@ dateModified: "2026-06-08"
 
 Closing the books shouldn't take days. AI Reconciliation intelligently matches imported bank feed activity against your open invoices and logged expenses to finalize accounting entries quickly and accurately.
 
-<HelpImage src="/help/screenshots/help-reconciliation-01-overview.png" alt="AI Reconciliation overview page" caption="Reconciliation queue and status overview." />
+<HelpImage src="/product-images/light/reconciliation.png" alt="Current AI Reconciliation workspace" caption="Import, review, and match bank activity before writing confirmed accounting outcomes." />
 
 ## The Reconciliation Workflow
 
-<HelpImage src="/help/screenshots/help-reconciliation-02-primary-action.png" alt="AI Reconciliation primary action" caption="Primary match/review actions for transaction finalization." />
 
 <Steps>
   <Step title="Import Bank Statement">
@@ -35,7 +34,6 @@ Closing the books shouldn't take days. AI Reconciliation intelligently matches i
 
 ## Finalizing Entries
 
-<HelpImage src="/help/screenshots/help-reconciliation-03-detail.png" alt="AI Reconciliation detail" caption="Detailed review context before ledger write." />
 
 Once a bank transaction is matched to an invoice, that invoice is permanently marked as "Paid," updating your cash flow and dashboard metrics instantly.
 

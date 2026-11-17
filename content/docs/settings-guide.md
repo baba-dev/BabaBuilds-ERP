@@ -13,13 +13,12 @@ dateModified: "2026-06-04"
 
 Settings is your ERP control panel. The values you configure here dictate how your business presents itself to the world (via invoices and emails), how taxes are calculated, and which advanced features are available to your team.
 
-<HelpImage src="/help/screenshots/help-settings-01-overview.png" alt="Settings overview page" caption="Use Settings as your command center for identity, finance, and module controls." />
+<HelpImage src="/product-images/light/settings.png" alt="Current Settings workspace" caption="Use Settings for business identity, finance configuration, access, integrations, and workspace modules." />
 
 ## Step 1: Business Identity & Branding
 
 Your business profile information appears on all generated PDFs and client-facing communications.
 
-<HelpImage src="/help/screenshots/help-settings-02-primary-action.png" alt="Settings primary action section" caption="Primary settings controls for business profile and integrations." />
 
 <Steps>
   <Step title="Navigate to Settings">
@@ -37,7 +36,6 @@ Your business profile information appears on all generated PDFs and client-facin
 
 Ensuring your tax and banking details are correct is critical before sending your first invoice.
 
-<HelpImage src="/help/screenshots/help-settings-03-detail.png" alt="Settings detailed section" caption="Detailed form context for workspace configuration." />
 
 - **Tax IDs:** Enter your local tax registration numbers (e.g., GSTIN, VAT, EIN). These are legally required on invoices in many jurisdictions.
 - **Bank Remittance Details:** Clearly state your bank name, account number, routing/IFSC codes, and account holder name so clients know where to send wire transfers.
@@ -47,7 +45,6 @@ Ensuring your tax and banking details are correct is critical before sending you
 
 BabaBuilds ERP is modular. You can turn on advanced features only when your business needs them, keeping the interface uncluttered.
 
-<HelpImage src="/help/screenshots/help-settings-modules-enabled.png" alt="Workspace modules in settings" caption="Enable optional modules from this section, then verify routes in sidebar." />
 
 From the **Workspace Modules** section, toggle on modules such as:
 - Workforce & Payroll

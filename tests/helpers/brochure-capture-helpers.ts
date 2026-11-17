@@ -37,7 +37,7 @@ export async function loginViaDemoSoftwareCompany(page: Page) {
 
   await page.waitForURL(
     (url) => url.pathname.startsWith("/dashboard") || url.pathname.startsWith("/setup"),
-    { timeout: 90_000 },
+    { timeout: 120_000, waitUntil: "domcontentloaded" },
   );
 }
 

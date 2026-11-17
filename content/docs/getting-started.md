@@ -1,129 +1,97 @@
 ---
 title: "Getting Started with BabaBuilds ERP"
-description: "Onboarding walkthrough from plan-aware signup to first invoice, with persona-specific setup guidance."
+description: "Set up a workspace, add the records you reuse, and send your first invoice without unnecessary configuration."
 order: 1
 category: "Getting Started"
-tags: ["onboarding", "setup", "workspace", "first invoice", "signup"]
+tags: ["onboarding", "setup", "workspace", "first invoice", "demo"]
 estimatedMinutes: 8
 isFeatured: true
 icon: "Rocket"
-dateModified: "2026-04-29"
+dateModified: "2026-11-17"
 ---
 
 # Getting Started with BabaBuilds ERP
 
-Welcome to BabaBuilds ERP. This guide helps you go from a new workspace to your first professional invoice in a few focused steps.
+You do not need to configure the whole ERP before doing useful work. Start with the details that appear on customer documents, add the client and services you use most often, then create a real invoice draft. You can enable specialist modules when your process is ready for them.
 
-## What you can run from one workspace
+## Explore safely first
 
-- Invoicing and collections
-- Client and retainer management
-- Expense and tax visibility
-- Payment links (Stripe / Razorpay)
-- Optional advanced subsystems (cash flow, payroll, documents, reporting)
+If you are still evaluating BabaBuilds, open **Sign in → Explore a live demo workspace** and choose the business profile closest to your work. The demo creates an expiring workspace filled with synthetic records. Try actions freely; nothing in it belongs to a real customer.
 
----
+<HelpImage src="/product-images/light/dashboard.png" alt="BabaBuilds ERP demo dashboard with the main navigation visible" caption="The demo uses the same navigation and workflows as a real workspace, with safe sample data." />
 
-## Step 1 — Start from plan-aware signup
+When you are ready to use your own business data, return to sign in and create or join the correct permanent workspace. Demo data is intentionally isolated and is not promoted into a live business automatically.
 
-<Steps>
-  <Step title="Choose plan + trial intent">
-    Start from a plan-aware URL such as **/signup?plan=pro&cycle=monthly&trial=15**. This preserves your selected billing intent during authentication.
-  </Step>
-  <Step title="Complete secure sign-in">
-    Continue through **/login** and confirm your workspace context before entering records.
-  </Step>
-</Steps>
+## 1. Confirm the workspace
 
-<HelpImage src="/help/diagrams/erp_entrypoint.svg" alt="User entering ERP workspace to begin onboarding" caption="Start in the correct workspace to avoid data being saved under the wrong business." />
+Before entering data, check the company name in the workspace switcher. If you work across several companies, this prevents a client, invoice, or expense from being saved under the wrong entity.
 
----
+Then open **Settings** and add the minimum details needed for a professional document:
 
-## Step 2 — Pick onboarding persona and complete Settings
+- Legal or trading name
+- Business address and contact details
+- Tax registration details that apply to you
+- Primary bank or remittance details
+- Logo and document preferences
 
-On first dashboard load, choose your persona (CA, Agency, Freelancer, or Contractor) to get a guided money-task path. Then open **Settings** and complete:
+Save each section before moving on. Payment gateways, outbound email, storefront settings, and advanced tax options can wait until you need them.
 
-- Company identity and logo
-- Tax and compliance IDs
-- Bank remittance details
-- SMTP (if sending invoice emails)
-- Payment gateway (optional)
+## 2. Add reusable records
 
-See full guide: [Configuring Your Business Profile & Workspace Settings](/help/settings-guide)
+Create one real client in **Client CRM**, then add the services or products you regularly sell in **Service Catalog**. Good master data makes every later proposal and invoice faster and more consistent.
 
----
+For a client, include:
 
-## Step 3 — Add core master data
+1. The billing name and a working contact method.
+2. The correct billing and tax address.
+3. Tax identifiers only when they are required for your documents.
+4. Any internal note that helps your team serve the account.
 
-Before invoicing, add these records:
+For a service, use a plain-language name, a clear unit or billing basis, and the rate your team is allowed to quote.
 
-1. **Client CRM** entries
-2. **Service Catalog** items
-3. Retainer details (if recurring billing)
+## 3. Create the first invoice
 
-This prevents repetitive manual entry during invoice creation.
+1. Open **Invoices & Earnings**.
+2. Select **New Invoice**.
+3. Choose the client and confirm the billing details pulled into the draft.
+4. Add service or product lines, quantities, rates, discounts, and taxes.
+5. Review the total and payment instructions before generating the PDF.
+6. Save the draft. Send it only after the PDF looks correct.
 
----
+Use [Generating, Sending, and Collecting Invoices](/help/generating-invoices) for the complete invoice workflow.
 
-## Step 4 — Generate your first invoice
+## 4. Record the first payment correctly
 
-1. Open **Invoices & Earnings** / **New Invoice**
-2. Select client and billing period
-3. Add service line items
-4. Generate PDF
-5. Send via email (if SMTP configured)
+When money arrives, record it against the invoice rather than creating a separate income entry. This updates the outstanding balance and keeps receivables, reporting, and reconciliation aligned.
 
-See: [Generating, Sending, and Collecting Invoices](/help/generating-invoices)
+If you accept online payments, configure the gateway in Settings and test with a low-risk internal invoice before sharing payment links with customers.
 
----
+## 5. Add modules when the workflow needs them
 
-## Step 5 — Enable optional subsystems as needed
+Open **Settings → Workspace Modules** and enable only the capabilities your team will actively own. A sensible rollout is:
 
-From **Settings → Workspace Modules**, enable only what your team will actively use.
+1. **Documents** for shared evidence and compliance files.
+2. **Cash Flow** and **Reporting** when your base invoice and expense data is reliable.
+3. **Workforce** before **Payroll**, so people, attendance, leave, and payroll setup agree.
+4. **Import Manager** when you have a reviewed source file and know who will resolve validation errors.
 
-Common rollout order:
+See [Optional Sub Systems — Overview](/help/optional-sub-systems-overview) before enabling a module for a larger team.
 
-1. Document Vault
-2. Cash Flow
-3. Reporting Center
-4. Payroll + Workforce
+## A practical first-week checklist
 
-See: [Optional Sub Systems — Overview](/help/optional-sub-systems-overview)
+- [ ] Confirmed the correct company and workspace
+- [ ] Completed the business profile and remittance details
+- [ ] Added at least one client and three reusable services
+- [ ] Generated and reviewed a test invoice PDF
+- [ ] Recorded a test payment against its invoice
+- [ ] Invited teammates with the smallest roles they need
+- [ ] Enabled only the modules with a named owner
 
----
+## If something does not look right
 
-## Related guides for launch workflows
+- **You returned to sign in:** make sure the address you opened matches the configured `NEXTAUTH_URL`, then sign in again.
+- **A menu item is missing:** the module may be disabled, your plan may not include it, or your role may not have permission.
+- **The invoice total is unexpected:** review quantity, rate, discount, tax treatment, and currency before changing client or business settings.
+- **Email did not send:** the invoice may still be saved correctly. Check outbound email settings and retry from the saved record instead of rebuilding it.
 
-- [Personalized onboarding and money-task paths](/help/personalized-onboarding)
-- [Guided money flows in the dashboard](/help/guided-money-flows)
-- [Demo to real business migration path](/help/demo-to-real-business)
-
----
-
-## Recommended first-week checklist
-
-- [ ] Business profile completed
-- [ ] 3–5 clients added
-- [ ] 3–5 service templates added
-- [ ] Test invoice sent to your own email
-- [ ] Payment gateway tested (if enabled)
-- [ ] At least one advanced module enabled and verified
-
----
-
-## Need help?
-
-Email **admin@bababuilds.com** with screenshots of the step where you’re blocked.
-
----
-
-## FAQ
-
-### Do I need to complete every Settings field before first invoice?
-No. Start with company identity, tax basics, and bank details. You can refine other fields later.
-
-### Can I invite my team right after setup?
-Yes. Once basic settings are saved, you can onboard team members and assign operational responsibilities.
-
-### What should I do if my first invoice fails?
-Check client data, required fields, and SMTP/gateway setup. Then retry from a fresh draft.
+If you contact support, include the page name, what you selected, what you expected, and a screenshot with private customer details hidden.

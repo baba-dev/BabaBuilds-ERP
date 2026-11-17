@@ -7,6 +7,7 @@ tags: ["invoice", "pdf", "email", "smtp", "numbering"]
 estimatedMinutes: 10
 isFeatured: true
 icon: "ReceiptText"
+dateModified: "2026-11-17"
 ---
 
 # Generating, Sending, and Collecting Invoices
@@ -14,6 +15,8 @@ icon: "ReceiptText"
 This guide covers the complete invoice lifecycle: draft, validate, generate, send, and collect.
 
 <HelpImage src="/help/diagrams/invoice_workflow.svg" alt="Invoice lifecycle from draft to paid status" caption="Use this lifecycle as your standard invoicing process." />
+
+<HelpImage src="/product-images/light/invoice_new.png" alt="Current new invoice workspace" caption="Confirm the client, line items, taxes, totals, and remittance details before generating the customer PDF." />
 
 ## Before you start
 
@@ -150,7 +153,7 @@ Before sending, verify:
 
 ## Article details
 
-- **Last reviewed:** 2026-04-21
+- **Last reviewed:** 2026-11-17
 - **Owner:** Finance Operations Docs
 - **Audience:** Founders, Finance Ops, Billing Managers
 

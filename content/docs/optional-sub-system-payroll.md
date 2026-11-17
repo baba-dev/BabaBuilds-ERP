@@ -12,13 +12,12 @@ dateModified: "2026-06-04"
 
 Payroll supports end-to-end salary processing with a controlled run lifecycle and posting safeguards to ensure your team is paid accurately and on time.
 
-<HelpImage src="/help/screenshots/help-optional-payroll-01-overview.png" alt="Payroll landing page" caption="Payroll overview page after module enablement." />
+<HelpImage src="/product-images/light/payroll.png" alt="Current Payroll workspace" caption="Check setup and run readiness before creating or approving a payroll run." />
 
 ## Enabling and Configuring Payroll
 
 To begin using the Payroll module, you must first enable it in your Workspace Settings and configure your standard salary components.
 
-<HelpImage src="/help/screenshots/help-optional-payroll-02-primary-action.png" alt="Payroll primary action area" caption="Configure payroll cycle, components, and run readiness checks." />
 
 <Steps>
   <Step title="Enable the Module">
@@ -36,7 +35,6 @@ To begin using the Payroll module, you must first enable it in your Workspace Se
 
 Running payroll is a structured, multi-step process to prevent costly errors.
 
-<HelpImage src="/help/screenshots/help-optional-payroll-03-detail.png" alt="Payroll detailed section" caption="Detailed payroll controls and execution context." />
 
 <Steps>
   <Step title="Draft the Run">

@@ -12,11 +12,10 @@ dateModified: "2026-06-04"
 
 Document Vault provides centralized evidence management with OCR capabilities. It allows you to link contracts, receipts, and compliance documents directly to the relevant records (like clients or expenses) for a fully audit-proof workspace.
 
-<HelpImage src="/help/screenshots/help-optional-document-vault-01-overview.png" alt="Document Vault overview page" caption="Document Vault landing with intake queue and status." />
+<HelpImage src="/product-images/light/documents.png" alt="Current Document Center" caption="Upload, find, classify, and retain business evidence from the shared Document Center." />
 
 ## Uploading and Linking Documents
 
-<HelpImage src="/help/screenshots/help-optional-document-vault-02-primary-action.png" alt="Document Vault primary action area" caption="Upload and classify documents for finance/compliance use." />
 
 <Steps>
   <Step title="Enable the Module">
@@ -32,7 +31,6 @@ Document Vault provides centralized evidence management with OCR capabilities. I
 
 ## Utilizing OCR Extraction
 
-<HelpImage src="/help/screenshots/help-optional-document-vault-03-detail.png" alt="Document Vault detail screen" caption="Detailed review/linking context for document processing." />
 
 For standard document types like receipts, the Vault uses OCR (Optical Character Recognition) to automatically suggest the date, amount, and vendor, reducing manual data entry.
 

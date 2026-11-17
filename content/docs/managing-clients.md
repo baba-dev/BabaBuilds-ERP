@@ -13,13 +13,12 @@ dateModified: "2026-06-04"
 
 Your Client CRM is more than just an address book—it is the source of truth for billing identity, invoice behavior, tax treatment, and relationship history. Keeping this data clean ensures that every invoice generated is accurate and compliant.
 
-<HelpImage src="/help/screenshots/help-clients-01-overview.png" alt="Client CRM overview" caption="Client CRM list view with account context." />
+<HelpImage src="/product-images/light/clients.png" alt="Current Client CRM workspace" caption="Use Client CRM as the shared source for billing, contact, proposal, and relationship details." />
 
 ## Adding a New Client
 
 When onboarding a new client, taking the time to accurately fill out their profile prevents downstream errors in invoicing and tax reporting.
 
-<HelpImage src="/help/screenshots/help-clients-02-primary-action.png" alt="Client CRM add/edit actions" caption="Primary actions for adding or updating client records." />
 
 <Steps>
   <Step title="Navigate to Client CRM">
@@ -43,7 +42,6 @@ When onboarding a new client, taking the time to accurately fill out their profi
 
 For complex billing scenarios, you'll need to utilize the detailed profile fields.
 
-<HelpImage src="/help/screenshots/help-clients-03-detail.png" alt="Client CRM detailed view" caption="Detailed client profile fields for billing and compliance." />
 
 - **Billing Address vs. Shipping Address:** Ensure these are distinguished if your client requires physical product delivery versus digital services.
 - **Default Currency:** If dealing with international clients, set their default currency here to automatically apply it to future invoices.
