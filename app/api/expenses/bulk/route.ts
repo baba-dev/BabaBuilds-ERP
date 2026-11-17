@@ -15,7 +15,7 @@ const body = z.object({
 
 /** One action on up to 200 expenses. Deleting needs expenses.delete, approving or rejecting needs expenses.approve, the rest expenses.create. */
 export async function POST(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/expenses/bulk", scope: "expense-bulk", max: 60, windowMs: 10 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/expenses/bulk", scope: "expense-bulk", max: 60, windowMs: 10 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const parsed = body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return expenseError(400, "INVALID_BODY", "Choose expenses and an action.");

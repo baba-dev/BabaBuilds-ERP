@@ -14,7 +14,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const gate = await requirePayrollModuleAndAction('post');
     if ('response' in gate) return gate.response;
     const { workspaceId, userId, email } = gate.access;
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/payroll/payslips/send', scope: 'send', max: 10, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/payroll/payslips/send', scope: 'send', max: 10, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
     const d = body.parse((await readJson(req)) ?? {});
     const id = (await ctx.params).id;

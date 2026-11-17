@@ -17,7 +17,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const gate = await requirePayrollModuleAndAction(type === 'register' ? 'view' : 'post');
     if ('response' in gate) return gate.response;
     const { workspaceId, userId, email } = gate.access;
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/payroll/runs/export', scope: type, max: 30, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/payroll/runs/export', scope: type, max: 30, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
     const run = await getRunDetail(workspaceId, userId, (await ctx.params).id);
     if (!run) return NextResponse.json({ code: 'NOT_FOUND', error: 'Payroll run not found.' }, { status: 404 });

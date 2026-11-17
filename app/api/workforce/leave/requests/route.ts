@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     const gate = await requireWorkforce('workforce.leave.view');
     if ('response' in gate) return gate.response;
     const { workspaceId, userId, email } = gate.access;
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/workforce/leave/requests', scope: workspaceId, max: 40, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/workforce/leave/requests', scope: workspaceId, max: 40, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
     const d = leaveSubmitSchema.parse(await readJson(req));
     const canManage = await can(gate.access, 'workforce.leave.manage');

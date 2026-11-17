@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     const g = await requireWorkforce('workforce.attendance.view');
     if ('response' in g) return g.response;
     const { access } = g;
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/workforce/attendance', scope: `${access.workspaceId}:${access.userId}`, max: 120, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/workforce/attendance', scope: `${access.workspaceId}:${access.userId}`, max: 120, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
 
     const body = attendanceSchema.parse(await readJson(req));

@@ -23,7 +23,7 @@ const BATCH = 500;
  * and audited. Files are checked once for size, then streamed into the archive.
  */
 export async function GET(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/ca/export/pack", scope: "ca-export-pack", max: 4, windowMs: 15 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/ca/export/pack", scope: "ca-export-pack", max: 4, windowMs: 15 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const auth = await requireCaAccess("ca.export");
   if (!auth.ok) return auth.response;

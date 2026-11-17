@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const g = await requireWorkforce('workforce.people.manage');
     if ('response' in g) return g.response;
     const { workspaceId, userId, email } = g.access;
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/workforce/employees', scope: workspaceId, max: 60, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/workforce/employees', scope: workspaceId, max: 60, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
     const d = employeeCreateSchema.parse(await readJson(req));
     await validateEmployeeLinks(workspaceId, d);

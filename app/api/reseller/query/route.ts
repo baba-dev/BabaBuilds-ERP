@@ -31,7 +31,7 @@ function normalizeEmail(input: unknown) {
 export async function POST(req: Request) {
   try {
     const ip = getClientIp(req);
-    const limited = checkRateLimit(`reseller-query:${ip}`, 10, 60_000);
+    const limited = await checkRateLimit(`reseller-query:${ip}`, 10, 60_000);
     if (!limited.ok) {
       return NextResponse.json(
         { error: "Too many requests. Please try again shortly.", retryAfterMs: limited.retryAfterMs },

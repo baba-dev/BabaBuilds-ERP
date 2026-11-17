@@ -36,7 +36,7 @@ export async function POST(req: Request) {
     const gate = await requirePos('checkout');
     if ('response' in gate) return gate.response;
     const { workspaceId, userId } = gate.access;
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/pos/holds', scope: workspaceId, max: 60, windowMs: 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/pos/holds', scope: workspaceId, max: 60, windowMs: 60_000 });
     if (!limit.ok) return limit.response;
     const d = body.parse(await readJson(req));
     if ((await prisma.posHeldSale.count({ where: { workspaceId } })) >= MAX_HOLDS) {

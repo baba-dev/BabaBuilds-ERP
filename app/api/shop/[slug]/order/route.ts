@@ -34,7 +34,7 @@ const bodySchema = z.object({
 export async function POST(request: Request, context: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await context.params;
-    const limit = enforceRouteRateLimit({ request, route: '/api/shop/order', scope: slug.toLowerCase(), max: 20, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request, route: '/api/shop/order', scope: slug.toLowerCase(), max: 20, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
 
     const parsed = bodySchema.safeParse(await request.json().catch(() => null));

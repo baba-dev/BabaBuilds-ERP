@@ -18,7 +18,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ to
   const { token } = await params;
   if (!token?.trim()) return proposalError(400, "VALIDATION_ERROR", "Proposal token is required.");
   const ip = getClientIp(request);
-  const limited = checkRateLimit(`proposal-feedback:${token}:${ip}`, 10, 15 * 60_000);
+  const limited = await checkRateLimit(`proposal-feedback:${token}:${ip}`, 10, 15 * 60_000);
   if (!limited.ok) return proposalError(429, "RATE_LIMITED", "Too many requests. Please try again later.");
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));

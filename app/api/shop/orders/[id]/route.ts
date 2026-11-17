@@ -38,7 +38,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     const gate = await requireShop('shop.orders.manage');
     if ('response' in gate) return gate.response;
     const { workspaceId, userId, email } = gate.access;
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/shop/orders/action', scope: workspaceId, max: 120, windowMs: 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/shop/orders/action', scope: workspaceId, max: 120, windowMs: 60_000 });
     if (!limit.ok) return limit.response;
     const { id } = await ctx.params;
     const a = action.parse(await readJson(req));

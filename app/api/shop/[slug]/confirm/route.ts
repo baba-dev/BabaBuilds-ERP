@@ -17,7 +17,7 @@ const body = z.object({ orderId: z.string().trim().min(1).max(40), sessionId: z.
 export async function POST(request: Request, context: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await context.params;
-    const limit = enforceRouteRateLimit({ request, route: '/api/shop/confirm', scope: slug.toLowerCase(), max: 40, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request, route: '/api/shop/confirm', scope: slug.toLowerCase(), max: 40, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
     const parsed = body.safeParse(await request.json().catch(() => null));
     if (!parsed.success) return NextResponse.json({ error: 'Missing payment details.' }, { status: 400 });

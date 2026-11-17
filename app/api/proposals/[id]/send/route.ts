@@ -20,7 +20,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const { workspaceId, userId, email } = auth.access;
   const { id } = await params;
 
-  const limited = checkRateLimit(`proposal-send:${workspaceId}:${id}`, 5, 60 * 60 * 1000);
+  const limited = await checkRateLimit(`proposal-send:${workspaceId}:${id}`, 5, 60 * 60 * 1000);
   if (!limited.ok) return proposalError(429, "RATE_LIMITED", "This proposal was emailed several times already. Try again later.");
 
   const body = bodySchema.safeParse(await request.json().catch(() => ({})));

@@ -19,7 +19,7 @@ const schema = z.object({
 export async function POST(req: Request) {
   try {
     const { workspaceId, userId } = await resolveReportingContext('reporting_center.query.run');
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/reporting/run', scope: 'reporting-run', max: 90, windowMs: 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/reporting/run', scope: 'reporting-run', max: 90, windowMs: 60_000 });
     if (!limit.ok) return limit.response;
     const parsed = schema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) throw new Error('INVALID_INPUT');

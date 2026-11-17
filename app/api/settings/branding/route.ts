@@ -8,7 +8,7 @@ import { storeBrandingImage, type BrandingKind } from "@/lib/settings/branding";
 
 /** Upload (multipart: kind + file) or remove (multipart: kind + remove=true) the logo or signature. */
 export async function POST(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/settings/branding", scope: "settings-branding", max: 20, windowMs: 10 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/settings/branding", scope: "settings-branding", max: 20, windowMs: 10 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const auth = await requireSettingsManager();
   if (!auth.ok) return auth.response;

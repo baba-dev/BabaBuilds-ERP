@@ -7,7 +7,7 @@ import { enforceRouteRateLimit } from "@/lib/route-rate-limit";
  * The secret token in the URL identifies the workspace; wrong or switched-off tokens get the same 404.
  */
 export async function POST(request: Request, props: { params: Promise<{ token: string }> }) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/expenses/inbound", scope: "expense-inbox", max: 60, windowMs: 10 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/expenses/inbound", scope: "expense-inbox", max: 60, windowMs: 10 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const { token } = await props.params;
   const workspaceId = await workspaceForInboxToken(token);

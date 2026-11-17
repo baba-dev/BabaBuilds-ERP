@@ -7,7 +7,7 @@ import { enforceRouteRateLimit } from "@/lib/route-rate-limit";
 
 /** Moves everything from one client into another and removes the duplicate. Billing history is kept. */
 export async function POST(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/clients/merge", scope: "client-merge", max: 30, windowMs: 10 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/clients/merge", scope: "client-merge", max: 30, windowMs: 10 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const auth = await requireClientAccess("clients.manage");
   if (!auth.ok) return auth.response;

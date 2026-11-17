@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     // Same owner-only gate as cancelling a subscription.
     await requirePermission(userId, workspaceId, "billing.manage");
 
-    const rl = checkRateLimit(`play-verify:${workspaceId}:${getClientIp(req)}`, 20, 60_000);
+    const rl = await checkRateLimit(`play-verify:${workspaceId}:${getClientIp(req)}`, 20, 60_000);
     if (!rl.ok) {
       return NextResponse.json({ error: "Too many attempts. Try again shortly.", retryAfterMs: rl.retryAfterMs }, { status: 429 });
     }

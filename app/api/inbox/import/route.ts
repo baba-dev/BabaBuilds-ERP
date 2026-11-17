@@ -46,7 +46,7 @@ async function context() {
 export async function POST(request: Request) {
   const ctx = await context();
   if ('response' in ctx) return ctx.response;
-  const limit = enforceRouteRateLimit({ request, route: '/api/inbox/import', scope: `${ctx.workspaceId}:${ctx.userId}`, max: 60, windowMs: 10 * 60_000 });
+  const limit = await enforceRouteRateLimit({ request, route: '/api/inbox/import', scope: `${ctx.workspaceId}:${ctx.userId}`, max: 60, windowMs: 10 * 60_000 });
   if (!limit.ok) return limit.response;
 
   const parsed = importSchema.safeParse(await request.json().catch(() => null));

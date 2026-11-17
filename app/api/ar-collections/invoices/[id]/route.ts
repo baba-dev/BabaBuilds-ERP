@@ -39,7 +39,7 @@ export async function PATCH(request: NextRequest, props: Ctx) {
     switch (action) {
       case 'remind': {
         if (!(await checkPermissionSilent(userId, workspaceId, 'invoices.send'))) return arError(403, 'FORBIDDEN', 'You need permission to send reminders.');
-        const limit = enforceRouteRateLimit({ request, route: '/api/ar-collections/invoices', scope: 'remind', max: 40, windowMs: 10 * 60_000 });
+        const limit = await enforceRouteRateLimit({ request, route: '/api/ar-collections/invoices', scope: 'remind', max: 40, windowMs: 10 * 60_000 });
         if (!limit.ok) return limit.response;
         const inv = await prisma.invoice.findFirst({ where: { id, workspaceId }, select: { status: true, lastReminderSentAt: true } });
         if (!inv) return arError(404, 'NOT_FOUND', 'Invoice not found.');

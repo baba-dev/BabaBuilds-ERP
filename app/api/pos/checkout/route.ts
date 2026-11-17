@@ -243,7 +243,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const limit = enforceRouteRateLimit({ request, route: '/api/pos/checkout', scope: workspaceId, max: 120, windowMs: 60_000 });
+    const limit = await enforceRouteRateLimit({ request, route: '/api/pos/checkout', scope: workspaceId, max: 120, windowMs: 60_000 });
     if (!limit.ok) return limit.response;
 
     const rawBody = await request.json();

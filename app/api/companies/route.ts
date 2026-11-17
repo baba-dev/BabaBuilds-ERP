@@ -72,7 +72,7 @@ export async function POST(request: Request) {
     if (moduleResponse) return moduleResponse;
     if (!canManageCompanies(context.groupRole)) return errorJson("Forbidden", 403);
 
-    const limit = enforceRouteRateLimit({ request, route: "/api/companies", scope: context.companyGroupId, max: 10, windowMs: 60 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request, route: "/api/companies", scope: context.companyGroupId, max: 10, windowMs: 60 * 60_000 });
     if (!limit.ok) return limit.response;
 
     const parsed = companyCreateSchema.safeParse(await request.json().catch(() => null));

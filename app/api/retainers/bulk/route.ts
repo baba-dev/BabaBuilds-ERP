@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   const parsed = bulkActionSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return retainerError(400, "VALIDATION_ERROR", "Choose an action and between 1 and 50 retainers.");
   const { action, ids } = parsed.data;
-  if (action === "billNow" && !checkRateLimit(`retainer-bulk-bill:${workspaceId}`, 5, 60_000).ok) return retainerError(429, "RATE_LIMITED", "Please wait a moment before billing again.");
+  if (action === "billNow" && !(await checkRateLimit(`retainer-bulk-bill:${workspaceId}`, 5, 60_000)).ok) return retainerError(429, "RATE_LIMITED", "Please wait a moment before billing again.");
 
   const results: Array<{ id: string; ok: boolean; message?: string }> = [];
   // Sequential on purpose: billing allocates invoice numbers per workspace.

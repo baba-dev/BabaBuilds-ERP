@@ -7,7 +7,7 @@ import { requireSettingsManager } from "@/lib/settings/access";
 
 /** Sends a test message through the saved SMTP settings to the signed-in user, so a wrong password shows up here and not on a client's invoice. */
 export async function POST(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/settings/email-test", scope: "settings-email-test", max: 5, windowMs: 10 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/settings/email-test", scope: "settings-email-test", max: 5, windowMs: 10 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const auth = await requireSettingsManager();
   if (!auth.ok) return auth.response;

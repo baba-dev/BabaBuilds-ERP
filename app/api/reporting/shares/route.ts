@@ -30,7 +30,7 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const { workspaceId, userId, email } = await resolveReportingContext('reporting_center.export');
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/reporting/shares', scope: 'share-create', max: 20, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/reporting/shares', scope: 'share-create', max: 20, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
     const parsed = schema.safeParse(await req.json().catch(() => null));
     const def = parsed.success ? getReport(parsed.data.reportId) : null;

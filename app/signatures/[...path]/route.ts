@@ -10,7 +10,7 @@ import { servePrivateFile } from '@/lib/uploads/private-storage';
 import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 
 export async function GET(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
-  const routeLimit = enforceRouteRateLimit({
+  const routeLimit = await enforceRouteRateLimit({
     request,
     route: '/signatures/[...path]',
     scope: 'asset-download',

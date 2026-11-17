@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     const gate = await requirePos('checkout');
     if ('response' in gate) return gate.response;
     const { workspaceId, userId, email } = gate.access;
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/pos/closeout', scope: workspaceId, max: 20, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/pos/closeout', scope: workspaceId, max: 20, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
     const d = body.parse(await readJson(req));
     const shift = await currentShift(workspaceId);

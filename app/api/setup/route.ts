@@ -76,7 +76,7 @@ export async function POST(req: Request) {
     if (e instanceof RbacDeniedError) return rbacDeniedResponse(e) as NextResponse;
     throw e;
   }
-  const limit = enforceRouteRateLimit({ request: req, route: "/api/setup", scope: `${workspaceId}:${userId}`, max: 30, windowMs: 10 * 60_000 });
+  const limit = await enforceRouteRateLimit({ request: req, route: "/api/setup", scope: `${workspaceId}:${userId}`, max: 30, windowMs: 10 * 60_000 });
   if (!limit.ok) return limit.response;
 
   try {

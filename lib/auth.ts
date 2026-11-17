@@ -477,7 +477,7 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        const limit = checkPasswordAuthRateLimit(rateLimitKey);
+        const limit = await checkPasswordAuthRateLimit(rateLimitKey);
         if (!limit.ok) {
           recordAuthFailure({ reason: "PASSWORD_LOGIN_RATE_LIMITED", code: "PASSWORD_LOGIN_RATE_LIMITED", provider: "password-login" });
           recordPasswordAuthAuditEvent({ email, outcome: "rate_limited", ip, retryAfterSeconds: limit.retryAfterSeconds });
@@ -501,7 +501,7 @@ export const authOptions: NextAuthOptions = {
         if (!user || user.isDemo || !user.passwordHash) {
           // Burn the same CPU as a real check so response time cannot be used to enumerate accounts.
           await verifyAgainstDummyHash(password);
-          recordPasswordAuthFailure(rateLimitKey);
+          await recordPasswordAuthFailure(rateLimitKey);
           recordAuthFailure({ reason: user?.isDemo ? "PASSWORD_LOGIN_DEMO_USER_BLOCKED" : "PASSWORD_LOGIN_INVALID_CREDENTIALS", code: "PASSWORD_LOGIN_FAILED", provider: "password-login" });
           recordPasswordAuthAuditEvent({ email, outcome: "failure", ip });
           return null;
@@ -518,7 +518,7 @@ export const authOptions: NextAuthOptions = {
         if (!passwordMatches) {
           // A single IP is throttled by the (email, ip) limiter above. The account itself only locks
           // after many failures overall, so one attacker cannot lock a real user out in 5 guesses.
-          recordPasswordAuthFailure(rateLimitKey);
+          await recordPasswordAuthFailure(rateLimitKey);
           const updated = await prisma.user.update({
             where: { id: user.id },
             data: { passwordFailedAttempts: { increment: 1 }, passwordLastFailureAt: new Date() },
@@ -549,7 +549,7 @@ export const authOptions: NextAuthOptions = {
             },
           });
         }
-        clearPasswordAuthRateLimit(rateLimitKey);
+        await clearPasswordAuthRateLimit(rateLimitKey);
         recordPasswordAuthAuditEvent({ email, userId: user.id, outcome: "success", ip });
 
         return { id: user.id, name: user.name, email: user.email, image: user.image, authMethod: "password", phishingResistant: false };

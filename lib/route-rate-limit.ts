@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getClientIp } from '@/lib/request-ip';
+import { redisRateLimit } from '@/lib/redis/rate-limit';
 
 type Bucket = { count: number; resetAt: number };
 
@@ -43,61 +44,77 @@ export function getRequestIp(request: Request): string {
   return getClientIp(request);
 }
 
-export function enforceRouteRateLimit(input: {
+export async function enforceRouteRateLimit(input: {
   request: Request;
   route: string;
   scope: string;
   max: number;
   windowMs: number;
-}): { ok: true } | { ok: false; response: NextResponse } {
+}): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
   const sourceIp = getRequestIp(input.request);
-  const key = `${input.route}:${input.scope}:${sourceIp}`;
-
+  const key = input.route + ':' + input.scope + ':' + sourceIp;
   const now = Date.now();
   const { buckets, events } = getStore();
-  let bucket = buckets.get(key);
+  let retryAfterSeconds = 0;
 
-  if (!bucket || now >= bucket.resetAt) {
-    bucket = { count: 0, resetAt: now + input.windowMs };
-    buckets.set(key, bucket);
+  // Redis is authoritative when explicitly enabled and healthy.
+  // When unavailable, preserve the original bounded per-process limiter rather
+  // than making every ERP business operation fail during a cache outage.
+  let distributed = null;
+  try {
+    distributed = await redisRateLimit('route', key, input.max, input.windowMs);
+  } catch {
+    // Never log IPs, workspace identifiers, or Redis credentials.
+    warnRedisFallback();
   }
 
-  if (bucket.count >= input.max) {
-    const retryAfterSeconds = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
-    events.push({
-      key,
-      route: input.route,
-      scope: input.scope,
-      sourceIp,
-      retryAfterSeconds,
-      at: new Date().toISOString(),
-    });
-
-    if (events.length > MAX_EVENTS) {
-      events.splice(0, events.length - MAX_EVENTS);
+  if (distributed) {
+    if (distributed.ok) return { ok: true };
+    retryAfterSeconds = Math.max(1, Math.ceil(distributed.retryAfterMs / 1000));
+  } else {
+    let bucket = buckets.get(key);
+    if (!bucket || now >= bucket.resetAt) {
+      bucket = { count: 0, resetAt: now + input.windowMs };
+      buckets.set(key, bucket);
     }
-
-    return {
-      ok: false,
-      response: NextResponse.json(
-        {
-          error: 'Too many requests for this endpoint.',
-          message: 'Please wait a bit before trying again.',
-          retryAfterSeconds,
-          hint: 'Reduce request frequency or retry after the suggested delay.',
-        },
-        {
-          status: 429,
-          headers: {
-            'Retry-After': String(retryAfterSeconds),
-          },
-        },
-      ),
-    };
+    if (bucket.count < input.max) {
+      bucket.count += 1;
+      return { ok: true };
+    }
+    retryAfterSeconds = Math.max(1, Math.ceil((bucket.resetAt - now) / 1000));
   }
 
-  bucket.count += 1;
-  return { ok: true };
+  events.push({
+    key,
+    route: input.route,
+    scope: input.scope,
+    sourceIp,
+    retryAfterSeconds,
+    at: new Date().toISOString(),
+  });
+  if (events.length > MAX_EVENTS) events.splice(0, events.length - MAX_EVENTS);
+
+  return {
+    ok: false,
+    response: NextResponse.json(
+      {
+        error: 'Too many requests for this endpoint.',
+        message: 'Please wait a bit before trying again.',
+        retryAfterSeconds,
+        hint: 'Reduce request frequency or retry after the suggested delay.',
+      },
+      { status: 429, headers: { 'Retry-After': String(retryAfterSeconds) } },
+    ),
+  };
+}
+
+let lastRedisWarningAt = 0;
+function warnRedisFallback() {
+  const now = Date.now();
+  if (now - lastRedisWarningAt >= 60_000) {
+    lastRedisWarningAt = now;
+    console.warn('[redis-rate-limit] unavailable; local route limiter retained');
+  }
 }
 
 export function getRouteRateLimitMetrics() {

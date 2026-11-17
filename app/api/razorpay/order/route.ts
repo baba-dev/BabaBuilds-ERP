@@ -25,7 +25,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing workspace context" }, { status: 400 });
     }
 
-    const rl = checkRateLimit(orderKey(req, workspaceId), 20, 60_000);
+    const rl = await checkRateLimit(orderKey(req, workspaceId), 20, 60_000);
     if (!rl.ok) {
       return NextResponse.json(
         { error: "Too many checkout attempts. Try again shortly.", retryAfterMs: rl.retryAfterMs },

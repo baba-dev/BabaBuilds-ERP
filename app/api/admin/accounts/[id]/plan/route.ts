@@ -19,7 +19,7 @@ const body = z.object({
 export async function POST(request: Request, ctx: { params: Promise<{ id: string }> }) {
   try {
     const admin = await verifySuperAdmin();
-    const limit = enforceRouteRateLimit({ request, route: "/api/admin/accounts/plan", scope: "admin-plan", max: 30, windowMs: 10 * 60 * 1000 });
+    const limit = await enforceRouteRateLimit({ request, route: "/api/admin/accounts/plan", scope: "admin-plan", max: 30, windowMs: 10 * 60 * 1000 });
     if (!limit.ok) return limit.response;
     const { id } = await ctx.params;
     const parsed = body.safeParse(await request.json().catch(() => null));
