@@ -25,7 +25,7 @@ const REQUIRED_DIRECT_ENDPOINTS = ['/mail/domains', '/mail/users?format=json'] a
 const OPTIONAL_DIRECT_ENDPOINT = '/mail/aliases?format=json';
 
 function isPrivateHostname(hostname: string) {
-  const h = hostname.toLowerCase().replace(/\\.$/, '');
+  const h = hostname.toLowerCase().replace(/\.$/, '');
   if (['localhost', '0.0.0.0', '::', '::1'].includes(h) || h.endsWith('.localhost') || h.endsWith('.local')) return true;
   return isPrivateOrReservedAddress(h);
 }
