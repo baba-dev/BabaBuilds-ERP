@@ -10,7 +10,7 @@ import {
 import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 
 export async function GET(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
-  const routeLimit = enforceRouteRateLimit({
+  const routeLimit = await enforceRouteRateLimit({
     request,
     route: '/receipts/[...path]',
     scope: 'asset-download',

@@ -7,7 +7,7 @@ import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
  * Public endpoint — checks if a shop slug is available.
  */
 export async function GET(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: '/api/shop/check-slug', scope: 'public', max: 60, windowMs: 60_000 });
+  const limit = await enforceRouteRateLimit({ request, route: '/api/shop/check-slug', scope: 'public', max: 60, windowMs: 60_000 });
   if (!limit.ok) return limit.response;
   const { searchParams } = new URL(request.url);
   const slug = searchParams.get('slug')?.toLowerCase().trim();

@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     }
     throw error;
   }
-  const limit = enforceRouteRateLimit({
+  const limit = await enforceRouteRateLimit({
     request, route: '/share-target', scope: `${workspaceId}:${userId}`,
     max: 60, windowMs: 10 * 60_000,
   });
