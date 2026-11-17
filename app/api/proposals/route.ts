@@ -12,9 +12,9 @@ import { createProposal, resolveCurrency } from "@/lib/proposals/save";
 import { startOfUtcDay, type ProposalDisplayStatus } from "@/lib/proposals/status";
 import type { ProposalListResponse } from "@/lib/proposals/types";
 
-function refreshDashboard(workspaceId: string, action: string) {
+async function refreshDashboard(workspaceId: string, action: string) {
   try {
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    await invalidateDashboardCacheForWorkspace(workspaceId);
   } catch (error) {
     noteDashboardCacheIncident("invalidationFailures", { workspaceId, entity: "proposal", action, error: String(error) });
   }
@@ -125,7 +125,7 @@ export async function POST(request: Request) {
       entity: { type: "proposal", id: created.id },
       request,
     });
-    refreshDashboard(workspaceId, "create");
+    await refreshDashboard(workspaceId, "create");
 
     return NextResponse.json({
       success: true,

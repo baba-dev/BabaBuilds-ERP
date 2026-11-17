@@ -715,7 +715,7 @@ export async function POST(request: Request) {
 
     // --- EMAIL DELIVERY LOGIC ---
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'create', error: String(error) });
     }

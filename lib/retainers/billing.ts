@@ -308,7 +308,7 @@ export async function billRetainer(args: { retainerId: string; workspaceId?: str
         }
         dispatchNotification({ event: "INVOICE_GENERATED", workspaceId, data: { invoiceNumber, clientName: retainer.client.name, amount: `${currency} ${total.toFixed(2)}`, pdfUrl: relativePdfPath } }).catch(() => null);
         logActivity({ action: "retainer_billed", status: "SUCCESS", workspaceId, actor: { userId: args.actorUserId ?? "system", email: "system" }, entity: { type: "retainer", id: retainer.id }, metadata: { invoiceId: invoice.id, trigger: args.trigger } });
-        try { invalidateDashboardCacheForWorkspace(workspaceId); } catch { /* best effort */ }
+        try { await invalidateDashboardCacheForWorkspace(workspaceId); } catch { /* best effort */ }
         return { ok: true, invoice, emailed, completed: finishedAfter };
       } catch (error) {
         await fs.promises.unlink(pdfPath).catch(() => undefined);

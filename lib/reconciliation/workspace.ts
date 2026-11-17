@@ -138,6 +138,6 @@ export async function unmatchBankTransaction(ctx: ReconCtx, bankTransactionId: s
   });
   if (expenseToRemove) { const r = await deleteExpenses({ workspaceId: ctx.workspaceId, userId: ctx.userId, email: ctx.email, countryCode: "IN" }, [expenseToRemove]); removedExpense = r.ok; }
   void logActivity({ action: "reconciliation_unmatched", status: "SUCCESS", workspaceId: ctx.workspaceId, actor: { userId: ctx.userId, email: ctx.email ?? undefined }, entity: { type: "bank_transaction", id: bt.id }, metadata: { reversedInvoices, removedExpense, reopenedBill } });
-  try { invalidateDashboardCacheForWorkspace(ctx.workspaceId); } catch { /* the cache is advisory */ }
+  try { await invalidateDashboardCacheForWorkspace(ctx.workspaceId); } catch { /* the cache is advisory */ }
   return { ok: true, reversedInvoices, removedExpense, reopenedBill };
 }

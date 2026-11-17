@@ -301,7 +301,7 @@ export async function recordInvoicePayment(
       console.error("[invoice-payment] PDF stamp failed", error);
     }
   }
-  invalidateInvoiceCaches(input.workspaceId, "payment");
+  await invalidateInvoiceCaches(input.workspaceId, "payment");
   if (result.becamePaid) {
     dispatchNotification({
       event: "INVOICE_PAID",
@@ -375,13 +375,13 @@ export async function reverseInvoicePayment(input: {
     return { ok: true, status } as const;
   });
 
-  if (outcome.ok) invalidateInvoiceCaches(input.workspaceId, "payment_reversal");
+  if (outcome.ok) await invalidateInvoiceCaches(input.workspaceId, "payment_reversal");
   return outcome;
 }
 
-export function invalidateInvoiceCaches(workspaceId: string, action: string) {
+export async function invalidateInvoiceCaches(workspaceId: string, action: string) {
   try {
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    await invalidateDashboardCacheForWorkspace(workspaceId);
   } catch (error) {
     noteDashboardCacheIncident("invalidationFailures", { workspaceId, entity: "invoice", action, error: String(error) });
   }

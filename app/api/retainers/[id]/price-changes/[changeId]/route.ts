@@ -11,6 +11,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const { id, changeId } = await params;
   const res = await prisma.retainerPriceChange.deleteMany({ where: { id: changeId, retainerId: id, appliedAt: null, retainer: { workspaceId } } });
   if (res.count === 0) return retainerError(404, "CHANGE_NOT_FOUND", "Pending price change not found.");
-  afterRetainerChange(workspaceId, "price-change");
+  await afterRetainerChange(workspaceId, "price-change");
   return NextResponse.json({ success: true });
 }

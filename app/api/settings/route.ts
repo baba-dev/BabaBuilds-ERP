@@ -513,7 +513,7 @@ export async function POST(request: Request) {
     }
 
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'businessProfile', action: 'update' });
     }
@@ -635,7 +635,7 @@ export async function PATCH(request: Request) {
     changed.push('locale');
   }
 
-  try { invalidateDashboardCacheForWorkspace(workspaceId); } catch { noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'businessProfile', action: 'update' }); }
+  try { await invalidateDashboardCacheForWorkspace(workspaceId); } catch { noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'businessProfile', action: 'update' }); }
   logActivity({ action: 'settings_update', status: 'SUCCESS', workspaceId, actor: { userId, email: session.user?.email ?? null }, entity: { type: 'workspace_settings', id: workspaceId }, metadata: { section, changedFieldNames: changed, changedFieldCount: changed.length }, request });
   return NextResponse.json({ success: true, section, changed });
 }

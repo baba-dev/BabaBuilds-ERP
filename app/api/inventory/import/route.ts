@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       }
     }, { timeout: 120_000 });
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_import', action: 'write', error: String(error) });
     }

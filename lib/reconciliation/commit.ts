@@ -158,7 +158,7 @@ export async function commitReconciliationTransactions({ workspaceId, approvedIn
     return { ok: false, status: 422, body: { error: 'None of these lines could be matched.', skipped } };
   }
   void logActivity({ action: 'reconciliation_committed', status: 'SUCCESS', workspaceId, actor: { userId: actorUserId }, metadata: { matched: bankTransactionsUpdated, expensesCreated, invoicesReconciled, skipped: skipped.length } });
-  try { invalidateDashboardCacheForWorkspace(workspaceId); } catch { /* the cache is advisory */ }
+  try { await invalidateDashboardCacheForWorkspace(workspaceId); } catch { /* the cache is advisory */ }
   return {
     ok: true, status: 200,
     body: {

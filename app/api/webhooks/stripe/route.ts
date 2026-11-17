@@ -17,7 +17,7 @@ function toSmallestUnit(amount: number, currency: string): number {
 
 async function invalidateWorkspaceDashboard(workspaceId: string, action: string) {
   try {
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    await invalidateDashboardCacheForWorkspace(workspaceId);
   } catch (err) {
     noteDashboardCacheIncident("invalidationFailures", {
       workspaceId,

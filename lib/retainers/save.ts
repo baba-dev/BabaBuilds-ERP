@@ -7,9 +7,9 @@ import { retainerMrr } from "@/lib/retainers/mrr";
 import type { RetainerPricing } from "@/lib/retainers/pricing";
 import type { RetainerInput } from "@/lib/retainers/validation";
 
-export function afterRetainerChange(workspaceId: string, action: string) {
+export async function afterRetainerChange(workspaceId: string, action: string) {
   try {
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    await invalidateDashboardCacheForWorkspace(workspaceId);
   } catch (error) {
     noteDashboardCacheIncident("invalidationFailures", { workspaceId, entity: "retainer", action, error: String(error) });
   }

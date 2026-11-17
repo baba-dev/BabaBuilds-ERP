@@ -11,9 +11,9 @@ import { proposalInputSchema } from "@/lib/proposals/validation";
 import { checkMilestones, computeProposalTotals } from "@/lib/proposals/totals";
 import { resolveCurrency, updateProposal } from "@/lib/proposals/save";
 
-function refreshDashboard(workspaceId: string, action: string) {
+async function refreshDashboard(workspaceId: string, action: string) {
   try {
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    await invalidateDashboardCacheForWorkspace(workspaceId);
   } catch (error) {
     noteDashboardCacheIncident("invalidationFailures", { workspaceId, entity: "proposal", action, error: String(error) });
   }
@@ -49,7 +49,7 @@ export async function PATCH(request: Request, { params }: Ctx) {
     });
     if (res.count === 0) return proposalError(404, "PROPOSAL_NOT_FOUND", "Proposal not found.");
     if (archive.data.archived) await addProposalEvent(prisma, { workspaceId, proposalId: id, type: "ARCHIVED", actorUserId: userId });
-    refreshDashboard(workspaceId, "archive");
+    await refreshDashboard(workspaceId, "archive");
     return NextResponse.json({ success: true });
   }
 
@@ -93,7 +93,7 @@ export async function PATCH(request: Request, { params }: Ctx) {
     if (!updated) return proposalError(409, "PROPOSAL_LOCKED", "This proposal was accepted while you were editing it.");
 
     logActivity({ action: "proposal_updated", status: "SUCCESS", workspaceId, actor: { userId, email }, entity: { type: "proposal", id }, request });
-    refreshDashboard(workspaceId, "update");
+    await refreshDashboard(workspaceId, "update");
     return NextResponse.json({
       success: true,
       proposal: { id: updated.id, status: updated.status, revision: updated.revision },
@@ -126,6 +126,6 @@ export async function DELETE(request: Request, { params }: Ctx) {
   if (res.count === 0) return proposalError(409, "PROPOSAL_NOT_DELETABLE", "This proposal changed while deleting. Refresh and try again.", { archivable: true });
 
   logActivity({ action: "proposal_deleted", status: "SUCCESS", workspaceId, actor: { userId, email }, entity: { type: "proposal", id }, request });
-  refreshDashboard(workspaceId, "delete");
+  await refreshDashboard(workspaceId, "delete");
   return NextResponse.json({ success: true });
 }

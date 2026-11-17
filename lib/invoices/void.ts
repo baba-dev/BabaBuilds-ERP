@@ -98,7 +98,7 @@ export async function voidInvoice(input: {
         });
         return { ok: true, creditNoteNumber } as const;
       });
-      if (outcome.ok) invalidateInvoiceCaches(input.workspaceId, "void");
+      if (outcome.ok) await invalidateInvoiceCaches(input.workspaceId, "void");
       return outcome;
     } catch (error) {
       // Credit-note number collision with a concurrent void: retry with a fresh number.

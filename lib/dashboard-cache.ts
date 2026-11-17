@@ -1,3 +1,5 @@
+import { invalidateWorkspaceDataCache } from '@/lib/redis/data-cache';
+
 type DashboardCacheKeyParts = {
   workspaceId: string;
   userId?: string | null;
@@ -89,13 +91,15 @@ export function setDashboardCacheEntry(cacheKey: string, payload: unknown): Dash
   return entry;
 }
 
-export function invalidateDashboardCacheForWorkspace(workspaceId: string): void {
+export async function invalidateDashboardCacheForWorkspace(workspaceId: string): Promise<void> {
   const workspacePrefix = `workspace:${workspaceId}|`;
   for (const key of dashboardCache.keys()) {
     if (key.startsWith(workspacePrefix)) {
       dashboardCache.delete(key);
     }
   }
+  // Distributed generation bump; all mutation callers must await this after commit.
+  await invalidateWorkspaceDataCache(workspaceId);
 }
 
 export function noteDashboardCacheIncident(

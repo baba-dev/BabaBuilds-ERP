@@ -149,9 +149,9 @@ export function publicProposalUrl(token: string) {
   return `${origin}/p/${token}`;
 }
 
-export function afterProposalChange(workspaceId: string, action: string) {
+export async function afterProposalChange(workspaceId: string, action: string) {
   try {
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    await invalidateDashboardCacheForWorkspace(workspaceId);
   } catch (error) {
     noteDashboardCacheIncident("invalidationFailures", { workspaceId, entity: "proposal", action, error: String(error) });
   }

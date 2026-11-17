@@ -127,7 +127,7 @@ export async function PATCH(request: Request, { params }: Ctx) {
     workspaceId: proposal.workspaceId,
     data: { proposalNo: proposal.proposalNo, clientName: full.client.name, amount: totals.totalAmount.toFixed(2) },
   }).catch(() => null);
-  afterProposalChange(proposal.workspaceId, "accepted");
+  await afterProposalChange(proposal.workspaceId, "accepted");
 
   return NextResponse.json({ success: true, status: "ACCEPTED", totalAmount: totals.totalAmount.toFixed(2) });
 }

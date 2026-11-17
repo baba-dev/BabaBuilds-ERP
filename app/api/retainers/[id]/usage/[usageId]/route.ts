@@ -13,6 +13,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const res = await prisma.meteredUsage.deleteMany({ where: { id: usageId, retainerId: id, status: "PENDING", retainer: { workspaceId } } });
   if (res.count === 0) return retainerError(404, "USAGE_NOT_FOUND", "Pending usage not found.");
   await addRetainerEvent(prisma, { workspaceId, retainerId: id, type: "USAGE_REMOVED", actorUserId: userId });
-  afterRetainerChange(workspaceId, "usage");
+  await afterRetainerChange(workspaceId, "usage");
   return NextResponse.json({ success: true });
 }

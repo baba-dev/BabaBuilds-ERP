@@ -44,7 +44,7 @@ export async function PATCH(request: Request, { params }: Ctx) {
     const updated = await updateRetainer({ workspaceId, retainerId: id, actorUserId: userId, input, pricing: priced.pricing, currency, exchangeRate });
     if (!updated) return retainerError(409, "RETAINER_LOCKED", "This retainer changed while you were editing it.");
     logActivity({ action: "retainer_updated", status: "SUCCESS", workspaceId, actor: { userId, email }, entity: { type: "retainer", id }, request });
-    afterRetainerChange(workspaceId, "update");
+    await afterRetainerChange(workspaceId, "update");
     return NextResponse.json({ success: true, retainer: { id: updated.id, status: updated.status } });
   } catch (error) {
     console.error("Retainer update error:", error);
@@ -66,6 +66,6 @@ export async function DELETE(request: Request, { params }: Ctx) {
   const res = await prisma.retainer.deleteMany({ where: { id, workspaceId, cyclesBilled: 0 } });
   if (res.count === 0) return retainerError(409, "RETAINER_NOT_DELETABLE", "This retainer changed while deleting. Refresh and try again.", { cancellable: true });
   logActivity({ action: "retainer_deleted", status: "SUCCESS", workspaceId, actor: { userId, email }, entity: { type: "retainer", id }, request });
-  afterRetainerChange(workspaceId, "delete");
+  await afterRetainerChange(workspaceId, "delete");
   return NextResponse.json({ success: true });
 }

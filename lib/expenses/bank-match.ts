@@ -39,7 +39,7 @@ export async function linkBankTransaction(ctx: ExpenseCtx, expenseId: string, ba
     ...(e.paymentStatus === "UNPAID" ? [prisma.expense.update({ where: { id: e.id }, data: { paymentStatus: "PAID", paidAt: t.date } })] : []),
   ]);
   void logActivity({ action: "expense_bank_matched", status: "SUCCESS", workspaceId: ctx.workspaceId, actor: { userId: ctx.userId, email: ctx.email ?? undefined }, entity: { type: "expense", id: e.id }, metadata: { bankTransactionId: t.id, markedPaid: e.paymentStatus === "UNPAID" } });
-  try { invalidateDashboardCacheForWorkspace(ctx.workspaceId); } catch { /* cache is advisory */ }
+  try { await invalidateDashboardCacheForWorkspace(ctx.workspaceId); } catch { /* cache is advisory */ }
   return { ok: true as const, markedPaid: e.paymentStatus === "UNPAID" };
 }
 

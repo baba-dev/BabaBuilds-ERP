@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     const { currency, exchangeRate } = await resolveCurrency(workspaceId, input);
     const created = await createRetainer({ workspaceId, actorUserId: userId, input, pricing: priced.pricing, currency, exchangeRate });
     logActivity({ action: "retainer_created", status: "SUCCESS", workspaceId, actor: { userId, email }, entity: { type: "retainer", id: created.id }, request });
-    afterRetainerChange(workspaceId, "create");
+    await afterRetainerChange(workspaceId, "create");
     return NextResponse.json({ success: true, retainer: { id: created.id, status: created.status } });
   } catch (error) {
     console.error("Retainer creation error:", error);

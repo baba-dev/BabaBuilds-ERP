@@ -438,7 +438,7 @@ async function markInvoicePaid(invoiceNumber: string, workspaceId: string) {
     });
 
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', {
         workspaceId,
@@ -759,7 +759,7 @@ async function autoReconcile(transactionId: string, invoiceNumber: string, works
     });
 
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', {
         workspaceId,
@@ -821,7 +821,7 @@ async function convertProposalToInvoice(proposalNo: string, workspaceId: string,
     if (!result.ok) return JSON.stringify({ error: result.message });
 
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'invoice', action: 'create', error: String(error) });
     }
@@ -902,7 +902,7 @@ async function createRetainer(
     });
 
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', {
         workspaceId,
@@ -956,7 +956,7 @@ async function updateRetainerStatus(
     if (!changed.ok) return JSON.stringify({ error: changed.message });
 
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'retainer', action: 'update', error: String(error) });
     }

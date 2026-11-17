@@ -19,8 +19,8 @@ export type ClientSource = "MANUAL" | "IMPORT" | "AI" | "POS";
 const audit = (ctx: ClientCtx, action: string, id: string | null, metadata?: Record<string, unknown>) =>
   logActivity({ action, status: "SUCCESS", workspaceId: ctx.workspaceId, actor: { userId: ctx.userId ?? undefined, email: ctx.email ?? undefined }, entity: { type: "client", id }, metadata }).catch(() => null);
 
-function bust(workspaceId: string, action: string) {
-  try { invalidateDashboardCacheForWorkspace(workspaceId); } catch { noteDashboardCacheIncident("invalidationFailures", { workspaceId, entity: "client", action }); }
+async function bust(workspaceId: string, action: string) {
+  try { await invalidateDashboardCacheForWorkspace(workspaceId); } catch { noteDashboardCacheIncident("invalidationFailures", { workspaceId, entity: "client", action }); }
 }
 
 /** Existing clients that look like the same company: the same cleaned name, or the same email. */
@@ -58,7 +58,7 @@ export async function createClient(ctx: ClientCtx, data: Partial<ClientColumns>,
         ownerUserId: data.ownerUserId ?? ctx.userId, isExport: data.isExport ?? false, logoUrl: opts.logoUrl ?? null, source: opts.source, isWalkIn: !!opts.walkIn,
       },
     });
-    bust(ctx.workspaceId, "create");
+    await bust(ctx.workspaceId, "create");
     if (!opts.walkIn) {
       dispatchNotification({ event: "CLIENT_ADDED", workspaceId: ctx.workspaceId, data: { clientName: client.name } }).catch(() => null);
       void audit(ctx, "client_created", client.id, { source: opts.source });
@@ -86,7 +86,7 @@ export async function updateClient(ctx: ClientCtx, id: string, patch: Partial<Cl
     throw error;
   }
   const client = await prisma.client.findFirstOrThrow({ where: { id, workspaceId: ctx.workspaceId } });
-  bust(ctx.workspaceId, "update");
+  await bust(ctx.workspaceId, "update");
   void audit(ctx, "client_updated", id, { changedFieldNames: changed });
   return { ok: true, client, changed };
 }
@@ -94,7 +94,7 @@ export async function updateClient(ctx: ClientCtx, id: string, patch: Partial<Cl
 export async function setArchived(ctx: ClientCtx, id: string, archived: boolean): Promise<{ ok: true } | ServiceError> {
   const res = await prisma.client.updateMany({ where: { id, workspaceId: ctx.workspaceId, isWalkIn: false }, data: { archivedAt: archived ? new Date() : null } });
   if (res.count === 0) return { ok: false, status: 404, code: "CLIENT_NOT_FOUND", message: "Client not found" };
-  bust(ctx.workspaceId, archived ? "archive" : "restore");
+  await bust(ctx.workspaceId, archived ? "archive" : "restore");
   void audit(ctx, archived ? "client_archived" : "client_restored", id);
   return { ok: true };
 }
@@ -115,7 +115,7 @@ export async function deleteClient(ctx: ClientCtx, id: string): Promise<{ ok: tr
     const segments = client.logoUrl.replace(/^\/logos\//, "").split("/").filter(Boolean);
     await fs.unlink(buildPrivatePath("logos", segments)).catch(() => undefined);
   }
-  bust(ctx.workspaceId, "delete");
+  await bust(ctx.workspaceId, "delete");
   void audit(ctx, "client_deleted", id);
   return { ok: true };
 }
@@ -149,7 +149,7 @@ export async function mergeClients(ctx: ClientCtx, sourceId: string, targetId: s
     await tx.client.delete({ where: { id: sourceId } });
     return { invoices: invoices.count, proposals: proposals.count, retainers: retainers.count };
   });
-  bust(ctx.workspaceId, "merge");
+  await bust(ctx.workspaceId, "merge");
   void audit(ctx, "client_merged", targetId, { mergedFromId: sourceId, mergedFromName: source.name, moved });
   return { ok: true, moved };
 }

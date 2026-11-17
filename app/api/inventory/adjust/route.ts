@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       return applyStockChange(tx, { workspaceId, productId: d.productId, delta, type: 'ADJ', reason: d.reason ?? (delta > 0 ? 'Manual stock in' : 'Manual stock out'), userId });
     });
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_stock', action: 'write', error: String(error) });
     }
@@ -54,7 +54,7 @@ export async function PUT(req: Request) {
       return { changed, total: d.counts.length };
     }, { timeout: 60_000 });
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_stock', action: 'write', error: String(error) });
     }
