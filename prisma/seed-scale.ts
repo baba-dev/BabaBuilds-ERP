@@ -1,6 +1,7 @@
-import { PrismaClient, Prisma, InvoiceStatus } from "@prisma/client";
+import { Prisma, InvoiceStatus } from '@prisma/client';
+import { createPrismaClient } from '../lib/prisma-client';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 type SeedOptions = {
   invoices: number;

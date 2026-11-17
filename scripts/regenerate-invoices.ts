@@ -1,11 +1,11 @@
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../lib/prisma-client';
 import fs from 'fs';
 import path from 'path';
 import { generateInvoicePDF } from '../lib/pdf/generator';
 import { calculateInvoiceTotals } from '../lib/invoice/totals';
 import { decimalToNumber } from '../lib/money';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main() {
   console.log('--- 🚀 Starting Invoice Regeneration Utility ---');

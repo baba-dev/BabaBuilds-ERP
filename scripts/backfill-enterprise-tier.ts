@@ -2,9 +2,9 @@
  * One-time: map legacy ENTERPRISE workspaces to TEAM (product tier removed).
  * Run: npx ts-node scripts/backfill-enterprise-tier.ts
  */
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from '../lib/prisma-client';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main() {
   const res = await prisma.workspace.updateMany({
