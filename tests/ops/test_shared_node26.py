@@ -50,7 +50,7 @@ class SharedNode26Contract(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             archive = Path(tmp) / provision.ARCHIVE_NAME
             archive.write_bytes(b"invalid download")
-            with self.assertRaisesRegex(RuntimeError, "digest mismatch"):
+            with self.assertRaisesRegex(RuntimeError, "root-owned|digest mismatch"):
                 provision.validate_archive(archive)
 
     def test_existing_runtime_is_verified_instead_of_overwritten(self):
@@ -79,6 +79,8 @@ class SharedNode26Contract(unittest.TestCase):
         self.assertIn('filter="data"', content)
         self.assertIn("source.rename(DEST)", content)
         self.assertIn("fcntl.flock", content)
+        self.assertIn("os.O_NOFOLLOW", content)
+        self.assertIn("metadata.st_uid != 0", content)
         self.assertIn("sha256(archive) != ARCHIVE_SHA256", content)
         self.assertIn('"clubkeep-redis.service"', content)
         for forbidden in ("systemctl restart", "systemctl stop", "systemctl enable",
@@ -98,7 +100,8 @@ class SharedNode26Contract(unittest.TestCase):
         self.assertIn(provision.ARCHIVE_SHA256, workflow)
         self.assertIn("--inventory", workflow)
         self.assertIn("--install --archive", workflow)
-        self.assertIn("7fc1d533a0d6c9169521ba323c9ed08aa2e053c4", workflow)
+        self.assertIn('sudo -n install -o root -g root -m 0600 "$archive" "$root_archive"', workflow)
+        self.assertIn("a8c87b019939abb3f74c0bdf834ea1931200ec55", workflow)
         for forbidden in ("systemctl restart", "systemctl stop", "systemctl disable"):
             self.assertNotIn(forbidden, workflow)
 
