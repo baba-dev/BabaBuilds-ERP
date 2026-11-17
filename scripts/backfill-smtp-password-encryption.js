@@ -10,8 +10,15 @@
 
 const crypto = require('crypto');
 const { PrismaClient } = require('@prisma/client');
+const { PrismaPg } = require('@prisma/adapter-pg');
 
-const prisma = new PrismaClient();
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) throw new Error('DATABASE_URL is required');
+const url = new URL(connectionString);
+if (!['postgres:', 'postgresql:'].includes(url.protocol)) throw new Error('PostgreSQL DATABASE_URL required');
+const prisma = new PrismaClient({ adapter: new PrismaPg({
+  connectionString, max: 5, connectionTimeoutMillis: 5000, idleTimeoutMillis: 30000,
+}) });
 
 const ALGORITHM = 'aes-256-gcm';
 const KEY_LENGTH = 32;
