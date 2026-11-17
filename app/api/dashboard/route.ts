@@ -33,6 +33,8 @@ import {
   noteDashboardCacheIncident,
   setDashboardCacheEntry,
 } from "@/lib/dashboard-cache";
+import { cachedDataSnapshot, isRedisDataCacheEnabled } from "@/lib/redis/data-cache";
+import { resolveLiveCacheAuthorization } from "@/lib/redis/cache-authorization";
 
 
 const LOCALE_CURRENCY_AFFECTS_PAYLOAD = false;
@@ -1247,6 +1249,44 @@ export async function GET(request: Request) {
       segment: segment || "full",
       localeCurrencyAffectsPayload: LOCALE_CURRENCY_AFFECTS_PAYLOAD,
     });
+
+    // Distributed data cache is an independent opt-in path. It MUST precede
+    // the legacy process-local Map and MUST check current permissions before
+    // every read, including a warm Redis hit.
+    let useRedisDashboardCache = false;
+    try {
+      useRedisDashboardCache = isRedisDataCacheEnabled('dashboard');
+    } catch {
+      noteDashboardCacheIncident('cacheErrors', { category: 'redis-config' });
+    }
+    if (useRedisDashboardCache) {
+      if (!userId) {
+        return NextResponse.json({ error: 'Unauthorized', code: 'AUTH_UNAUTHORIZED' }, { status: 401 });
+      }
+      const authorized = await resolveLiveCacheAuthorization(userId, workspaceId, 'dashboard.view');
+      if (!authorized) {
+        return NextResponse.json({ error: 'Forbidden', code: 'AUTH_FORBIDDEN' }, { status: 403 });
+      }
+      const snapshot = await cachedDataSnapshot(
+        'dashboard',
+        {
+          workspaceId,
+          userId,
+          authorizationFingerprint: authorized.fingerprint,
+          variant: cacheKey,
+        },
+        30,
+        () => buildDashboardPayload(workspaceId, userId, fy, { segment }),
+      );
+      return NextResponse.json(snapshot.value, {
+        headers: {
+          'X-Dashboard-Cache': snapshot.state,
+          'X-Dashboard-Cache-Age': String(snapshot.ageSeconds),
+          'X-Dashboard-Cache-TTL': String(snapshot.ttlSeconds),
+          'Cache-Control': 'private, max-age=0, must-revalidate',
+        },
+      });
+    }
 
     // Client pages currently use `cache: "no-store"` so Next-level caching is bypassed.
     // Use the in-process dashboard cache to avoid repeated recomputation under concurrent staff traffic.
