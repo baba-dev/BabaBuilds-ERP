@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/prisma';
+import { getRedisHealth } from '@/lib/redis/health';
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
-import { Bug, Activity, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Bug, Activity, CheckCircle2, AlertTriangle, Server } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requireSystemHealthSuperAdmin } from "./_auth";
 
@@ -10,10 +11,13 @@ export const dynamic = "force-dynamic";
 export default async function SystemHealthPage() {
   await requireSystemHealthSuperAdmin();
 
-  const errors = await prisma.systemErrorLog.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 50,
-  });
+  const [errors, redis] = await Promise.all([
+    prisma.systemErrorLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    }),
+    getRedisHealth(),
+  ]);
 
   const unresolvedCount = errors.filter(e => e.status === "UNRESOLVED").length;
   const analyzingCount = errors.filter(e => e.status === "ANALYZING").length;
@@ -44,6 +48,39 @@ export default async function SystemHealthPage() {
           </div>
         </div>
       </div>
+
+      {/* Redis foundation is informative, not an ERP availability gate. */}
+      <section className="rounded-xl border bg-card text-card-foreground shadow" aria-label="Redis infrastructure health">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b p-6">
+          <div>
+            <h2 className="flex items-center gap-2 text-lg font-semibold">
+              <Server className="h-5 w-5" /> Redis infrastructure
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Optional cache and queue connections. Core ERP uses PostgreSQL independently.
+            </p>
+          </div>
+          <span className="rounded-full border px-3 py-1 text-sm font-medium capitalize">
+            {redis.status}
+          </span>
+        </div>
+        <div className="grid gap-3 p-6 sm:grid-cols-2">
+          {(['cache', 'queue'] as const).map((purpose) => (
+            <div key={purpose} className="rounded-lg border bg-muted/20 p-4">
+              <p className="text-sm font-medium">{purpose === 'cache' ? 'Cache and rate limits' : 'Background queues'}</p>
+              <p className="mt-2 text-sm capitalize text-muted-foreground">
+                {redis.connections[purpose].status.replace('-', ' ')}
+                {redis.connections[purpose].latencyMs !== undefined
+                  ? ` · ${redis.connections[purpose].latencyMs} ms`
+                  : ''}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="px-6 pb-5 text-xs text-muted-foreground">
+          Namespace: {redis.namespace ?? 'Not configured'} · Redis features remain opt-in.
+        </p>
+      </section>
 
       {/* Error Stream List */}
       <div className="rounded-xl border bg-card text-card-foreground shadow">
