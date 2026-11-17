@@ -20,8 +20,8 @@ permissions:
 
 # Do not race ERP production releases. This workflow does not restart any app.
 concurrency:
-  group: erp-immutable-production
-  cancel-in-progress: false
+  group: ${{ github.event_name == 'pull_request' && format('node26-signature-pr-{0}', github.event.pull_request.number) || 'erp-immutable-production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify-pr:
