@@ -2,6 +2,7 @@ import "server-only";
 import fs from "node:fs/promises";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { containsInsensitive } from "@/lib/prisma-filters";
 import { FREE_TIER_CLIENT_LIMIT, shouldApplyFreeTierLimits } from "@/lib/entitlements";
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from "@/lib/dashboard-cache";
 import { dispatchNotification } from "@/lib/notifications/dispatcher";
@@ -27,7 +28,7 @@ export async function findSimilarClients(workspaceId: string, name: string | und
   const key = name ? duplicateKey(name) : "";
   const first = key.split(" ")[0];
   const or: Prisma.ClientWhereInput[] = [];
-  if (first && first.length >= 2) or.push({ name: { contains: first } });
+  if (first && first.length >= 2) or.push({ name: containsInsensitive(first) });
   if (email) or.push({ email: emailKey(email) });
   if (!or.length) return [];
   const rows = await prisma.client.findMany({ where: { workspaceId, isWalkIn: false, ...(excludeId ? { id: { not: excludeId } } : {}), OR: or }, select: { id: true, name: true, email: true, archivedAt: true }, take: 60 });

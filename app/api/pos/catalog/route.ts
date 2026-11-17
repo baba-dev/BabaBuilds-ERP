@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { containsInsensitive } from '@/lib/prisma-filters';
 import { supplierChargesGst } from '@/lib/msme/threshold';
 import { posErrorResponse, requirePos } from '../_guard';
 
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
 
     if (q.type === 'SERVICES') {
       const rows = await prisma.serviceTemplate.findMany({
-        where: { workspaceId, ...(q.q ? { name: { contains: q.q } } : {}) },
+        where: { workspaceId, ...(q.q ? { name: containsInsensitive(q.q) } : {}) },
         select: { id: true, name: true, defaultPrice: true, description: true, sacCode: { select: { igstRate: true } } },
         orderBy: [{ name: 'asc' }, { id: 'asc' }],
         take: q.limit + 1,
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
       where: {
         workspaceId, archivedAt: null,
         ...(q.category ? { category: q.category } : {}),
-        ...(q.barcode ? { OR: [{ barcode: q.barcode }, { sku: q.barcode.toUpperCase() }] } : q.q ? { OR: [{ name: { contains: q.q } }, { sku: { contains: q.q } }, { barcode: { contains: q.q } }] } : {}),
+        ...(q.barcode ? { OR: [{ barcode: q.barcode }, { sku: q.barcode.toUpperCase() }] } : q.q ? { OR: [{ name: containsInsensitive(q.q) }, { sku: containsInsensitive(q.q) }, { barcode: containsInsensitive(q.q) }] } : {}),
       },
       select: { id: true, name: true, sku: true, barcode: true, category: true, baselinePrice: true, description: true, currentStock: true, gstRate: true, unit: true },
       orderBy: [{ name: 'asc' }, { id: 'asc' }],

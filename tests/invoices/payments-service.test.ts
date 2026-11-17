@@ -62,6 +62,22 @@ describe("recordInvoicePayment", () => {
     expect(mocks.tx.invoicePayment.create).not.toHaveBeenCalled();
   });
 
+  it("retries a PostgreSQL serialization conflict", async () => {
+    mocks.prisma.invoicePayment.findUnique.mockResolvedValue(null);
+    mocks.tx.invoice.findFirst.mockResolvedValue({ id: "inv_1", status: "VOID" });
+    mocks.prisma.$transaction.mockRejectedValueOnce(
+      new Prisma.PrismaClientKnownRequestError("serialization conflict", {
+        code: "P2034",
+        clientVersion: "test",
+      }),
+    );
+
+    const result = await recordInvoicePayment({ ...base, amount: 10, idempotencyKey: "key-12345678" });
+
+    expect(result).toMatchObject({ ok: false, code: "INVOICE_VOID" });
+    expect(mocks.prisma.$transaction).toHaveBeenCalledTimes(2);
+  });
+
   it("blocks overpayment, counting money already received", async () => {
     mocks.prisma.invoicePayment.findUnique.mockResolvedValue(null);
     mocks.tx.invoice.findFirst.mockResolvedValue({
@@ -72,6 +88,10 @@ describe("recordInvoicePayment", () => {
     const result = await recordInvoicePayment({ ...base, amount: 150, idempotencyKey: "key-12345678" });
     expect(result).toMatchObject({ ok: false, status: 400, code: "OVERPAYMENT_NOT_ALLOWED" });
     expect(mocks.tx.invoicePayment.create).not.toHaveBeenCalled();
+    expect(mocks.prisma.$transaction).toHaveBeenCalledWith(
+      expect.any(Function),
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 15_000 },
+    );
   });
 });
 

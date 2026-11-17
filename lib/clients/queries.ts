@@ -1,6 +1,7 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { containsInsensitive } from "@/lib/prisma-filters";
 import { getClientRetainerSummaries } from "@/lib/retainers/client-summary";
 import { clientHealth, creditStatus, paymentStats } from "./metrics";
 import { duplicateKey, emailKey } from "./names";
@@ -66,11 +67,11 @@ export async function listClients(workspaceId: string, query: ClientListQuery, n
   else if (view !== "all") and.push({ archivedAt: null });
   if (view === "vip") and.push({ status: "VIP" });
   if (view === "inactive") and.push({ status: "INACTIVE" });
-  if (query.tag) and.push({ tags: { contains: tagLike(query.tag).replaceAll("%", "") } });
+  if (query.tag) and.push({ tags: containsInsensitive(tagLike(query.tag).replaceAll("%", "")) });
   if (query.country) and.push({ countryCode: query.country.toUpperCase() });
   if (query.owner) and.push({ ownerUserId: query.owner });
   const q = query.q?.trim();
-  if (q) and.push({ OR: [{ name: { contains: q } }, { email: { contains: q } }, { taxId: { contains: q.toUpperCase() } }, { phone: { contains: q } }, { tags: { contains: q.toLowerCase() } }, { contacts: { some: { OR: [{ name: { contains: q } }, { email: { contains: q } }] } } }] });
+  if (q) and.push({ OR: [{ name: containsInsensitive(q) }, { email: containsInsensitive(q) }, { taxId: containsInsensitive(q) }, { phone: containsInsensitive(q) }, { tags: containsInsensitive(q) }, { contacts: { some: { OR: [{ name: containsInsensitive(q) }, { email: containsInsensitive(q) }] } } }] });
   const where: Prisma.ClientWhereInput = { workspaceId, AND: and };
 
   const sort = query.sort ?? "name";

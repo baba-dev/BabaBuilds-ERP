@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { FREQUENCIES, startOfUtcDay } from "@/lib/retainers/status";
+import { containsInsensitive } from "@/lib/prisma-filters";
 
 const STATUS_FILTERS = ["ACTIVE", "PAUSED", "CANCELLED", "COMPLETED", "DUE"] as const;
 const SORTS = ["nextBillingDate", "createdAt", "name", "status"] as const;
@@ -36,7 +37,7 @@ export function parseRetainerListQuery(sp: URLSearchParams) {
 export function buildBaseWhere(workspaceId: string, q: RetainerListQuery): Prisma.RetainerWhereInput {
   const and: Prisma.RetainerWhereInput[] = [];
   if (q.q) {
-    and.push({ OR: [{ name: { contains: q.q } }, { client: { name: { contains: q.q } } }, { items: { some: { title: { contains: q.q } } } }] });
+    and.push({ OR: [{ name: containsInsensitive(q.q) }, { client: { name: containsInsensitive(q.q) } }, { items: { some: { title: containsInsensitive(q.q) } } }] });
   }
   if (q.clientId) and.push({ clientId: q.clientId });
   if (q.frequency) and.push({ frequency: q.frequency });

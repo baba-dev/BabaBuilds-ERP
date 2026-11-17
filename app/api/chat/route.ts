@@ -4,6 +4,7 @@ import { canOwnerTransition } from '@/lib/proposals/status';
 import { addProposalEvent } from '@/lib/proposals/events';
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { containsInsensitive } from '@/lib/prisma-filters';
 import { Prisma } from '@prisma/client';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
@@ -209,7 +210,7 @@ async function lookupInvoiceDetails(invoiceNumber: string, workspaceId: string) 
   try {
     const invoice = await prisma.invoice.findFirst({
       where: {
-        invoiceNumber: { contains: invoiceNumber },
+        invoiceNumber: containsInsensitive(invoiceNumber),
         workspaceId,
       },
     });
@@ -235,7 +236,7 @@ async function getClientSummary(clientName: string, workspaceId: string) {
   try {
     const client = await prisma.client.findFirst({
       where: {
-        name: { contains: clientName },
+        name: containsInsensitive(clientName),
         workspaceId,
       },
     });
@@ -548,7 +549,7 @@ async function createClient(
 async function updateClientStatus(clientName: string, status: string, workspaceId: string) {
   try {
     const client = await prisma.client.findFirst({
-      where: { name: { contains: clientName }, workspaceId },
+      where: { name: containsInsensitive(clientName), workspaceId },
     });
 
     if (!client) {
@@ -583,7 +584,7 @@ async function searchClients(query: string, workspaceId: string) {
     const clients = await prisma.client.findMany({
       where: {
         workspaceId,
-        OR: [{ name: { contains: query } }, { email: { contains: query } }],
+        OR: [{ name: containsInsensitive(query) }, { email: containsInsensitive(query) }],
       },
       take: 5,
     });
@@ -608,7 +609,7 @@ async function searchClients(query: string, workspaceId: string) {
 async function getClientLedger(clientName: string, workspaceId: string) {
   try {
     const client = await prisma.client.findFirst({
-      where: { name: { contains: clientName }, workspaceId },
+      where: { name: containsInsensitive(clientName), workspaceId },
       include: {
         invoices: {
           orderBy: { invoiceDate: 'desc' },
@@ -865,7 +866,7 @@ async function createRetainer(
 ) {
   try {
     const client = await prisma.client.findFirst({
-      where: { name: { contains: clientName }, workspaceId },
+      where: { name: containsInsensitive(clientName), workspaceId },
     });
     if (!client) return JSON.stringify({ error: `Client ${clientName} not found.` });
 
@@ -928,14 +929,14 @@ async function updateRetainerStatus(
 ) {
   try {
     const client = await prisma.client.findFirst({
-      where: { name: { contains: clientName }, workspaceId },
+      where: { name: containsInsensitive(clientName), workspaceId },
     });
     if (!client) return JSON.stringify({ error: `Client ${clientName} not found.` });
 
     const retainer = await prisma.retainer.findFirst({
       where: {
         clientId: client.id,
-        items: { some: { title: { contains: serviceName } } },
+        items: { some: { title: containsInsensitive(serviceName) } },
         workspaceId,
       },
       include: { items: true }
@@ -1299,7 +1300,7 @@ async function captureMutationState(
           name:
             toolName === 'create_client'
               ? asString(args.name)
-              : { contains: asString(args.client_name) },
+              : containsInsensitive(asString(args.client_name)),
         },
         select: { id: true, name: true, email: true, status: true, createdAt: true },
       });
@@ -1388,12 +1389,7 @@ async function captureMutationState(
       const client = await prisma.client.findFirst({
         where: {
           workspaceId,
-          name: {
-            contains:
-              toolName === 'create_retainer'
-                ? asString(args.client_name)
-                : asString(args.client_name),
-          },
+          name: containsInsensitive(asString(args.client_name)),
         },
         select: { id: true, name: true },
       });
@@ -1403,7 +1399,7 @@ async function captureMutationState(
         where: {
           workspaceId,
           clientId: client.id,
-          items: { some: { title: { contains: serviceName } } },
+          items: { some: { title: containsInsensitive(serviceName) } },
         },
         select: {
           id: true,

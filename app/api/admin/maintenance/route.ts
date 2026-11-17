@@ -7,6 +7,7 @@ import path from "path";
 import { decimalToNumber } from "@/lib/money";
 import { sendActivityAlert } from '@/lib/security/alert-hooks';
 import { ensureDir, getPrivateUploadsRoot } from '@/lib/uploads/private-storage';
+import { containsInsensitive } from '@/lib/prisma-filters';
 
 export async function POST(req: Request) {
   try {
@@ -33,9 +34,7 @@ export async function POST(req: Request) {
             OR: [
               { isDemo: true },
               {
-                email: {
-                  contains: "bababuilds.demo",
-                },
+                email: containsInsensitive("bababuilds.demo"),
               },
             ],
           }

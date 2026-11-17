@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { OPEN_STATUSES, startOfUtcDay, type ProposalDisplayStatus } from "@/lib/proposals/status";
+import { containsInsensitive } from "@/lib/prisma-filters";
 
 export const MAX_PAGE_SIZE = 100;
 const DISPLAY_STATUSES = ["DRAFT", "SENT", "VIEWED", "REVISION_REQUESTED", "ACCEPTED", "DECLINED", "EXPIRED", "INVOICED"] as const;
@@ -49,7 +50,7 @@ export function buildBaseWhere(workspaceId: string, query: ProposalListQuery): P
   const and: Prisma.ProposalWhereInput[] = [];
   if (query.q) {
     and.push({
-      OR: [{ title: { contains: query.q } }, { proposalNo: { contains: query.q } }, { client: { name: { contains: query.q } } }],
+      OR: [{ title: containsInsensitive(query.q) }, { proposalNo: containsInsensitive(query.q) }, { client: { name: containsInsensitive(query.q) } }],
     });
   }
   if (query.clientId) and.push({ clientId: query.clientId });

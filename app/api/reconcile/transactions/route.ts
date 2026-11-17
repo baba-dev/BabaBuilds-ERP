@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireReconAccess } from "@/lib/reconciliation/access";
+import { containsInsensitive } from "@/lib/prisma-filters";
 
 export async function GET(request: Request) {
   const access = await requireReconAccess("reconciliation.import");
@@ -20,7 +21,7 @@ export async function GET(request: Request) {
     ...(accountId ? { accountId } : {}),
     ...(unreconciledOnly ? { isReconciled: false } : {}),
     ...(reconciledOnly ? { isReconciled: true } : {}),
-    ...(q ? { OR: [{ description: { contains: q } }, { referenceId: { contains: q } }] } : {}),
+    ...(q ? { OR: [{ description: containsInsensitive(q) }, { referenceId: containsInsensitive(q) }] } : {}),
   };
 
   const [rows, total] = await Promise.all([

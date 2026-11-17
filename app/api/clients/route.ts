@@ -6,6 +6,7 @@ import { normalizeClientInput } from "@/lib/clients/schema";
 import { createClient } from "@/lib/clients/service";
 import { creditStatus } from "@/lib/clients/metrics";
 import { prisma } from "@/lib/prisma";
+import { containsInsensitive } from "@/lib/prisma-filters";
 
 const int = (v: string | null): number | null | typeof Number.NaN => {
   if (v === null || v.trim() === "") return null;
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
     if (sp.get("picker") === "1") {
       const q = sp.get("q")?.trim();
       const rows = await prisma.client.findMany({
-        where: { workspaceId, isWalkIn: false, archivedAt: null, ...(q ? { OR: [{ name: { contains: q } }, { email: { contains: q } }, { taxId: { contains: q.toUpperCase() } }] } : {}) },
+        where: { workspaceId, isWalkIn: false, archivedAt: null, ...(q ? { OR: [{ name: containsInsensitive(q) }, { email: containsInsensitive(q) }, { taxId: containsInsensitive(q) }] } : {}) },
         orderBy: { name: "asc" }, take: Math.min(50, limit ?? 20),
         select: { id: true, name: true, email: true, country: true, countryCode: true, isExport: true, gstStateCode: true, taxId: true, currency: true, paymentTermsDays: true, creditLimit: true, status: true, logoUrl: true },
       });

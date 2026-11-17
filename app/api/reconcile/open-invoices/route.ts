@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireReconAccess } from "@/lib/reconciliation/access";
 import { Prisma } from "@prisma/client";
+import { containsInsensitive } from "@/lib/prisma-filters";
 
 export async function GET(request: Request) {
   const access = await requireReconAccess("reconciliation.import");
@@ -18,8 +19,8 @@ export async function GET(request: Request) {
     ...(q.length >= 1
       ? {
           OR: [
-            { invoiceNumber: { contains: q } },
-            { clientName: { contains: q } },
+            { invoiceNumber: containsInsensitive(q) },
+            { clientName: containsInsensitive(q) },
           ],
         }
       : {}),

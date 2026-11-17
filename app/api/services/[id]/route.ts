@@ -5,6 +5,7 @@ import { parseServiceForm, sameServiceName } from "@/lib/services/validation";
 import { saveServiceImage } from "@/lib/services/image-upload";
 import { requireServiceAccess, serviceError } from "@/lib/services/access";
 import { SERVICE_INCLUDE, withUsage } from "@/lib/services/serialize";
+import { containsInsensitive } from "@/lib/prisma-filters";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -26,7 +27,7 @@ export async function PATCH(request: Request, context: Ctx) {
     const [nic, sac, sameName] = await Promise.all([
       data.nicCodeId ? prisma.nICCode.findUnique({ where: { id: data.nicCodeId }, select: { id: true } }) : Promise.resolve(true),
       data.sacCodeId ? prisma.sACCode.findUnique({ where: { id: data.sacCodeId }, select: { id: true } }) : Promise.resolve(true),
-      prisma.serviceTemplate.findMany({ where: { workspaceId, id: { not: id }, name: { contains: data.name } }, select: { name: true } }),
+      prisma.serviceTemplate.findMany({ where: { workspaceId, id: { not: id }, name: containsInsensitive(data.name) }, select: { name: true } }),
     ]);
     if (!nic || !sac) return serviceError(400, "INVALID_TAX_CODE", "The selected tax classification no longer exists.");
     if (sameName.some((s) => sameServiceName(s.name, data.name))) {

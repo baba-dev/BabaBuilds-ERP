@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
+import { containsInsensitive } from '@/lib/prisma-filters';
 import { REVENUE_STATUSES, SHOP_STATUSES } from '@/lib/shop/status';
 import { requireShop, shopErrorResponse } from '../_guard';
 
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
     const where = {
       workspaceId,
       ...(q.status === 'OPEN' ? { status: { in: ['PAID', 'REFUND_DUE'] } } : q.status !== 'ALL' ? { status: q.status } : {}),
-      ...(q.q ? { OR: [{ buyerName: { contains: q.q } }, { buyerEmail: { contains: q.q } }, { id: { startsWith: q.q } }, { trackingRef: { contains: q.q } }, { items: { some: { productName: { contains: q.q } } } }] } : {}),
+      ...(q.q ? { OR: [{ buyerName: containsInsensitive(q.q) }, { buyerEmail: containsInsensitive(q.q) }, { id: { startsWith: q.q } }, { trackingRef: containsInsensitive(q.q) }, { items: { some: { productName: containsInsensitive(q.q) } } }] } : {}),
     };
     const [rows, groups, revenue] = await Promise.all([
       prisma.shopOrder.findMany({ where, include: { items: { select: { productName: true, quantity: true, unitPrice: true, lineTotal: true } }, linkedInvoice: { select: { id: true, invoiceNumber: true } } }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: q.limit + 1, ...(q.cursor ? { cursor: { id: q.cursor }, skip: 1 } : {}) }),

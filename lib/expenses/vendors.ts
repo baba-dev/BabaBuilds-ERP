@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { containsInsensitive } from "@/lib/prisma-filters";
 import { normalizeGstin, validateGstin } from "@/lib/gst/gstin";
 import { isStateCode } from "@/lib/gst/states";
 import { validateUdyam } from "@/lib/msme/udyam";
@@ -87,7 +88,7 @@ export async function resolveVendor(db: Db, workspaceId: string, name: string, k
 export async function listVendors(workspaceId: string, opts: { q?: string; includeArchived?: boolean; limit?: number } = {}) {
   const q = opts.q?.trim();
   const rows = await prisma.vendor.findMany({
-    where: { workspaceId, ...(opts.includeArchived ? {} : { archivedAt: null }), ...(q ? { OR: [{ name: { contains: q } }, { gstin: { contains: q.toUpperCase() } }, { email: { contains: q } }] } : {}) },
+    where: { workspaceId, ...(opts.includeArchived ? {} : { archivedAt: null }), ...(q ? { OR: [{ name: containsInsensitive(q) }, { gstin: containsInsensitive(q) }, { email: containsInsensitive(q) }] } : {}) },
     orderBy: { name: "asc" }, take: Math.min(500, opts.limit ?? 200),
   });
   const ids = rows.map((r) => r.id);

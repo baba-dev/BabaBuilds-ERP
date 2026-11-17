@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { prisma } from '@/lib/prisma';
+import { containsInsensitive } from '@/lib/prisma-filters';
 import type { Prisma } from '@prisma/client';
 import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 import { logActivity } from '@/lib/security/activity-log';
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
     const q = listQuery.parse(Object.fromEntries(new URL(req.url).searchParams));
     const where: Prisma.EmployeeWhereInput = {
       workspaceId: g.access.workspaceId,
-      ...(q.search ? { OR: [{ firstName: { contains: q.search } }, { lastName: { contains: q.search } }, { email: { contains: q.search } }, { employeeCode: { contains: q.search } }] } : {}),
+      ...(q.search ? { OR: [{ firstName: containsInsensitive(q.search) }, { lastName: containsInsensitive(q.search) }, { email: containsInsensitive(q.search) }, { employeeCode: containsInsensitive(q.search) }] } : {}),
       ...(q.department ? { departmentId: q.department } : {}),
       ...(q.status ? { status: q.status } : {}),
     };

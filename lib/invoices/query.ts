@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { fyRangeFromLabel } from "@/lib/invoices/period";
 import { INVOICE_SOURCES, type InvoiceDisplayStatus } from "@/lib/invoices/types";
+import { containsInsensitive } from "@/lib/prisma-filters";
 
 export const MAX_PAGE_SIZE = 100;
 export const DEFAULT_PAGE_SIZE = 15;
@@ -62,9 +63,9 @@ export function buildBaseWhere(workspaceId: string, query: InvoiceListQuery): Pr
   if (query.q) {
     and.push({
       OR: [
-        { invoiceNumber: { contains: query.q } },
-        { clientName: { contains: query.q } },
-        { serviceDescription: { contains: query.q } },
+        { invoiceNumber: containsInsensitive(query.q) },
+        { clientName: containsInsensitive(query.q) },
+        { serviceDescription: containsInsensitive(query.q) },
       ],
     });
   }

@@ -1,6 +1,7 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { containsInsensitive } from "@/lib/prisma-filters";
 import { logActivity } from "@/lib/security/activity-log";
 import { invalidateDashboardCacheForWorkspace } from "@/lib/dashboard-cache";
 import { rankInvoiceMatchesForCredit } from "./invoice-match";
@@ -60,7 +61,7 @@ export async function reconciliationQueue(workspaceId: string, query: QueueQuery
     ...(query.accountId ? { accountId: query.accountId } : {}),
     ...(view === "ignored" ? { ignoredAt: { not: null } } : view === "transfers" ? { isInternalTransfer: true, ignoredAt: null } : { ignoredAt: null, isInternalTransfer: false }),
     ...(query.direction === "debit" ? { amount: { lt: 0 } } : query.direction === "credit" ? { amount: { gt: 0 } } : {}),
-    ...(query.q?.trim() ? { OR: [{ description: { contains: query.q.trim() } }, { referenceId: { contains: query.q.trim() } }] } : {}),
+    ...(query.q?.trim() ? { OR: [{ description: containsInsensitive(query.q.trim()) }, { referenceId: containsInsensitive(query.q.trim()) }] } : {}),
   };
   const [rows, total, settings] = await Promise.all([
     prisma.bankTransaction.findMany({ where, orderBy: { date: "desc" }, take, skip, include: { account: { select: { id: true, name: true, currency: true } } } }),
