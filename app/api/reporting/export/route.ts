@@ -19,7 +19,7 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/reporting/export', scope: 'reporting-export', max: 20, windowMs: 10 * 60 * 1000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/reporting/export', scope: 'reporting-export', max: 20, windowMs: 10 * 60 * 1000 });
     if (!limit.ok) return limit.response;
     const { workspaceId, userId } = await resolveReportingContext('reporting_center.export');
     const parsed = schema.safeParse(await req.json().catch(() => null));

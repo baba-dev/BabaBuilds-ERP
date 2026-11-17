@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     }
 
     const userId = (session.user as { id?: string } | undefined)?.id ?? "";
-    const limit = enforceRouteRateLimit({ request: req, route: "/api/referrals/redeem", scope: `${workspaceId}:${userId}`, max: 5, windowMs: 60 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: "/api/referrals/redeem", scope: `${workspaceId}:${userId}`, max: 5, windowMs: 60 * 60_000 });
     if (!limit.ok) return limit.response;
 
     const body = await req.json().catch(() => null);

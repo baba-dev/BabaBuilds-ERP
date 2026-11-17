@@ -7,7 +7,7 @@ import { reportingErrorResponse, resolveReportingContext } from '@/app/api/repor
 export async function POST(req: Request, props: { params: Promise<{ id: string }> }) {
   try {
     const { workspaceId, userId, email } = await resolveReportingContext('reporting_center.export');
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/reporting/views/send', scope: 'test-send', max: 10, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/reporting/views/send', scope: 'test-send', max: 10, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
     if (!email) throw new Error('INVALID_INPUT');
     const { id } = await props.params;

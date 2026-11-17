@@ -13,7 +13,7 @@ import { secretSchema } from "@/lib/settings/schemas";
  * the audit log records which secret changed, never its value.
  */
 export async function PUT(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/settings/secrets", scope: "settings-secrets", max: 20, windowMs: 10 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/settings/secrets", scope: "settings-secrets", max: 20, windowMs: 10 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const auth = await requireSettingsManager();
   if (!auth.ok) return auth.response;
