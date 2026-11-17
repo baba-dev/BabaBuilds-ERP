@@ -54,6 +54,7 @@ async function nativeChecks() {
   const { PDFDocument } = await import("pdf-lib");
   const { PDFParse } = await import("pdf-parse");
   const { PrismaClient } = await import("@prisma/client");
+  const { PrismaPg } = await import("@prisma/adapter-pg");
 
   const png = await sharp({ create: { width: 32, height: 32, channels: 3, background: "#eef2ff" } }).png().toBuffer();
   const image = await sharp(png).resize(16, 16).webp().toBuffer();
@@ -71,7 +72,10 @@ async function nativeChecks() {
     await parser.destroy();
   }
 
-  const db = new PrismaClient();
+  const db = new PrismaClient({ adapter: new PrismaPg({
+    connectionString: process.env.DATABASE_URL,
+    max: 5, connectionTimeoutMillis: 5000, idleTimeoutMillis: 30000,
+  }) });
   try {
     const rows = await db.$queryRaw`SELECT 1 AS ok`;
     assert.equal(Number(rows[0].ok), 1);
