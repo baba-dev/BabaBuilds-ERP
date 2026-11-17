@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireEmailBilling } from '../../../_lib/auth';
+import { auditEmailBilling } from '../../../_lib/audit';
 import { calculateMailBilling } from '@/lib/email-billing/billing-calculator';
 import { resolveMailBillingReviewItems } from '@/lib/email-billing/review';
 import { mailBillingCreateRetainerSchema, parseJsonBody } from '@/lib/email-billing/validation';
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireEmailBilling('invoices.create');
+  const auth = await requireEmailBilling('billing', { legacy: 'invoices.create' });
   if ('response' in auth) return auth.response;
   const { id } = await params;
   const sub = await prisma.mailBillingSubscription.findFirst({ where: { id, workspaceId: auth.workspaceId }, include: { domain: true, plan: true } });
@@ -20,6 +21,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return { retainer, subscription };
     });
     await resolveMailBillingReviewItems(auth.workspaceId, { domainId: sub.domainId, subscriptionId: id, types: ['DOMAIN_MISSING_RETAINER', 'DOMAIN_MISSING_SUBSCRIPTION', 'MAILBOX_COUNT_CHANGED'] }, auth.userId);
+    auditEmailBilling(auth, 'subscription_retainer_created', { type: 'mail_billing_subscription', id }, { retainerId: result.retainer.id, amount: calc.totalRecurringAmount, currency: calc.currency }, req);
     return NextResponse.json(result, { status: 201 });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid retainer request' }, { status: 400 }); }
 }

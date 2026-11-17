@@ -37,7 +37,7 @@ const sanitizeServer = (server: MailBillingServerForApi) => ({
 });
 
 export async function GET() {
-  const auth = await requireEmailBilling('invoices.view');
+  const auth = await requireEmailBilling('view');
   if ('response' in auth) return auth.response;
 
   const servers = await prisma.mailBillingServer.findMany({
@@ -49,7 +49,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireEmailBilling('workspace.manage_settings');
+  const auth = await requireEmailBilling('admin');
   if ('response' in auth) return auth.response;
 
   try {

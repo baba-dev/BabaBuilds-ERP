@@ -28,9 +28,24 @@ Direct MiaB API mode is server-side fallback only and is restricted to read endp
 4. Map each domain to an ERP client.
 5. Link an existing retainer or create a new retainer using fixed domain, per-mailbox, or manual package billing.
 
+## Availability and permissions
+
+Email Billing is available on every plan, free and paid; the workspace owner still has to enable the module.
+
+Access is controlled by dedicated permissions, shown under **Email Hosting** in the roles matrix:
+
+| Permission | Allows | Default roles |
+|---|---|---|
+| `email_hosting.view` | Read domains, mailboxes, plans, subscriptions, review queue | Everyone who has `invoices.view` |
+| `email_hosting.billing` | Change plans, subscriptions, retainer links, review items | Owner, Admin, Finance Manager |
+| `email_hosting.admin_server` | Add/edit servers and tokens, test connections, run syncs, change settings | Owner, Admin |
+| `email_hosting.operate` | Reserved for future mailbox operations; not used yet | Owner, Admin |
+
+For compatibility the routes also accept the permission the module used before these keys existed (`invoices.view`, `invoices.edit`, `invoices.create` for creating retainers, `workspace.manage_settings`), so no existing role loses access. Every mutation writes an `email_billing.*` entry to the activity log; entries never contain tokens or passwords.
+
 ## Security notes
 
-Configured URLs are validated before server-side fetches. Production requires HTTPS and blocks localhost, loopback, link-local, and private network ranges. Sync never hard-deletes inventory; missing domains and mailboxes are marked `REMOVED` for auditability.
+Configured URLs are validated before server-side fetches. Production requires HTTPS and blocks localhost, loopback, link-local, and private network ranges. Sync never hard-deletes inventory; missing domains and mailboxes are marked `REMOVED` for auditability and are reported once, not on every later sync. Each domain, with its mailboxes and review items, is written in a single database transaction, so a failure never leaves a half-imported domain.
 
 ## Plans and subscriptions
 

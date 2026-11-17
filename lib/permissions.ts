@@ -232,6 +232,13 @@ export const PERMISSION_KEYS = [
   'shop.orders.manage',       // Update status, mark paid/refunded/fulfilled, delete
   'shop.content.manage',      // Edit storefront content (About, social, FAQ, announcement, AI Assist)
   'shop.settings.manage',     // Toggle shop on/off, change slug, branding, gateways
+
+  // Email Hosting (Mail-in-a-Box). Granted alongside the legacy invoices.* or workspace.manage_settings
+  // checks the module used before these keys existed; see app/api/email-billing/_lib/auth.ts.
+  'email_hosting.view',          // Read domains, mailboxes, plans, subscriptions, review queue
+  'email_hosting.billing',       // Manage plans, subscriptions, retainer links and review items
+  'email_hosting.operate',       // Reserved: mailbox/alias operations on the mail server (not used yet)
+  'email_hosting.admin_server',  // Manage server connections and credentials, run syncs
 ] as const;
 
 export type Permission = (typeof PERMISSION_KEYS)[number];
@@ -277,6 +284,7 @@ export const PERMISSION_MODULE_GROUPS: { module: string; label: string; keys: Pe
   },
   { module: 'clients',         label: 'Clients',          keys: ['clients.view', 'clients.manage'] },
   { module: 'pos',             label: 'Point of Sale',    keys: ['pos.view', 'pos.checkout', 'pos.discount', 'pos.custom_item', 'pos.refund'] },
+  { module: 'email_hosting',   label: 'Email Hosting',    keys: ['email_hosting.view', 'email_hosting.billing', 'email_hosting.operate', 'email_hosting.admin_server'] },
   { module: 'workspace',       label: 'Workspace Admin',  keys: ['workspace.manage_members', 'workspace.manage_roles', 'workspace.manage_settings'] },
   { module: 'billing',         label: 'Billing',          keys: ['billing.manage'] },
   {
@@ -358,6 +366,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'dashboard.view',
     'proposals.view', 'proposals.create', 'proposals.edit', 'proposals.send', 'proposals.convert', 'proposals.delete',
     'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.send', 'invoices.export', 'invoices.delete',
+    'email_hosting.view', 'email_hosting.billing', 'email_hosting.operate', 'email_hosting.admin_server',
     'retainers.view', 'retainers.manage',
     'expenses.view', 'expenses.create', 'expenses.delete', 'expenses.approve',
     'purchase_orders.view', 'purchase_orders.create', 'purchase_orders.approve',
@@ -419,6 +428,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'dashboard.view',
     'proposals.view', 'proposals.create', 'proposals.edit', 'proposals.send', 'proposals.convert', 'proposals.delete',
     'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.send', 'invoices.export', 'invoices.delete',
+    'email_hosting.view', 'email_hosting.billing', 'email_hosting.operate', 'email_hosting.admin_server',
     'retainers.view', 'retainers.manage',
     'expenses.view', 'expenses.create', 'expenses.delete', 'expenses.approve',
     'purchase_orders.view', 'purchase_orders.create', 'purchase_orders.approve',
@@ -480,6 +490,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     // Financial operations but no accounting posting, no tax config, no billing
     'dashboard.view',
     'invoices.view', 'invoices.create', 'invoices.edit', 'invoices.send', 'invoices.export',
+    'email_hosting.view', 'email_hosting.billing',
     'retainers.view', 'retainers.manage',
     'expenses.view', 'expenses.create', 'expenses.delete',
     'purchase_orders.view', 'purchase_orders.create',
@@ -527,6 +538,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     // Read-only audit access to all financial records
     'dashboard.view',
     'invoices.view',           // view only, no export (sensitive bulk extraction)
+    'email_hosting.view',
     'retainers.view',
     'expenses.view',
     'purchase_orders.view',
@@ -562,6 +574,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'dashboard.view',
     'proposals.view', 'proposals.create', 'proposals.edit', 'proposals.send', 'proposals.convert',
     'invoices.view', 'invoices.create',
+    'email_hosting.view',
     'tax.withholding.record',
     'retainers.view',
     'service_orders.view',
@@ -628,6 +641,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'dashboard.view',
     'clients.view',
     'invoices.view',
+    'email_hosting.view',
     'expenses.view', 'expenses.create',
     'tax.withholding.record',
     'service_orders.view',
@@ -655,6 +669,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<BusinessRole, PermissionSet> = {
     'reports.view',
     'reporting_center.view',
     'invoices.view',
+    'email_hosting.view',
     'expenses.view',
     'clients.view',
     'pos.view',

@@ -1,18 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireEmailBilling } from '../_lib/auth';
+import { auditEmailBilling } from '../_lib/audit';
 import { calculateMailBilling } from '@/lib/email-billing/billing-calculator';
 import { resolveMailBillingReviewItems } from '@/lib/email-billing/review';
 import { mailBillingSubscriptionCreateSchema, parseJsonBody } from '@/lib/email-billing/validation';
 
 export async function GET() {
-  const auth = await requireEmailBilling('invoices.view');
+  const auth = await requireEmailBilling('view');
   if ('response' in auth) return auth.response;
   return NextResponse.json({ subscriptions: await prisma.mailBillingSubscription.findMany({ where: { workspaceId: auth.workspaceId }, include: { domain: true, client: true, plan: true, retainer: true }, orderBy: { createdAt: 'desc' } }) });
 }
 
 export async function POST(req: NextRequest) {
-  const auth = await requireEmailBilling('invoices.edit');
+  const auth = await requireEmailBilling('billing');
   if ('response' in auth) return auth.response;
   try {
     const body = parseJsonBody(mailBillingSubscriptionCreateSchema, await req.json().catch(() => ({})));
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
       return subscription;
     });
     await resolveMailBillingReviewItems(auth.workspaceId, { domainId: domain.id, types: ['DOMAIN_MISSING_CLIENT', 'DOMAIN_MISSING_SUBSCRIPTION'] }, auth.userId);
+    auditEmailBilling(auth, 'subscription_created', { type: 'mail_billing_subscription', id: sub.id }, { domainId: domain.id, clientId: client.id, planId: plan?.id ?? null }, req);
     return NextResponse.json({ subscription: sub }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid subscription' }, { status: 400 });

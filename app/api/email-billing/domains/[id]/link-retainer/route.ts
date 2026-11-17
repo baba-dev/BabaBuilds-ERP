@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireEmailBilling } from '../../../_lib/auth';
+import { auditEmailBilling } from '../../../_lib/audit';
 import { resolveMailBillingReviewItems } from '@/lib/email-billing/review';
 import { mailBillingLinkRetainerSchema, parseJsonBody } from '@/lib/email-billing/validation';
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireEmailBilling('invoices.edit');
+  const auth = await requireEmailBilling('billing');
   if ('response' in auth) return auth.response;
   const { id } = await params;
   const domain = await prisma.mailBillingDomain.findFirst({ where: { id, workspaceId: auth.workspaceId }, include: { subscriptions: true } });
@@ -21,6 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return subscription;
     });
     await resolveMailBillingReviewItems(auth.workspaceId, { domainId: id, subscriptionId: updated?.id, types: ['DOMAIN_MISSING_RETAINER'] }, auth.userId);
+    auditEmailBilling(auth, 'domain_retainer_linked', { type: 'mail_billing_domain', id }, { retainerId: retainer.id, subscriptionId: updated?.id ?? null }, req);
     return NextResponse.json({ subscription: updated });
   } catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid retainer link' }, { status: 400 }); }
 }
