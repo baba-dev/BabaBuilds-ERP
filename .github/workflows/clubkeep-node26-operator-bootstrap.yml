@@ -3,6 +3,9 @@ name: Bootstrap reviewed ClubKeep Node26 root operators (no service cutover)
 # Trusted VPS host credentials belong to the platform/ERP production environment.
 # The restricted ClubKeep deploy user is intentionally NOT granted sudo install.
 on:
+  pull_request:
+    paths:
+      - .github/workflows/clubkeep-node26-operator-bootstrap.yml
   push:
     branches: [main]
     paths:
@@ -16,6 +19,28 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify-provenance:
+    if: ${{ github.event_name == 'pull_request' }}
+    name: Verify ClubKeep PR head and CI using scoped GitHub token (no VPS secrets)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Read public ClubKeep PR and green CI with authenticated gh api
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -Eeuo pipefail
+          expected=44273c54f1a5671aab0ef253bf9fd9305027e2e8
+          actual="$(gh api repos/baba-dev/ClubKeep/pulls/34 --jq '.head.sha')"
+          test "$actual" = "$expected"
+          gh api "repos/baba-dev/ClubKeep/actions/runs?head_sha=$expected&event=pull_request&per_page=60" |
+            jq -e --arg sha "$expected" '
+              any(.workflow_runs[]?;
+                .name == "CI" and .head_sha == $sha and
+                .status == "completed" and .conclusion == "success")
+            ' >/dev/null
+          echo "CLUBKEEP_CROSS_REPO_AUTHENTICATED_PROVENANCE_PASS"
+
   install:
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
@@ -25,11 +50,11 @@ jobs:
       - name: Verify exact reviewed ClubKeep PR head has passing CI
         env:
           CLUBKEEP_SHA: 44273c54f1a5671aab0ef253bf9fd9305027e2e8
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -Eeuo pipefail
-          pr="$(curl -fsSL --retry 3 --proto '=https' --tlsv1.2 \
-            https://api.github.com/repos/baba-dev/ClubKeep/pulls/34)"
+          pr="$(gh api repos/baba-dev/ClubKeep/pulls/34)"
           jq -e --arg sha "$CLUBKEEP_SHA" '
             .state == "open" and .head.sha == $sha and
             .head.repo.full_name == "baba-dev/ClubKeep" and
@@ -37,8 +62,7 @@ jobs:
           ' <<< "$pr" >/dev/null || {
             echo "CLUBKEEP_OPERATOR_BOOTSTRAP_BLOCKED: PR #34 changed"; exit 1;
           }
-          runs="$(curl -fsSL --retry 3 --proto '=https' --tlsv1.2 \
-            "https://api.github.com/repos/baba-dev/ClubKeep/actions/runs?head_sha=$CLUBKEEP_SHA&event=pull_request&per_page=60")"
+          runs="$(gh api "repos/baba-dev/ClubKeep/actions/runs?head_sha=$CLUBKEEP_SHA&event=pull_request&per_page=60")"
           jq -e --arg sha "$CLUBKEEP_SHA" '
             any(.workflow_runs[]?;
               .name == "CI" and .head_sha == $sha and
