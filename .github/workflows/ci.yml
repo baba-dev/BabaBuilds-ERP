@@ -109,7 +109,8 @@ jobs:
       - name: Validate SQLite retirement and standalone deployment operators
         run: |
           python3 -m py_compile scripts/operations/retire_erp_sqlite.py
-          bash -n scripts/operations/deploy-erp-standalone.sh
+          python3 -m py_compile ops/erp-release/{package,promote,commission}.py
+          bash -n scripts/operations/deploy-erp-standalone.sh ops/erp-release/install.sh
           python3 -m unittest discover -s tests/ops -p 'test_*.py' -v
 
   build:

@@ -3,6 +3,13 @@ name: ERP immutable Node 26 release
 # Only completed, successful, repository-owned CI pushes to latest main qualify.
 # Production is opt-in via an explicit repository variable and recovery gate.
 on:
+  workflow_dispatch:
+    inputs:
+      confirm_production:
+        description: "I have commissioned the VPS and verified protected recovery/rollback prerequisites"
+        type: boolean
+        default: false
+        required: true
   workflow_run:
     workflows: ["CI"]
     types: [completed]
@@ -19,13 +26,16 @@ jobs:
   provenance:
     name: Verify latest trusted main CI
     if: >-
-      ${{ github.event.workflow_run.event == 'push' &&
-          github.event.workflow_run.head_branch == 'main' &&
-          github.event.workflow_run.head_repository.full_name == github.repository &&
-          github.event.workflow_run.conclusion == 'success' &&
-          vars.ERP_AUTODEPLOY_ENABLED == 'true' &&
-          vars.ERP_RECOVERY_VERIFIED == 'true' &&
-          vars.CI_SMOKE_ADVISORY != 'true' }}
+      ${{ (github.event_name == 'workflow_dispatch' &&
+           github.ref == 'refs/heads/main' && inputs.confirm_production == true) ||
+          (github.event_name == 'workflow_run' &&
+           github.event.workflow_run.event == 'push' &&
+           github.event.workflow_run.head_branch == 'main' &&
+           github.event.workflow_run.head_repository.full_name == github.repository &&
+           github.event.workflow_run.conclusion == 'success' &&
+           vars.ERP_AUTODEPLOY_ENABLED == 'true' &&
+           vars.ERP_RECOVERY_VERIFIED == 'true' &&
+           vars.CI_SMOKE_ADVISORY != 'true') }}
     runs-on: ubuntu-24.04
     outputs:
       sha: ${{ steps.check.outputs.sha }}
@@ -33,12 +43,31 @@ jobs:
       - name: Verify current main SHA and all CI gates
         id: check
         uses: actions/github-script@v7
+        env:
+          CI_SMOKE_ADVISORY: ${{ vars.CI_SMOKE_ADVISORY }}
         with:
           script: |
             const { owner, repo } = context.repo;
-            const run = context.payload.workflow_run;
             const ref = await github.rest.git.getRef({owner, repo, ref:"heads/main"});
-            if (run.head_sha !== ref.data.object.sha) throw Error("Superseded CI run");
+            let run;
+            if (context.eventName === "workflow_dispatch") {
+              // Manual operations must also use a completed, green CI push for
+              // the CURRENT main SHA. Never trust an older CI or bypass tests.
+              const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+                owner, repo, workflow_id:"ci.yml", branch:"main",
+                event:"push", status:"completed", per_page:100
+              });
+              run = runs.find(r => r.head_sha === ref.data.object.sha &&
+                r.status === "completed" && r.conclusion === "success");
+              if (!run) throw Error("Latest main has no successful completed CI push");
+            } else {
+              run = context.payload.workflow_run;
+              if (run.head_sha !== ref.data.object.sha ||
+                  run.head_branch !== "main" ||
+                  run.head_repository.full_name !== context.repo.owner + "/" + context.repo.repo ||
+                  run.event !== "push" || run.conclusion !== "success")
+                throw Error("Untrusted or superseded CI run");
+            }
             const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
               owner, repo, run_id:run.id, per_page:100
             });
@@ -49,6 +78,9 @@ jobs:
               if (jobs.filter(j => j.name === name && j.conclusion === "success").length !== 1)
                 throw Error("Missing or failed required CI check: " + name);
             }
+            // A non-advisory browser job is required for both manual and auto.
+            if (process.env.CI_SMOKE_ADVISORY === "true")
+              throw Error("Browser smoke advisory mode blocks production");
             core.setOutput("sha", run.head_sha);
 
   arm64-build:
