@@ -1,16 +1,35 @@
-type Bucket = { count: number; resetAt: number };
+import { redisRateLimit } from '@/lib/redis/rate-limit';
 
+type Bucket = { count: number; resetAt: number };
 const store = new Map<string, Bucket>();
 
+let lastRedisWarningAt = 0;
+
 /**
- * Simple fixed-window rate limiter (per process). Suitable for single-node or dev;
- * use Redis in production for multi-instance.
+ * Existing fixed-window limit semantics, now distributed when enabled.
+ * The in-memory limiter remains the safe availability fallback for standard
+ * business/public routes; authentication uses a stricter fail-closed policy.
  */
-export function checkRateLimit(
+export async function checkRateLimit(
   key: string,
   max: number,
   windowMs: number,
-): { ok: true } | { ok: false; retryAfterMs: number } {
+): Promise<{ ok: true } | { ok: false; retryAfterMs: number }> {
+  try {
+    const result = await redisRateLimit('generic', key, max, windowMs);
+    if (result) {
+      return result.ok
+        ? { ok: true }
+        : { ok: false, retryAfterMs: result.retryAfterMs };
+    }
+  } catch {
+    const now = Date.now();
+    if (now - lastRedisWarningAt >= 60_000) {
+      lastRedisWarningAt = now;
+      console.warn('[redis-rate-limit] unavailable; local generic limiter retained');
+    }
+  }
+
   const now = Date.now();
   let b = store.get(key);
   if (!b || now >= b.resetAt) {
