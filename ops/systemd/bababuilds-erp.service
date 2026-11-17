@@ -1,0 +1,35 @@
+# Prepared for ERP-only PM2 -> systemd handoff after a verified Node 26 release.
+# DO NOT enable this alongside an active PM2 'erp' process on TCP 3000.
+# The 'current' symlink must point to the reviewed immutable standalone runtime.
+[Unit]
+Description=BabaBuilds ERP Node 26 (PostgreSQL 17)
+Wants=network-online.target
+After=network-online.target postgresql@17-main.service
+Requires=postgresql@17-main.service
+StartLimitIntervalSec=90
+StartLimitBurst=3
+
+[Service]
+Type=exec
+User=root
+Group=root
+WorkingDirectory=/opt/bababuilds-erp/releases/current
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+Environment=PRIVATE_UPLOADS_DIR=/var/www/bababuilds-erp/private_uploads
+ExecStartPre=/usr/bin/test -s /opt/bababuilds-erp/releases/current/server.js
+ExecStartPre=/usr/bin/test -s /opt/bababuilds-erp/releases/current/public/sw.js
+ExecStart=/opt/bababuilds-erp/node26/bin/node --env-file=/var/www/bababuilds-erp/.env --env-file=/etc/bababuilds-erp/production-database.env /opt/bababuilds-erp/releases/current/server.js
+Restart=on-failure
+RestartSec=4s
+KillSignal=SIGTERM
+TimeoutStopSec=30s
+LimitNOFILE=65535
+UMask=0077
+NoNewPrivileges=yes
+# Existing media ownership is root-based. Do not introduce sandboxed write
+# restrictions until all ERP document/upload paths have been exercised.
+
+[Install]
+WantedBy=multi-user.target

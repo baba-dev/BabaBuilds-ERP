@@ -4,7 +4,7 @@ description: Node version pinned from .nvmrc (matches package.json engines), npm
 runs:
   using: composite
   steps:
-    - uses: actions/setup-node@v4
+    - uses: actions/setup-node@v7
       with:
         node-version-file: .nvmrc
         cache: npm
@@ -19,3 +19,24 @@ runs:
       shell: bash
       # postinstall runs `prisma generate`, so the client is ready after this step.
       run: npm ci --no-audit --no-fund
+
+    - name: Enforce Prisma 7 PostgreSQL adapter contract
+      shell: bash
+      run: |
+        node - <<'JS'
+        const fs = require('node:fs');
+        const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+        const names = ['prisma', '@prisma/client', '@prisma/adapter-pg'];
+        for (const name of names) {
+          const pinned = pkg.dependencies?.[name] ?? pkg.devDependencies?.[name];
+          if (pinned !== '7.10.1') throw Error(name + ' must pin Prisma 7.10.1');
+          if (JSON.parse(fs.readFileSync('node_modules/' + name + '/package.json', 'utf8')).version !== '7.10.1') {
+            throw Error(name + ' installed version mismatch');
+          }
+        }
+        const schema = fs.readFileSync('prisma/schema.prisma','utf8');
+        if (!schema.includes('provider = "postgresql"')) {
+          throw Error('ERP must use PostgreSQL');
+        }
+        console.log('NODE26_PRISMA7_POSTGRES_CONTRACT_PASS');
+        JS

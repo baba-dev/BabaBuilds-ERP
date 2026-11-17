@@ -1,0 +1,59 @@
+name: ERP VPS runtime inventory (read-only)
+
+# Safe, one-time audit on introduction and explicit manual rechecks.
+# GitHub-hosted runner only; SSH runs reviewed code on the VPS.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/erp-vps-runtime-audit.yml
+      - ops/erp-release/audit_vps.py
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-runtime-inventory
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    name: Verify ERP runtime / Node22 retirement eligibility
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Stage reviewed read-only audit
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: ops/erp-release/audit_vps.py
+          target: /tmp/erp-runtime-audit-${{ github.sha }}
+          strip_components: 2
+      - name: Check root-owned audit and print sanitized evidence
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script_stop: true
+          command_timeout: 5m
+          script: |
+            set -euo pipefail
+            uploaded="/tmp/erp-runtime-audit-${{ github.sha }}/audit_vps.py"
+            reviewed="/usr/local/lib/bababuilds-erp-release/audit_vps.py"
+            test -f "$uploaded" && test ! -L "$uploaded"
+            sudo -n install -d -o root -g root -m 0755 /usr/local/lib/bababuilds-erp-release
+            sudo -n install -o root -g root -m 0644 "$uploaded" "$reviewed"
+            test "$(sudo -n git hash-object "$reviewed")" = "6d42f31ecaf0d434c1691977ab5c2ab017b45f4b" || {
+              echo "ERP runtime audit: reviewed source mismatch"; exit 1;
+            }
+            sudo -n /usr/bin/python3 "$reviewed"
+            rm -f -- "$uploaded"
+            rmdir "/tmp/erp-runtime-audit-${{ github.sha }}" 2>/dev/null || true
