@@ -223,7 +223,9 @@ def main():
     }
     print("ERP_VPS_RUNTIME_AUDIT=" + json.dumps(report, sort_keys=True))
     print("ERP_NODE22_RETIRE_GUARD=" + ("PASS" if can_retire else "BLOCKED"))
-    # Disk scans are opt-in so the release operator\x27s 50s health deadline stays bounded.\n    if "--storage" in sys.argv[1:]:\n        print("ERP_STORAGE_INVENTORY=" + json.dumps(disk_inventory(), sort_keys=True))
+    # Disk scans are opt-in so the release operator's health deadline stays bounded.
+    if "--storage" in sys.argv[1:]:
+        print("ERP_STORAGE_INVENTORY=" + json.dumps(disk_inventory(), sort_keys=True))
     if node26_version != "v26.13.1":
         raise SystemExit("Node26 installed binary mismatch")
     if database_rc != 0:
