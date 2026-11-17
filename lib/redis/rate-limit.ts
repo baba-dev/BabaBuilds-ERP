@@ -71,7 +71,9 @@ export async function redisRateLimit(
   const config = loadRedisConfig();
   if (!config.features.rateLimits) return null;
   validateLimit(max, windowMs);
-  const client = await getRedisClient('cache', config);
+  // Security counters live in the non-evicting, AOF-backed ERP queue pool.
+  // Ordinary endpoint limits may use the bounded LRU cache pool.
+  const client = await getRedisClient(domain === 'auth' ? 'queue' : 'cache', config);
   if (!client) throw new Error('REDIS_RATE_LIMIT_UNAVAILABLE');
   const key = redisKey(config, 'rate-limit', domain, rateLimitIdentity(domain, identity));
   const raw: unknown = await client.eval(FIXED_WINDOW_LUA, 1, key, action, max, windowMs);
@@ -90,7 +92,7 @@ export async function clearRedisRateLimit(
 ): Promise<boolean> {
   const config = loadRedisConfig();
   if (!config.features.rateLimits) return false;
-  const client = await getRedisClient('cache', config);
+  const client = await getRedisClient('queue', config);
   if (!client) throw new Error('REDIS_RATE_LIMIT_UNAVAILABLE');
   const key = redisKey(config, 'rate-limit', domain, rateLimitIdentity(domain, identity));
   await client.del(key);
