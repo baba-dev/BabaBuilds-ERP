@@ -25,11 +25,11 @@ jobs:
       - name: Verify exact reviewed ClubKeep PR head has passing CI
         env:
           CLUBKEEP_SHA: 44273c54f1a5671aab0ef253bf9fd9305027e2e8
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -Eeuo pipefail
-          pr="$(curl -fsSL --retry 3 --proto '=https' --tlsv1.2 \
-            https://api.github.com/repos/baba-dev/ClubKeep/pulls/34)"
+          pr="$(gh api repos/baba-dev/ClubKeep/pulls/34)"
           jq -e --arg sha "$CLUBKEEP_SHA" '
             .state == "open" and .head.sha == $sha and
             .head.repo.full_name == "baba-dev/ClubKeep" and
@@ -37,8 +37,7 @@ jobs:
           ' <<< "$pr" >/dev/null || {
             echo "CLUBKEEP_OPERATOR_BOOTSTRAP_BLOCKED: PR #34 changed"; exit 1;
           }
-          runs="$(curl -fsSL --retry 3 --proto '=https' --tlsv1.2 \
-            "https://api.github.com/repos/baba-dev/ClubKeep/actions/runs?head_sha=$CLUBKEEP_SHA&event=pull_request&per_page=60")"
+          runs="$(gh api "repos/baba-dev/ClubKeep/actions/runs?head_sha=$CLUBKEEP_SHA&event=pull_request&per_page=60")"
           jq -e --arg sha "$CLUBKEEP_SHA" '
             any(.workflow_runs[]?;
               .name == "CI" and .head_sha == $sha and
