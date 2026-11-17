@@ -202,7 +202,7 @@ jobs:
             operator="/usr/local/lib/bababuilds-erp-release/systemd_promote.py"
             sudo -n install -d -o root -g root -m 0755 /usr/local/lib/bababuilds-erp-release
             sudo -n install -o root -g root -m 0644 "$incoming/systemd_promote.py" "$operator"
-            test "$(sudo -n git hash-object "$operator")" = "54dd8a9df973612875336de1c42a68f149f7cb4d" || {
+            test "$(sudo -n git hash-object "$operator")" = "5a1f974a1d87f2ad215954287c8e1d875edf63d3" || {
               echo 'ERP_SYSTEMD_OPERATOR_REVIEWED_SHA_MISMATCH'; exit 1;
             }
             sudo -n /usr/bin/python3 "$operator" preflight
