@@ -18,13 +18,14 @@ if (process.env.ERP_STAGING_MODE === '1') {
   }
 }
 
-import { PrismaClient } from '@prisma/client';
+import type { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from './prisma-client';
 
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
-// Classic, stable Prisma 6 instantiation
+// Prisma 7: reuse a single PostgreSQL adapter pool per server process
 export const prisma =
   globalForPrisma.prisma ||
-  new PrismaClient();
+  createPrismaClient();
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
