@@ -1,12 +1,13 @@
-name: ERP immutable Node 26 release
+name: ERP immutable Node 26 systemd release
 
 # Only completed, successful, repository-owned CI pushes to latest main qualify.
-# Production is opt-in via an explicit repository variable and recovery gate.
+# Automatic after current main's completed green CI; no database migration or backup.
+# Only the ERP systemd service is restarted; sibling VPS services stay untouched.
 on:
   workflow_dispatch:
     inputs:
       confirm_production:
-        description: "I have commissioned the VPS and verified protected recovery/rollback prerequisites"
+        description: "Deploy latest green main to ERP Node26 systemd (no DB migration or backup)"
         type: boolean
         default: false
         required: true
@@ -33,8 +34,6 @@ jobs:
            github.event.workflow_run.head_branch == 'main' &&
            github.event.workflow_run.head_repository.full_name == github.repository &&
            github.event.workflow_run.conclusion == 'success' &&
-           vars.ERP_AUTODEPLOY_ENABLED == 'true' &&
-           vars.ERP_RECOVERY_VERIFIED == 'true' &&
            vars.CI_SMOKE_ADVISORY != 'true') }}
     runs-on: ubuntu-24.04
     outputs:
@@ -134,7 +133,7 @@ jobs:
           retention-days: 14
 
   promote:
-    name: Guarded ERP activation through existing SSH route
+    name: Deploy verified ARM64 release to ERP systemd
     needs: [provenance, arm64-build]
     runs-on: ubuntu-24.04
     environment: erp-production
@@ -142,32 +141,48 @@ jobs:
     env:
       DEPLOY_SHA: ${{ needs.provenance.outputs.sha }}
     steps:
-      - name: Download verified ARM64 candidate
+      - name: Checkout reviewed deployment operator for the exact verified SHA
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.provenance.outputs.sha }}
+          persist-credentials: false
+
+      - name: Download verified native ARM64 candidate
         uses: actions/download-artifact@v4
         with:
           name: erp-arm64-${{ needs.provenance.outputs.sha }}
           path: erp-release
 
-      - name: Recheck latest main SHA before transfer
+      - name: Recheck that candidate still matches latest main
         uses: actions/github-script@v7
         with:
           script: |
             const {owner, repo} = context.repo;
             const ref = await github.rest.git.getRef({owner, repo, ref:"heads/main"});
             if (ref.data.object.sha !== process.env.DEPLOY_SHA)
-              throw Error("Newer main commit exists; outdated release refused");
+              throw Error("Newer main commit exists; older release refused");
 
-      - name: Copy exact release into isolated incoming directory on ERP VPS
+      - name: Copy verified release artifacts to ERP VPS
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           source: "erp-release/erp-release.tar.gz,erp-release/manifest.json"
-          target: /tmp/erp-node26-${{ needs.provenance.outputs.sha }}
+          target: /tmp/erp-systemd-${{ needs.provenance.outputs.sha }}
           strip_components: 1
 
-      - name: Preflight, activate and verify through protected operator
+      - name: Copy exact reviewed systemd activation operator to ERP VPS
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "ops/erp-release/systemd_promote.py"
+          target: /tmp/erp-systemd-${{ needs.provenance.outputs.sha }}
+          strip_components: 2
+
+      - name: Activate only ERP systemd service and verify Node26
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.HOST }}
@@ -179,24 +194,32 @@ jobs:
           script: |
             set -euo pipefail
             [[ "$DEPLOY_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
-            # Existing trusted SSH deploy path from PR #643 is preserved.
-            app=/opt/bababuilds-erp-cutover/cut1611b/app
-            sudo -n git -C "$app" fetch --no-tags https://github.com/baba-dev/BabaBuilds-ERP.git refs/heads/main
-            live_sha="$(sudo -n git -C "$app" rev-parse FETCH_HEAD)"
-            [[ "$DEPLOY_SHA" == "$live_sha" ]] || { echo 'Newer main commit exists; skip'; exit 1; }
-            # Remove transferred artifact after execution; no customer files touched.
-            incoming="/tmp/erp-node26-$DEPLOY_SHA"
-            trap 'rm -rf -- "$incoming"' EXIT
-            # Monitor must already be enabled, or activation is refused.
-            sudo -n systemctl is-active --quiet erp-release-watchdog.timer
-            # The root-owned operator is installed separately from reviewed source,
-            # with protected environment and recovery attestations on the host.
-            sudo -n /usr/local/sbin/bababuilds-erp-promote preflight
-            sudo -n /usr/local/sbin/bababuilds-erp-promote promote \
-              --archive "/tmp/erp-node26-$DEPLOY_SHA/erp-release.tar.gz" \
-              --manifest "/tmp/erp-node26-$DEPLOY_SHA/manifest.json" \
+            incoming="/tmp/erp-systemd-$DEPLOY_SHA"
+            test -f "$incoming/erp-release.tar.gz"
+            test -f "$incoming/manifest.json"
+            test -f "$incoming/systemd_promote.py"
+            test ! -L "$incoming/systemd_promote.py"
+            operator="/usr/local/lib/bababuilds-erp-release/systemd_promote.py"
+            sudo -n install -d -o root -g root -m 0755 /usr/local/lib/bababuilds-erp-release
+            sudo -n install -o root -g root -m 0644 "$incoming/systemd_promote.py" "$operator"
+            test "$(sudo -n git hash-object "$operator")" = "54dd8a9df973612875336de1c42a68f149f7cb4d" || {
+              echo 'ERP_SYSTEMD_OPERATOR_REVIEWED_SHA_MISMATCH'; exit 1;
+            }
+            sudo -n /usr/bin/python3 "$operator" preflight
+            sudo -n /usr/bin/python3 "$operator" promote \
+              --archive "$incoming/erp-release.tar.gz" \
+              --manifest "$incoming/manifest.json" \
               --sha "$DEPLOY_SHA"
-            sudo -n /usr/local/sbin/bababuilds-erp-promote monitor
+            sudo -n /usr/bin/python3 /usr/local/lib/bababuilds-erp-release/audit_vps.py
+            # Retirement occurs only after the new Node26 systemd release is healthy,
+            # and the read-only audit independently confirms zero Node22 consumers.
+            if sudo -n test -d /opt/bababuilds-erp/node22; then
+              sudo -n /usr/bin/python3 "$operator" retire-node22
+            else
+              echo 'ERP_NODE22_ALREADY_RETIRED'
+            fi
+            rm -f -- "$incoming/erp-release.tar.gz" "$incoming/manifest.json" "$incoming/systemd_promote.py"
+            rmdir -- "$incoming" 2>/dev/null || true
 
       - name: Purge only ERP service-worker URL (when configured)
         shell: bash

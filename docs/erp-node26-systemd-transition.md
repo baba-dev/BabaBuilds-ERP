@@ -58,3 +58,45 @@ Before activation:
 The operator chose not to create new Restic/PostgreSQL backups or to rehearse
 application rollback; that decision increases risk of irrecoverable data loss
 during any subsequent schema or data-changing operation.
+
+## Production handoff completed, auto-deployment follow-up
+
+The operator-provided VPS evidence on 2026-11-17 confirmed:
+- `ERP_SYSTEMD_HANDOFF_PASS` for SHA `2566fd41e0334fa3762ba17de18d629c566f8495`
+- Active enabled `bababuilds-erp.service` PID executed `/opt/bababuilds-erp/node26/bin/node`
+- PostgreSQL 17 with 185 ERP tables; public `/login` HTTP 200
+- Read-only audit `ERP_NODE22_RETIRE_GUARD=PASS`, no ERP PM2 process or Node22 consumers
+- MenuMinute and ClubKeep both healthy
+
+The old GitHub deployment workflow was still a PM2/recovery operator; its earlier historical
+status is not a signal about the new release. The new `.github/workflows/deploy.yml`
+replaces production promotion with **systemd-only** activation on the exact current,
+completed, successful `main` CI SHA. It retains a native ARM64 artifact build,
+manifest SHA256 verification, complete PostgreSQL migration checksums, a
+private loopback preview, exact interpreter verification, and ERP-only health checks.
+It **never** runs Prisma migrations or any DB mutation/backup.
+
+`ops/erp-release/systemd_promote.py` is installed from a pinned reviewed Git blob on
+the VPS before each execution. It checks root-only protected env and installed
+systemd unit identity, stages a verified archive into a new isolated release
+tree, preserves all ten authoritative ERP media directories as symlinks, and
+atomically repoints `/opt/bababuilds-erp/releases/current`. Only
+`bababuilds-erp.service` is restarted; if startup or health fails, the previous
+symlink is restored and that ERP service is restarted. This application-only
+recovery does not replace a PostgreSQL backup.
+
+The deployment runs `retire-node22` only once the latest Node26 systemd release
+is healthy and the fresh VPS runtime audit reports
+`safe_to_retire_node22=true`. It deletes only the isolated
+`/opt/bababuilds-erp/node22` directory. Other Node installations, including
+the system, PM2 CLI runtime and MenuMinute/ClubKeep, are not modified.
+
+### Operational monitoring
+
+- Check the `ERP immutable Node 26 systemd release` workflow on GitHub Actions.
+- Check `sudo systemctl status bababuilds-erp.service --no-pager` and
+  `sudo readlink -f /proc/$(systemctl show -p MainPID --value bababuilds-erp.service)/exe`.
+- Verify `https://erp.bababuilds.com/login` and the application login/session.
+- The release workflow rechecks latest `main` immediately before restart;
+  rapid successive commits can legitimately skip an obsolete candidate.
+- Never enable legacy `erp-release-watchdog.timer` alongside the systemd ERP.
