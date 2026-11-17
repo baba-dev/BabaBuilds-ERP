@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { Prisma, PrismaClient } from "@prisma/client";
+import { Prisma } from '@prisma/client';
+import { createPrismaClient } from '@/lib/prisma-client';
 import { randomUUID } from "node:crypto";
 import { recordInvoicePayment } from "@/lib/invoices/payments";
 
@@ -15,7 +16,7 @@ try {
 
 describe.runIf(valid)("PostgreSQL financial concurrency", () => {
   it("prevents duplicate payment and lost-update on concurrent requests", async () => {
-    const prisma = new PrismaClient();
+    const prisma = createPrismaClient();
     const workspace = await prisma.workspace.create({
       data: { name: "pg-concurrency-" + randomUUID() }
     });
@@ -79,7 +80,7 @@ describe.runIf(valid)("PostgreSQL financial concurrency", () => {
   }, 60000);
 
   it("keeps invoice totals equal to the ledger during concurrent partial payments", async () => {
-    const prisma = new PrismaClient();
+    const prisma = createPrismaClient();
     const workspace = await prisma.workspace.create({
       data: { name: "pg-partial-payment-" + randomUUID() },
     });

@@ -4,7 +4,7 @@ const manifest=JSON.parse(readFileSync('package.json','utf8'));
 const lock=JSON.parse(readFileSync('package-lock.json','utf8'));
 const core={
  'next':'16.4.5','react':'19.3.1','react-dom':'19.3.1',
- '@prisma/client':'6.19.2','prisma':'6.19.2',
+ '@prisma/client':'7.10.1','prisma':'7.10.1','@prisma/adapter-pg':'7.10.1',
  '@serwist/next':'9.5.13','serwist':'9.5.13','eslint-config-next':'16.4.5'
 };
 const version=(name)=>lock.packages['node_modules/'+name]?.version;
@@ -31,6 +31,6 @@ for(const parent of ['@serwist/build','@serwist/next','@serwist/webpack-plugin']
  assert.ok(min(installed,'4.6.7'),parent+' unresolved vulnerable Zod');
  assert.equal(manifest.overrides[parent]?.zod,'4.6.7',parent+' scoped override missing');
 }
-assert.equal(manifest.dependencies['@prisma/client'],'^6.19.2');
-assert.equal(manifest.devDependencies.prisma,'^6.19.2');
+assert.equal(manifest.dependencies['@prisma/client'],'7.10.1');
+assert.equal(manifest.devDependencies.prisma,'7.10.1');
 console.log('ERP dependency security boundaries PASS');

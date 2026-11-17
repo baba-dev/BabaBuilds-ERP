@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import { createPrismaClient } from '@/lib/prisma-client';
 import { randomUUID } from 'node:crypto';
 import { aggregate } from '@/lib/reporting/semantic';
 import { clientMetrics, listClients } from '@/lib/clients/queries';
@@ -15,7 +16,7 @@ try {
 
 describe.runIf(enabled)('PostgreSQL runtime aggregation and CRM SQL', () => {
   it('executes invoices/expenses semantic SQL with date, enum, and numeric fidelity', async () => {
-    const prisma = new PrismaClient();
+    const prisma = createPrismaClient();
     const tag = randomUUID();
     const workspace = await prisma.workspace.create({ data: { name: 'pg-runtime-' + tag } });
     const now = new Date('2026-11-15T12:00:00.000Z');

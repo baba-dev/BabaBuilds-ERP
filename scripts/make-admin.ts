@@ -6,7 +6,7 @@
  * The other half is the server setting SUPERADMIN_EMAILS (comma separated). Both are required, on purpose: a database
  * change alone, or an environment change alone, never grants access to the admin console.
  */
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from '../lib/prisma-client';
 
 async function main() {
   const email = process.argv[2]?.trim().toLowerCase();
@@ -14,7 +14,7 @@ async function main() {
     console.error("Usage: npm run admin:promote -- you@example.com");
     process.exit(1);
   }
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   try {
     const user = await prisma.user.findFirst({ where: { email: { equals: email } }, select: { id: true, email: true, role: true } });
     if (!user) {

@@ -1,11 +1,9 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from '@/lib/prisma';
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { Bug, Activity, CheckCircle2, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requireSystemHealthSuperAdmin } from "./_auth";
-
-const prisma = new PrismaClient();
 
 export const dynamic = "force-dynamic";
 

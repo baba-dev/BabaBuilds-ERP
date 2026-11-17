@@ -19,7 +19,7 @@ npx --no-install prisma migrate deploy
 npx --no-install prisma migrate status
 # Exit 2 on schema drift.
 npx --no-install prisma migrate diff \
-  --from-url "$DATABASE_URL" --to-schema-datamodel prisma/schema.prisma \
+  --from-config-datasource --to-schema prisma/schema.prisma \
   --exit-code
 # Repeated deployment must have no pending migrations.
 npx --no-install prisma migrate deploy

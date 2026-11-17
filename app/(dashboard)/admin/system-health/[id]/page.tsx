@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from '@/lib/prisma';
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
@@ -6,8 +6,6 @@ import { ArrowLeft, Sparkles, Terminal, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { requireSystemHealthSuperAdmin } from "../_auth";
-
-const prisma = new PrismaClient();
 
 export const dynamic = "force-dynamic";
 

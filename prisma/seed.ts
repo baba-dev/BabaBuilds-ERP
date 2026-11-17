@@ -1,8 +1,8 @@
-import { PrismaClient } from '@prisma/client';
+import { createPrismaClient } from '../lib/prisma-client';
 import { getIndiaStarterComplianceReadinessSummary } from './seed/index';
 import { upsertIndiaTaxReferenceCatalog } from './seed/tax-reference-persistence';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 
 async function main() {
   console.log('Seeding compliance dictionaries...');
