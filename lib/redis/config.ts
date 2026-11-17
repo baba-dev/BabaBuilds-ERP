@@ -94,8 +94,8 @@ export function loadRedisConfig(env: NodeJS.ProcessEnv = process.env): RedisConf
   if (requested.rateLimits && !urls.queue) {
     throw new Error('ERP_REDIS_QUEUE_URL is required for authentication rate limits');
   }
-  if (requested.jobs && !urls.queue) {
-    throw new Error('ERP_REDIS_QUEUE_URL is required for background jobs');
+  if (requested.jobs && !endpoint(env, 'ERP_REDIS_JOB_URL')) {
+    throw new Error('ERP_REDIS_JOB_URL is required for background jobs');
   }
 
   return {
