@@ -70,6 +70,15 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 15
+      redis:
+        image: redis:7
+        ports:
+          - 6384:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -80,6 +89,7 @@ jobs:
       - name: Vitest (complete suite, including financial concurrency)
         env:
           CI_POSTGRES_FINANCE_TESTS: "1"
+          CI_REDIS_RATE_LIMIT_TESTS: "1"
         run: npm test
 
   prisma:
