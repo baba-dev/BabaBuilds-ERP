@@ -4,6 +4,9 @@ import { randomUUID } from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import { authOptions } from '@/lib/auth';
+import { ModuleDisabledError, requireModule } from '@/lib/modules';
+import { RbacDeniedError, requirePermission } from '@/lib/rbac';
+import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 import { buildPrivatePath, ensureDir, sanitizeFilename, sniffAllowedContent } from '@/lib/uploads/private-storage';
 import { scanBuffer } from '@/lib/security/clamav';
 
@@ -33,10 +36,27 @@ type SharedImportPayload = {
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
   const workspaceId = (session as { workspaceId?: string } | null)?.workspaceId;
+  const userId = session?.user?.id;
 
-  if (!workspaceId) {
+  if (!workspaceId || !userId) {
     return NextResponse.redirect(new URL('/login?callbackUrl=/inbox/import', request.url));
   }
+
+  // Sharing to the inbox is a document upload: protect it before parsing bytes.
+  try {
+    await requireModule(workspaceId, 'DOCUMENTS');
+    await requirePermission(userId, workspaceId, 'documents.upload');
+  } catch (error) {
+    if (error instanceof ModuleDisabledError || error instanceof RbacDeniedError) {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
+    throw error;
+  }
+  const limit = enforceRouteRateLimit({
+    request, route: '/share-target', scope: `${workspaceId}:${userId}`,
+    max: 60, windowMs: 10 * 60_000,
+  });
+  if (!limit.ok) return limit.response;
 
   const formData = await request.formData();
   const title = formData.get('title');
