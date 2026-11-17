@@ -1,0 +1,27 @@
+# Reviewed template; NOT installed or enabled by ERP web CI/CD.
+[Unit]
+Description=BabaBuilds ERP Background Worker (Phase 4 opt-in)
+Wants=network-online.target
+After=network-online.target postgresql@17-main.service bababuilds-erp-redis-job.service
+Requires=postgresql@17-main.service bababuilds-erp-redis-job.service
+StartLimitIntervalSec=90
+StartLimitBurst=3
+
+[Service]
+Type=exec
+User=root
+Group=root
+WorkingDirectory=/opt/bababuilds-erp/releases/current
+Environment=NODE_ENV=production
+ExecStartPre=/usr/bin/test -s /opt/bababuilds-erp/releases/current/erp-worker.mjs
+ExecStart=/opt/bababuilds-erp/node26/bin/node --env-file=/var/www/bababuilds-erp/.env --env-file=/etc/bababuilds-erp/production-database.env /opt/bababuilds-erp/releases/current/erp-worker.mjs
+Restart=on-failure
+RestartSec=5s
+KillSignal=SIGTERM
+TimeoutStopSec=60s
+LimitNOFILE=16384
+UMask=0077
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

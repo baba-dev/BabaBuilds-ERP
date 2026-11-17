@@ -26,7 +26,21 @@ describe('ERP Redis foundation', () => {
     expect(() => loadRedisConfig(env({
       ERP_REDIS_ENABLED: 'true', ERP_REDIS_CACHE_URL: cacheUrl,
       ERP_REDIS_JOBS_ENABLED: 'true',
-    }))).toThrow(/ERP_REDIS_QUEUE_URL/);
+    }))).toThrow(/ERP_REDIS_JOB_URL/);
+  });
+
+  it('requires an isolated jobs endpoint independent of security counters', () => {
+    expect(() => loadRedisConfig(env({
+      ERP_REDIS_ENABLED: 'true', ERP_REDIS_QUEUE_URL: queueUrl,
+      ERP_REDIS_JOBS_ENABLED: 'true',
+    }))).toThrow(/ERP_REDIS_JOB_URL/);
+    const config = loadRedisConfig(env({
+      ERP_REDIS_ENABLED: 'true', ERP_REDIS_QUEUE_URL: queueUrl,
+      ERP_REDIS_JOBS_ENABLED: 'true',
+      ERP_REDIS_JOB_URL: 'redis://erp_jobs:password@127.0.0.1:6387/0',
+    }));
+    expect(config.features.jobs).toBe(true);
+    expect(config.urls.queue).toBe(queueUrl);
   });
 
   it('rejects independent cache flags without the master flag', () => {

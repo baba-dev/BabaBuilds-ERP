@@ -17,6 +17,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isCronAuthorized, unauthorizedCronResponse } from '@/lib/security/cron-auth';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
+import { inAppDeadlineQueueEnabled } from '@/lib/jobs/config';
+import { recordDeadlineInAppJob } from '@/lib/jobs/outbox';
 import { addDays, format, startOfDay, endOfDay } from 'date-fns';
 
 // Tax filing milestones for Indian compliance (extendable for global users)
@@ -150,6 +152,20 @@ export async function GET(request: Request) {
 
       for (const task of dueTasks) {
         if (!task.dueDate) continue;
+        // Phase 4 pilot: persist only the in-app channel before returning from
+        // cron. Email and push continue through the existing dispatcher.
+        // On outbox failure, immediately use the full legacy path (no dropped alert).
+        let queuedInApp = false;
+        if (inAppDeadlineQueueEnabled()) {
+          try {
+            await recordDeadlineInAppJob({
+              workspaceId: wid, taskId: task.id, dueDate: task.dueDate,
+            });
+            queuedInApp = true;
+          } catch {
+            console.error('[phase4] Deadline outbox unavailable; legacy route retained');
+          }
+        }
         await dispatchNotification({
           event: 'DEADLINE_ALERT',
           workspaceId: wid,
@@ -158,7 +174,7 @@ export async function GET(request: Request) {
             deadline: format(task.dueDate, 'dd MMM yyyy'),
             description: task.description ?? '',
           },
-        });
+        }, { skipInApp: queuedInApp });
         results.push(`[DEADLINE_ALERT] ${task.title}`);
       }
 

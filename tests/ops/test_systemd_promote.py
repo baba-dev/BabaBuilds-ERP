@@ -75,6 +75,7 @@ class SystemdPromoteTests(unittest.TestCase):
                 for name, content in (
                     ("release/server.js", b"server"),
                     ("release/public/sw.js", b"worker"),
+                    ("release/erp-worker.mjs", b"job-worker"),
                     ("release/public/partner-kit/asset.svg", b"old-build"),
                 ):
                     info = tarfile.TarInfo(name)
