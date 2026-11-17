@@ -14,7 +14,7 @@ const cell = (v: unknown) => {
 
 /** CSV of the current filter (up to 20,000 rows). */
 export async function GET(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/expenses/export", scope: "expense-export", max: 20, windowMs: 10 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/expenses/export", scope: "expense-export", max: 20, windowMs: 10 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const auth = await requireExpenseAccess("expenses.view");
   if (!auth.ok) return auth.response;

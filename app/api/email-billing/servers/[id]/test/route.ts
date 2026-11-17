@@ -9,7 +9,7 @@ import { requireEmailBilling } from '../../../_lib/auth';
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireEmailBilling('workspace.manage_settings');
   if ('response' in auth) return auth.response;
-  const limit = enforceRouteRateLimit({ request: req, route: '/api/email-billing/servers/test', scope: auth.workspaceId, max: 20, windowMs: 10 * 60_000 });
+  const limit = await enforceRouteRateLimit({ request: req, route: '/api/email-billing/servers/test', scope: auth.workspaceId, max: 20, windowMs: 10 * 60_000 });
   if (!limit.ok) return limit.response;
   const { id } = await params;
   const server = await prisma.mailBillingServer.findFirst({ where: { id, workspaceId: auth.workspaceId } });

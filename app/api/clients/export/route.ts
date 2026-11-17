@@ -7,7 +7,7 @@ import { logActivity } from "@/lib/security/activity-log";
 
 /** The whole client book as a spreadsheet, with what each client owes. Needs clients.view, rate limited, and recorded. */
 export async function GET(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/clients/export", scope: "client-export", max: 6, windowMs: 10 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/clients/export", scope: "client-export", max: 6, windowMs: 10 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const auth = await requireClientAccess("clients.view");
   if (!auth.ok) return auth.response;
