@@ -165,7 +165,7 @@ def check_config():
     }.items():
         if key in candidate and candidate[key] != desired:
             fail("Canary environment must not override isolated runtime: " + key)
-     if cfg["canary_env"] != "/etc/bababuilds-erp/canary.env":
+    if cfg["canary_env"] != "/etc/bababuilds-erp/canary.env":
         fail("Canary env path differs from isolated systemd unit")
     return cfg
 
