@@ -1,15 +1,29 @@
-name: ERP PostgreSQL protected backup
+name: ERP PostgreSQL backup (manual, opted out of scheduled backups)
+
+# No scheduled PostgreSQL or Restic backup is configured by this workflow.
+# Kept as an explicit operator-only action if backup policy changes.
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 1 * * *'
+
 permissions:
   contents: read
+
 jobs:
   backup:
-    if: vars.ERP_POSTGRES_PRODUCTION_VERIFIED == 'true' && vars.ERP_POSTGRES_CUTOVER_APPROVED == 'true'
-    runs-on: [self-hosted, linux, x64, erp-ci]
+    if: ${{ vars.ERP_POSTGRES_PRODUCTION_VERIFIED == 'true' && vars.ERP_POSTGRES_CUTOVER_APPROVED == 'true' }}
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
+    environment: erp-production
     steps:
-      - name: Execute installed root-reviewed backup helper
-        run: sudo -n /usr/local/sbin/bababuilds-erp-backup
+      - name: Invoke root-installed PostgreSQL backup only when explicitly requested
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script_stop: true
+          command_timeout: 20m
+          script: |
+            set -euo pipefail
+            sudo -n systemctl is-active --quiet postgresql@17-main
+            sudo -n /usr/local/sbin/bababuilds-erp-backup
