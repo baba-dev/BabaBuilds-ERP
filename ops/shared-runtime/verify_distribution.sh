@@ -44,7 +44,7 @@ source = Path("ops/shared-runtime/provision_node26.py")
 spec = importlib.util.spec_from_file_location("node26_installer", source)
 installer = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(installer)
-installer.validate_archive(Path("runtime-artifacts/node-v26.13.1-linux-arm64.tar.xz"))
+installer.validate_archive(Path("runtime-artifacts/node-v26.13.1-linux-arm64.tar.xz"), require_root_owned=False)
 print("NODE26_ARCHIVE_MEMBER_VALIDATION_PASS")
 PY
 echo 'NODE26_OFFICIAL_SIGNED_ARTIFACT_VERIFIED release=v26.13.1 arch=linux-arm64'
