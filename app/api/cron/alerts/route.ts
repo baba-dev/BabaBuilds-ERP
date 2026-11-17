@@ -154,16 +154,19 @@ export async function GET(request: Request) {
         if (!task.dueDate) continue;
         // Phase 4 pilot: persist only the in-app channel before returning from
         // cron. Email and push continue through the existing dispatcher.
-        // On outbox failure, immediately use the full legacy path (no dropped alert).
+        // On an ambiguous outbox commit error, never fall back to an in-app
+        // write: the DB might already contain the event. Abort this cron run
+        // and let the existing cron retry; no duplicate in-app notification.
         let queuedInApp = false;
-        if (inAppDeadlineQueueEnabled()) {
+        if (inAppDeadlineQueueEnabled(wid)) {
           try {
             await recordDeadlineInAppJob({
               workspaceId: wid, taskId: task.id, dueDate: task.dueDate,
             });
             queuedInApp = true;
           } catch {
-            console.error('[phase4] Deadline outbox unavailable; legacy route retained');
+            console.error('[phase4] Deadline outbox write uncertain; cron will retry');
+            throw new Error('ERP_PHASE4_DEADLINE_OUTBOX_UNAVAILABLE');
           }
         }
         await dispatchNotification({

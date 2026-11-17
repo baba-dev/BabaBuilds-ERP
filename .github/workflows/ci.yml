@@ -154,6 +154,7 @@ jobs:
           bash -n scripts/operations/deploy-erp-standalone.sh ops/erp-release/install.sh
           bash -n scripts/operations/erp-redis-phase3-provision.sh scripts/operations/erp-redis-phase3-preflight.sh
           bash -n scripts/operations/erp-redis-phase4-provision.sh scripts/operations/erp-redis-phase4-preflight.sh
+          bash -n scripts/operations/erp-phase4-audit.sh scripts/operations/erp-phase4-rehearse.sh
           node --check ops/erp-worker/worker.mjs
           python3 -m unittest discover -s tests/ops -p 'test_*.py' -v
 

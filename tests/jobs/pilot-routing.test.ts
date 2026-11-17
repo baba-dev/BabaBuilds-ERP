@@ -8,6 +8,9 @@ describe('Phase 4 in-app deadline routing boundary', () => {
   it('preserves external channels while moving only in-app to the outbox', () => {
     expect(cron).toContain('recordDeadlineInAppJob(');
     expect(cron).toContain('skipInApp: queuedInApp');
+    expect(cron).toContain('inAppDeadlineQueueEnabled(wid)');
+    expect(cron).toContain('ERP_PHASE4_DEADLINE_OUTBOX_UNAVAILABLE');
+    expect(cron).not.toContain('legacy route retained');
     expect(dispatcher).toContain('user.notifyInApp && !options.skipInApp');
     expect(dispatcher).toContain('user.notifyEmail && user.transactionalAlerts');
     expect(dispatcher).toContain('if (user.notifyPush)');
