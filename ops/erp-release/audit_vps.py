@@ -125,6 +125,74 @@ def safe_to_retire(services, pm2, systemd, old_processes, legacy_units, node26_v
         node26_version == "v26.13.1"
     )
 
+def disk_inventory():
+    """Read-only, bounded storage inventory; never inspect file contents or env."""
+    roots = (
+        "/opt/bababuilds-erp", "/opt/bababuilds-erp/releases",
+        "/opt/bababuilds-erp-cutover", "/opt/bababuilds-erp-staging",
+        "/var/www/bababuilds-erp/.next",
+        "/var/www/bababuilds-erp/.next/cache",
+        "/var/www/bababuilds-erp/.next/standalone/.next/cache",
+        "/root/.npm", "/root/.cache", "/var/log/journal",
+        "/var/lib/menuminute/incoming", "/var/www/clubkeep/releases",
+        "/tmp",
+    )
+    def bytes_on_disk(path):
+        rc, output = run("/usr/bin/du", "-sxB1", str(path), timeout=50)
+        if rc != 0:
+            return None
+        try:
+            return int(output.split()[0])
+        except (IndexError, ValueError):
+            return None
+
+    def children(path, count=30):
+        directory = Path(path)
+        if not directory.is_dir():
+            return []
+        result = []
+        try:
+            entries = list(directory.iterdir())
+        except OSError:
+            return []
+        for child in entries[:120]:
+            if child.is_symlink():
+                continue
+            used = bytes_on_disk(child)
+            if used is not None:
+                result.append({"entry": child.name, "bytes": used, "is_dir": child.is_dir()})
+        return sorted(result, key=lambda v: v["bytes"], reverse=True)[:count]
+
+    top = (
+        "/opt/bababuilds-erp/releases",
+        "/opt/bababuilds-erp-cutover",
+        "/opt/bababuilds-erp-staging",
+        "/opt",
+        "/var/www",
+        "/var/lib/menuminute/incoming",
+        "/root/.npm",
+        "/root/.cache",
+    )
+    disk = shutil.disk_usage("/")
+    current = Path("/opt/bababuilds-erp/releases/current")
+    return {
+        "root": {"total_bytes": disk.total, "used_bytes": disk.used,
+                 "free_bytes": disk.free},
+        "erp_current_release": str(current.resolve()) if current.is_symlink() else None,
+        "tracked_path_sizes": {path: bytes_on_disk(path) for path in roots},
+        "largest_entries": {path: children(path) for path in top},
+        "node_binaries": {
+            path: Path(path).exists() for path in (
+                "/opt/bababuilds-erp/node22/bin/node",
+                "/opt/bababuilds-erp/node26/bin/node",
+                "/root/.nvm/versions/node/v24.14.1/bin/node",
+                "/usr/bin/node", "/usr/local/bin/node",
+            )
+        },
+        "journald_usage": run("/usr/bin/journalctl", "--disk-usage")[1],
+        "read_only": True,
+    }
+
 def main():
     if os.geteuid() != 0:
         raise SystemExit("ERP_VPS_RUNTIME_AUDIT: root required for reliable process inspection")
@@ -154,6 +222,7 @@ def main():
     }
     print("ERP_VPS_RUNTIME_AUDIT=" + json.dumps(report, sort_keys=True))
     print("ERP_NODE22_RETIRE_GUARD=" + ("PASS" if can_retire else "BLOCKED"))
+    print("ERP_STORAGE_INVENTORY=" + json.dumps(disk_inventory(), sort_keys=True))
     if node26_version != "v26.13.1":
         raise SystemExit("Node26 installed binary mismatch")
     if database_rc != 0:

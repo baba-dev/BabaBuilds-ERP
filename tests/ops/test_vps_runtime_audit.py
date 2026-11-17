@@ -55,6 +55,16 @@ class PlatformContract(unittest.TestCase):
             self.assertNotIn(forbidden, src)
         self.assertIn('"read_only": True', src)
 
+    def test_storage_inventory_is_bounded_and_read_only(self):
+        source = SRC.read_text()
+        self.assertIn("ERP_STORAGE_INVENTORY=", source)
+        self.assertIn("def disk_inventory()", source)
+        self.assertIn("entries[:120]", source)
+        self.assertIn('"/opt/bababuilds-erp/releases"', source)
+        self.assertIn('"/var/lib/menuminute/incoming"', source)
+        for bad in ("rm -rf", "shutil.rmtree", "os.unlink", ".unlink(", "npm cache clean"):
+            self.assertNotIn(bad, source)
+
     def test_nightly_regression_uses_disposable_postgres_17(self):
         workflow = (ROOT / ".github/workflows/regression.yml").read_text()
         self.assertIn("image: postgres:17", workflow)
