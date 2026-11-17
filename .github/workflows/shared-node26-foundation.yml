@@ -1,0 +1,98 @@
+name: BabaBuilds shared Node 26.13.1 ARM64 foundation
+
+# A reviewed, one-time side-by-side runtime installation, never a service switch.
+# PRs cannot access VPS SSH secrets; only reviewed main can run installation.
+on:
+  push:
+    branches: [main]
+    paths:
+      - ops/shared-runtime/**
+      - .github/workflows/shared-node26-foundation.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - ops/shared-runtime/**
+      - .github/workflows/shared-node26-foundation.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Do not race ERP production releases. This workflow does not restart any app.
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('node26-signature-pr-{0}', github.event.pull_request.number) || 'erp-immutable-production' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify-pr:
+    if: ${{ github.event_name == 'pull_request' }}
+    name: Verify signed Node distribution on unprivileged runner (no VPS access)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Verify official Node.js GPG signature, digest, and archive safety
+        run: bash ops/shared-runtime/verify_distribution.sh
+
+  provision:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    name: Verify Node.js release signature and install inactive ARM64 runtime
+    environment: erp-production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Verify signed release before allowing VPS transfer
+        run: bash ops/shared-runtime/verify_distribution.sh
+      - name: Stage signed-artifact-verified runtime and reviewed installer
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: ops/shared-runtime/provision_node26.py,runtime-artifacts/node-v26.13.1-linux-arm64.tar.xz
+          target: /tmp/bababuilds-node26-${{ github.sha }}
+      - name: Install side-by-side only; confirm all live services untouched
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script_stop: true
+          command_timeout: 14m
+          script: |
+            set -Eeuo pipefail
+            incoming="/tmp/bababuilds-node26-${{ github.sha }}"
+            uploaded="$incoming/ops/shared-runtime/provision_node26.py"
+            archive="$incoming/runtime-artifacts/node-v26.13.1-linux-arm64.tar.xz"
+            operator="/usr/local/lib/bababuilds-platform/provision_node26.py"
+            test -f "$uploaded" && test ! -L "$uploaded"
+            test -f "$archive" && test ! -L "$archive"
+            sudo -n install -d -o root -g root -m 0755 /usr/local/lib/bababuilds-platform
+            sudo -n install -o root -g root -m 0644 "$uploaded" "$operator"
+            test "$(sudo -n git hash-object "$operator")" = "66236d2b9e5ab1a6ea6ebb7c8bacbdb5be04b239" || {
+              echo 'NODE26_INSTALLER_REVIEWED_SOURCE_MISMATCH' >&2; exit 1;
+            }
+            test "$(sha256sum "$archive" | cut -d' ' -f1)" = \
+              "89e1853138db51e8b82d3e98ba9c0d3f2956a28e5e55ea1b7e12d25aae92d5dd"
+            protected="/var/lib/bababuilds-platform/runtime-stage"
+            sudo -n install -d -o root -g root -m 0700 "$protected"
+            sudo -n test ! -L /var/lib/bababuilds-platform
+            sudo -n test ! -L "$protected"
+            root_archive="$protected/node-v26.13.1-${{ github.sha }}.tar.xz"
+            sudo -n install -o root -g root -m 0600 "$archive" "$root_archive"
+            trap 'sudo -n rm -f -- "$root_archive"' EXIT
+            test "$(sudo -n sha256sum "$root_archive" | cut -d' ' -f1)" =               "89e1853138db51e8b82d3e98ba9c0d3f2956a28e5e55ea1b7e12d25aae92d5dd"
+            sudo -n /usr/bin/python3 "$operator" --inventory
+            sudo -n /usr/bin/python3 "$operator" --install --archive "$root_archive"
+            sudo -n /usr/bin/python3 "$operator" --inventory
+            sudo -n rm -f -- "$root_archive"
+            trap - EXIT
+            rm -f -- "$uploaded" "$archive"
+            rmdir "$incoming/ops/shared-runtime" "$incoming/ops" \
+              "$incoming/runtime-artifacts" "$incoming" 2>/dev/null || true
+            echo 'BABABUILDS_NODE26_FOUNDATION_PASS no_services_switched'
