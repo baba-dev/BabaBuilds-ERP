@@ -22,7 +22,7 @@ export function getPrivateUploadsRoot() {
 }
 
 export function assertNoTraversal(segments: string[]) {
-  if (segments.some((s) => s.includes('..') || s.includes('/') || s.includes('\\'))) {
+  if (segments.some((s) => !s || s === '.' || s.includes('..') || s.includes('/') || s.includes('\\') || /[\u0000-\u001f\u007f]/.test(s))) {
     throw new Error('PATH_TRAVERSAL');
   }
 }
