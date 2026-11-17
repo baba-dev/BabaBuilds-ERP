@@ -165,3 +165,27 @@ describe('miab-client module split', () => {
     }
   });
 });
+
+describe('Email Hosting billing schemas', () => {
+  it('validates trial length on subscription create', async () => {
+    const { mailBillingSubscriptionCreateSchema } = await import('@/lib/email-billing/validation');
+    expect(mailBillingSubscriptionCreateSchema.parse({ domainId: 'd1', trialDays: 14 }).trialDays).toBe(14);
+    expect(mailBillingSubscriptionCreateSchema.parse({ domainId: 'd1' }).trialDays).toBeUndefined();
+    expect(mailBillingSubscriptionCreateSchema.safeParse({ domainId: 'd1', trialDays: -1 }).success).toBe(false);
+    expect(mailBillingSubscriptionCreateSchema.safeParse({ domainId: 'd1', trialDays: 400 }).success).toBe(false);
+    expect(mailBillingSubscriptionCreateSchema.safeParse({ domainId: 'd1', trialDays: 1.5 }).success).toBe(false);
+  });
+
+  it('leaves usage settings unchanged when a client does not send them, and rejects unknown policies', async () => {
+    const { mailBillingSettingsPatchSchema, mailBillingApplyQuantitySchema, mailBillingReviewApplySchema, mailBillingSubscriptionPatchSchema } = await import('@/lib/email-billing/validation');
+    const parsed = mailBillingSettingsPatchSchema.parse({});
+    expect(parsed.usageBillingPolicy).toBeUndefined();
+    expect(parsed.prorateIncreases).toBeUndefined();
+    expect(mailBillingSettingsPatchSchema.parse({ usageBillingPolicy: 'HIGH_WATER_MARK', prorateIncreases: false })).toMatchObject({ usageBillingPolicy: 'HIGH_WATER_MARK', prorateIncreases: false });
+    expect(mailBillingSettingsPatchSchema.safeParse({ usageBillingPolicy: 'AVERAGE' }).success).toBe(false);
+    expect(mailBillingApplyQuantitySchema.safeParse({}).success).toBe(true);
+    expect(mailBillingApplyQuantitySchema.safeParse({ toCount: -2 }).success).toBe(false);
+    expect(mailBillingReviewApplySchema.safeParse({ action: 'APPLY_MAILBOX_COUNT' }).success).toBe(true);
+    expect(mailBillingSubscriptionPatchSchema.safeParse({ billingStatus: 'TRIALING' }).success).toBe(true);
+  });
+});

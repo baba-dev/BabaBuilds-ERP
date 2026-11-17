@@ -25,7 +25,7 @@ export default async function ReviewPage() {
                     <p className="mt-1 text-sm text-muted-foreground">{item.domain?.domain ?? t('labels.notAvailable')} · {item.domain?.client?.name ?? t('labels.noClient')} · {item.server?.name ?? t('labels.notAvailable')} · {item.createdAt.toLocaleString()}</p>
                     <p className="mt-2 text-sm">{item.description}</p>
                     <p className="mt-2 text-sm font-medium">{t('tables.suggestedAction')}: {item.suggestedAction}</p>
-                    <div className="mt-3"><ReviewItemActions item={{ id: item.id, domainId: item.domainId, subscriptionId: item.subscriptionId }} /></div>
+                    <div className="mt-3"><ReviewItemActions item={{ id: item.id, type: item.type, domainId: item.domainId, subscriptionId: item.subscriptionId }} /></div>
                   </article>
                 ))}
               </div>

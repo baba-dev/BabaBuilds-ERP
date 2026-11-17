@@ -28,6 +28,24 @@ Direct MiaB API mode is server-side fallback only and is restricted to read endp
 4. Map each domain to an ERP client.
 5. Link an existing retainer or create a new retainer using fixed domain, per-mailbox, or manual package billing.
 
+## Usage-based billing
+
+A daily job (`/api/cron/email-hosting`, see `docs/cron.md`; schedule it before `process-retainers`) keeps billing in step with the mail server:
+
+1. **Sync** the mail servers, when the workspace sync preference is `DAILY` or `WEEKLY` (`MANUAL` never syncs on a schedule).
+2. **Usage snapshot**: one row per subscription per UTC day (mailboxes, admins, aliases, quota, billable mailboxes). Billable mailboxes are active ones, excluding admins if that setting is on. Re-running the same day updates that day's row.
+3. **Trials**: a subscription created with `trialDays` is `TRIALING` and not billed. When the trial ends the job creates a retainer that starts billing on that date (or keeps an active retainer you already linked); if that is not possible, it adds a review item.
+4. **Quantity changes**: the billable count is compared with what is being billed. By default a change is queued as a review item and you approve it (**Apply new mailbox count** in the review queue, or `POST /api/email-billing/subscriptions/:id/apply-quantity`). With *Auto-update retainer quantities* on (workspace) or `autoUpdateQuantity` (subscription) it is applied automatically.
+
+Applying a change updates the retainer lines the calculator manages (lines you added by hand are never touched), records the change in the quantity ledger and the retainer history, and:
+
+- **Increases mid-cycle** queue a prorated one-off charge (the extra recurring price x the part of the cycle left, in whole days) as pending usage on the retainer, so the next invoice bills it. Turn this off with *Prorate mailbox increases*. FIXED plans never prorate.
+- **Decreases** take effect from the next invoice; there is no credit for the current cycle.
+
+*Mailbox count used for billing*: `LATEST` bills the newest reading; `HIGH_WATER_MARK` bills the highest reading since the current cycle started. The retainer job remains the only thing that creates invoices, and an invoice can be traced to the usage behind it with `GET /api/email-billing/subscriptions/:id/usage` (snapshots, quantity changes, the retainer's invoices and proration lines).
+
+The dashboard and AI summary report **MRR** as what the retainer engine will bill each month (active retainers, base currency, same formula as the Retainers page), plus trial/unbilled pipeline, 30-day churn (subscriptions that cancelled over those active 30 days ago), mailbox growth and new subscriptions.
+
 ## Availability and permissions
 
 Email Billing is available on every plan, free and paid; the workspace owner still has to enable the module.

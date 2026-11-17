@@ -30,6 +30,8 @@ export async function PATCH(req: NextRequest, { params }: Ctx) {
       where: { id },
       data: {
         billingStatus: body.billingStatus ?? existing.billingStatus,
+        // cancelledAt feeds churn reports, so it must follow the status in both directions.
+        cancelledAt: body.billingStatus === 'CANCELLED' ? (existing.cancelledAt ?? new Date()) : body.billingStatus ? null : existing.cancelledAt,
         billableMailboxCount: body.billableMailboxCount ?? existing.billableMailboxCount,
         autoUpdateQuantity: body.autoUpdateQuantity ?? existing.autoUpdateQuantity,
         nextReviewAt: body.nextReviewAt ? new Date(body.nextReviewAt) : existing.nextReviewAt,

@@ -2854,7 +2854,8 @@
       "openDomain": "Open Domain",
       "createSubscription": "Create Subscription",
       "createRetainer": "Create Retainer",
-      "domainActions": "Domain actions"
+      "domainActions": "Domain actions",
+      "applyMailboxCount": "Apply new mailbox count"
     },
     "nav": {
       "domains": "Domains",
@@ -2896,7 +2897,12 @@
       "lastSyncStatus": "Last Sync Status",
       "needsAttention": "Needs Attention",
       "revenueSummary": "Revenue Summary",
-      "recentSyncActivity": "Recent Sync Activity"
+      "recentSyncActivity": "Recent Sync Activity",
+      "trialingSubscriptions": "Trials in progress",
+      "pipelineRevenue": "Trial and pending revenue (monthly)",
+      "churn30d": "Churn (30 days)",
+      "mailboxChange30d": "Mailbox change (30 days)",
+      "newSubscriptions30d": "New subscriptions (30 days)"
     },
     "empty": {
       "noServersTitle": "No mail servers connected",
@@ -2983,7 +2989,11 @@
       "autoUpdateRetainerQuantities": "Auto-update retainer quantities",
       "syncFrequencyPreference": "Sync frequency preference",
       "treatRemovedDomainsAsReviewRequired": "Treat removed domains as review-required",
-      "ignoreAdminMailboxesFromBilling": "Ignore admin mailboxes from billing"
+      "ignoreAdminMailboxesFromBilling": "Ignore admin mailboxes from billing",
+      "usageBillingPolicy": "Mailbox count used for billing",
+      "prorateIncreases": "Prorate mailbox increases mid-cycle",
+      "policyLatest": "Latest count",
+      "policyHighWaterMark": "Highest count in the billing cycle"
     },
     "forms": {
       "serverDescription": "Connect a read-only adapter endpoint or direct Mail-in-a-Box read API source. Tokens are never displayed after saving.",

@@ -67,6 +67,8 @@ type SettingsShape = {
   syncFrequencyPreference: string;
   treatRemovedDomainsAsReviewRequired: boolean;
   ignoreAdminMailboxesFromBilling: boolean;
+  usageBillingPolicy?: string;
+  prorateIncreases?: boolean;
 };
 
 async function postJson(url: string, body?: unknown, method = 'POST') {
@@ -247,7 +249,7 @@ export function PlanRowActions({ plan }: { plan: PlanRow }) {
   return <div className="flex flex-wrap gap-2"><PlanDialog plan={plan} triggerLabel={t('actions.editPlan')} /><Button type="button" variant="outline" size="sm" disabled={!plan.isActive} onClick={deactivate}>{t('actions.deactivatePlan')}</Button></div>;
 }
 
-export function ReviewItemActions({ item }: { item: { id: string; domainId: string | null; subscriptionId: string | null } }) {
+export function ReviewItemActions({ item }: { item: { id: string; type?: string; domainId: string | null; subscriptionId: string | null } }) {
   const t = useTranslations('EmailBilling');
   const router = useRouter();
   async function apply(url: string, body?: unknown) {
@@ -263,6 +265,7 @@ export function ReviewItemActions({ item }: { item: { id: string; domainId: stri
       <Button type="button" variant="outline" size="sm" onClick={() => apply(`/api/email-billing/review/${item.id}/resolve`)}>{t('actions.resolve')}</Button>
       <Button type="button" variant="outline" size="sm" onClick={() => apply(`/api/email-billing/review/${item.id}/dismiss`)}>{t('actions.dismiss')}</Button>
       {item.domainId ? <Button type="button" variant="outline" size="sm" onClick={() => apply(`/api/email-billing/review/${item.id}/apply`, { action: 'IGNORE_DOMAIN' })}>{t('actions.ignoreDomain')}</Button> : null}
+      {item.type === 'MAILBOX_COUNT_CHANGED' && item.subscriptionId ? <Button type="button" size="sm" onClick={() => apply(`/api/email-billing/review/${item.id}/apply`, { action: 'APPLY_MAILBOX_COUNT' })}>{t('actions.applyMailboxCount')}</Button> : null}
       {item.subscriptionId ? <Button type="button" variant="outline" size="sm" onClick={() => apply(`/api/email-billing/review/${item.id}/apply`, { action: 'PAUSE_SUBSCRIPTION' })}>{t('actions.pauseSubscription')}</Button> : null}
       {item.domainId ? <Button asChild variant="outline" size="sm"><Link href={`/email-billing/domains/${item.domainId}#billing`}>{t('actions.createSubscription')}</Link></Button> : null}
     </div>
@@ -280,12 +283,14 @@ export function SettingsForm({ settings, plans }: { settings: SettingsShape; pla
     const payload = {
       defaultBillingMode: String(form.get('defaultBillingMode')),
       defaultCurrency: String(form.get('defaultCurrency')),
-      defaultPlanId: String(form.get('defaultPlanId') || '') || null,
+      defaultPlanId: ['', 'none'].includes(String(form.get('defaultPlanId') || '')) ? null : String(form.get('defaultPlanId')),
       autoCreateReviewItems: form.get('autoCreateReviewItems') === 'on',
       autoUpdateRetainerQuantities: form.get('autoUpdateRetainerQuantities') === 'on',
       syncFrequencyPreference: String(form.get('syncFrequencyPreference')),
       treatRemovedDomainsAsReviewRequired: form.get('treatRemovedDomainsAsReviewRequired') === 'on',
       ignoreAdminMailboxesFromBilling: form.get('ignoreAdminMailboxesFromBilling') === 'on',
+      usageBillingPolicy: String(form.get('usageBillingPolicy') || 'LATEST'),
+      prorateIncreases: form.get('prorateIncreases') === 'on',
     };
     try {
       await postJson('/api/email-billing/settings', payload, 'PATCH');
@@ -297,7 +302,7 @@ export function SettingsForm({ settings, plans }: { settings: SettingsShape; pla
       toast.error(message);
     }
   }
-  const booleanFields = useMemo(() => ['autoCreateReviewItems', 'autoUpdateRetainerQuantities', 'treatRemovedDomainsAsReviewRequired', 'ignoreAdminMailboxesFromBilling'] as const, []);
+  const booleanFields = useMemo(() => ['autoCreateReviewItems', 'autoUpdateRetainerQuantities', 'treatRemovedDomainsAsReviewRequired', 'ignoreAdminMailboxesFromBilling', 'prorateIncreases'] as const, []);
   return (
     <form onSubmit={onSubmit} className="space-y-5">
       {error ? <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 p-2 text-sm text-destructive">{error}</p> : null}
@@ -306,9 +311,10 @@ export function SettingsForm({ settings, plans }: { settings: SettingsShape; pla
         <Field id="settings-currency" label={t('tables.currency')}><Input id="settings-currency" name="defaultCurrency" defaultValue={settings.defaultCurrency} maxLength={3} required /></Field>
         <Field id="settings-plan" label={t('tables.plan')}><Select name="defaultPlanId" defaultValue={settings.defaultPlanId ?? 'none'}><SelectTrigger id="settings-plan" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">{t('labels.none')}</SelectItem>{plans.map((plan) => <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>)}</SelectContent></Select></Field>
         <Field id="settings-sync" label={t('settingsLabels.syncFrequencyPreference')}><Select name="syncFrequencyPreference" defaultValue={settings.syncFrequencyPreference}><SelectTrigger id="settings-sync" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="MANUAL">MANUAL</SelectItem><SelectItem value="DAILY">DAILY</SelectItem><SelectItem value="WEEKLY">WEEKLY</SelectItem></SelectContent></Select></Field>
+        <Field id="settings-policy" label={t('settingsLabels.usageBillingPolicy')}><Select name="usageBillingPolicy" defaultValue={settings.usageBillingPolicy ?? 'LATEST'}><SelectTrigger id="settings-policy" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="LATEST">{t('settingsLabels.policyLatest')}</SelectItem><SelectItem value="HIGH_WATER_MARK">{t('settingsLabels.policyHighWaterMark')}</SelectItem></SelectContent></Select></Field>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        {booleanFields.map((field) => <label key={field} className="flex items-center gap-2 rounded-lg border border-border/70 p-3 text-sm"><Checkbox name={field} defaultChecked={Boolean(settings[field])} />{t(`settingsLabels.${field}`)}</label>)}
+        {booleanFields.map((field) => <label key={field} className="flex items-center gap-2 rounded-lg border border-border/70 p-3 text-sm"><Checkbox name={field} defaultChecked={field === 'prorateIncreases' ? settings.prorateIncreases !== false : Boolean(settings[field])} />{t(`settingsLabels.${field}`)}</label>)}
       </div>
       <Button type="submit">{t('actions.saveSettings')}</Button>
     </form>
