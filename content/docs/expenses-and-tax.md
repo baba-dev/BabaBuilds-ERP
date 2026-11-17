@@ -22,7 +22,7 @@ See also: [Tax Engine Scope & Country-Pack Verification](/help/tax-engine-scope)
 
 ## Expense Tracking Workflow
 
-<HelpImage src="/help/screenshots/help-expenses-01-overview.png" alt="Expenses page overview" caption="Expenses overview and spend visibility." />
+<HelpImage src="/product-images/light/expenses.png" alt="Current Expenses workspace" caption="Review spend, draft evidence, categories, and approval status before expenses affect reporting." />
 
 Your expense dashboard shows your total outward cash flow, categorized so you can identify where your money is going.
 
@@ -41,15 +41,13 @@ Your expense dashboard shows your total outward cash flow, categorized so you ca
   </Step>
 </Steps>
 
-<HelpImage src="/help/screenshots/help-expenses-02-primary-action.png" alt="Expenses primary actions" caption="Primary controls for logging and classifying expenses." />
 
-<HelpImage src="/help/screenshots/help-expenses-03-detail.png" alt="Expenses detail section" caption="Detailed expense ledger context." />
 
 ## Tax Readiness
 
 The tax module aggregates your invoiced income and categorized expenses to give you a real-time estimate of your tax liabilities.
 
-<HelpImage src="/help/screenshots/help-tax-01-overview.png" alt="Tax page overview" caption="Tax readiness overview and compliance posture." />
+<HelpImage src="/product-images/light/tax.png" alt="Current Tax workspace" caption="Review tax readiness, issues, filing context, and the evidence behind each signal." />
 
 <Steps>
   <Step title="Review Income vs Deductions">
@@ -60,9 +58,7 @@ The tax module aggregates your invoiced income and categorized expenses to give 
   </Step>
 </Steps>
 
-<HelpImage src="/help/screenshots/help-tax-02-primary-action.png" alt="Tax primary actions" caption="Primary controls for deductions and tax planning." />
 
-<HelpImage src="/help/screenshots/help-tax-03-detail.png" alt="Tax detail section" caption="Detailed tax analytics and supporting context." />
 
 ## Best Practices
 

@@ -12,11 +12,10 @@ dateModified: "2026-06-04"
 
 The Import Manager is designed to safely handle bulk data creation and upsert workflows (e.g., migrating clients from an old system or bulk-adding inventory items) using a preview-first validation process.
 
-<HelpImage src="/help/screenshots/help-optional-import-manager-01-overview.png" alt="Import Manager overview page" caption="Import Manager hub and run context." />
+<HelpImage src="/product-images/light/import_manager.png" alt="Current Import Manager" caption="Validate source files and mappings before imported records are allowed into operational workflows." />
 
 ## Performing a Bulk Import
 
-<HelpImage src="/help/screenshots/help-optional-import-manager-02-primary-action.png" alt="Import Manager mapping/validation screen" caption="Primary mapping and validation experience." />
 
 <Steps>
   <Step title="Enable the Module">
@@ -38,7 +37,6 @@ The Import Manager is designed to safely handle bulk data creation and upsert wo
 
 ## Reviewing Past Imports
 
-<HelpImage src="/help/screenshots/help-optional-import-manager-03-detail.png" alt="Import Manager detail view" caption="Validation detail and run-history context." />
 
 - **Run History:** Access the logs of all past imports, including who initiated them and when.
 - **Rollback Capabilities:** If an import contained massive errors, you can initiate a rollback to remove the imported records (available for 24 hours post-import).

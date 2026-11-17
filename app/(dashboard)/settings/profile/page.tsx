@@ -215,7 +215,7 @@ export default function ProfileSettingsPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="/dashboard">Dashboard</SelectItem>
-                        <SelectItem value="/invoice">New Invoice</SelectItem>
+                        <SelectItem value="/income/new">New Invoice</SelectItem>
                         <SelectItem value="/clients">Client CRM</SelectItem>
                       </SelectContent>
                     </Select>

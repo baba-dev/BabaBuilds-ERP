@@ -1,112 +1,74 @@
 ---
-title: "Help Screenshot Gallery"
-description: "Central gallery of reusable Help Center screenshots for dashboard pages and optional modules."
+title: "Product Screenshot Gallery"
+description: "Current light and dark product images captured from a safe, seeded demo workspace."
 order: 33
 category: "General"
-tags: ["screenshots", "gallery", "help center", "assets"]
-estimatedMinutes: 6
-dateModified: "2026-04-22"
+tags: ["screenshots", "gallery", "help center", "product tour"]
+estimatedMinutes: 5
+dateModified: "2026-11-17"
 isFeatured: true
 ---
 
-# Help Screenshot Gallery
+# Product Screenshot Gallery
 
-This page is the central screenshot index for reuse across Help, homepage, and other product surfaces.
+Use this gallery when you want to see where a feature lives before following a detailed guide. Every image comes from the Software Company demo and contains synthetic data only.
 
-## Dashboard-ordered core pages
+The captures use a 1440×900 desktop workspace. Choose the theme that is easiest for you to read; the controls and navigation are the same in both.
 
-### Dashboard
-- [Guide](/help/dashboard-command-center)
-- `/help/screenshots/help-dashboard-01-overview.png`
-- `/help/screenshots/help-dashboard-02-primary-action.png`
-- `/help/screenshots/help-dashboard-03-detail.png`
+## Start here
 
-### Service Catalog
-- [Guide](/help/service-catalog-operations)
-- `/help/screenshots/help-service-catalog-01-overview.png`
-- `/help/screenshots/help-service-catalog-02-primary-action.png`
-- `/help/screenshots/help-service-catalog-03-detail.png`
+| Area | Open the product | Light | Dark |
+|---|---|---|---|
+| Dashboard | `/dashboard` | [View](/product-images/light/dashboard.png) | [View](/product-images/dark/dashboard.png) |
+| Clients | `/clients` | [View](/product-images/light/clients.png) | [View](/product-images/dark/clients.png) |
+| Services | `/services` | [View](/product-images/light/services.png) | [View](/product-images/dark/services.png) |
+| Inventory | `/inventory` | [View](/product-images/light/inventory.png) | [View](/product-images/dark/inventory.png) |
+| Documents | `/documents` | [View](/product-images/light/documents.png) | [View](/product-images/dark/documents.png) |
 
-### Shop
-- [Guide](/help/shop-operations)
-- `/help/screenshots/help-shop-01-overview.png`
-- `/help/screenshots/help-shop-02-primary-action.png`
-- `/help/screenshots/help-shop-03-detail.png`
+## Sell and get paid
 
-### Inventory
-- [Guide](/help/inventory-hub-operations)
-- `/help/screenshots/help-inventory-01-overview.png`
-- `/help/screenshots/help-inventory-02-primary-action.png`
-- `/help/screenshots/help-inventory-03-detail.png`
+| Area | Open the product | Light | Dark |
+|---|---|---|---|
+| Proposals | `/proposals` | [View](/product-images/light/proposals.png) | [View](/product-images/dark/proposals.png) |
+| Revenue pipeline | `/proposals/pipeline` | [View](/product-images/light/proposals_pipeline.png) | [View](/product-images/dark/proposals_pipeline.png) |
+| Point of sale | `/pos` | [View](/product-images/light/pos.png) | [View](/product-images/dark/pos.png) |
+| Retainers | `/retainers` | [View](/product-images/light/retainers.png) | [View](/product-images/dark/retainers.png) |
+| Invoices and earnings | `/income` | [View](/product-images/light/income.png) | [View](/product-images/dark/income.png) |
 
-### Clients
-- [Guide](/help/managing-clients)
-- `/help/screenshots/help-clients-01-overview.png`
-- `/help/screenshots/help-clients-02-primary-action.png`
-- `/help/screenshots/help-clients-03-detail.png`
+## Control cash and compliance
 
-### Quotes & Proposals
-- [Guide](/help/quotes-and-proposals-operations)
-- `/help/screenshots/help-proposals-01-overview.png`
-- `/help/screenshots/help-proposals-02-primary-action.png`
-- `/help/screenshots/help-proposals-03-detail.png`
+| Area | Open the product | Light | Dark |
+|---|---|---|---|
+| Expenses | `/expenses` | [View](/product-images/light/expenses.png) | [View](/product-images/dark/expenses.png) |
+| Cash flow | `/cash-flow` | [View](/product-images/light/cash_flow.png) | [View](/product-images/dark/cash_flow.png) |
+| Reporting | `/reporting` | [View](/product-images/light/reporting.png) | [View](/product-images/dark/reporting.png) |
+| AR collections | `/ar-collections` | [View](/product-images/light/ar_collections.png) | [View](/product-images/dark/ar_collections.png) |
+| Tax | `/tax` | [View](/product-images/light/tax.png) | [View](/product-images/dark/tax.png) |
+| Bank reconciliation | `/reconciliation` | [View](/product-images/light/reconciliation.png) | [View](/product-images/dark/reconciliation.png) |
+| CA portal | `/ca-portal` | [View](/product-images/light/ca_portal.png) | [View](/product-images/dark/ca_portal.png) |
 
-### Retainers
-- [Guide](/help/retainers-and-mrr)
-- `/help/screenshots/help-retainers-01-overview.png`
-- `/help/screenshots/help-retainers-02-primary-action.png`
-- `/help/screenshots/help-retainers-03-detail.png`
+## Run the team
 
-### Referrals
-- [Guide](/help/referrals-and-rewards)
-- `/help/screenshots/help-referrals-01-overview.png`
-- `/help/screenshots/help-referrals-02-primary-action.png`
-- `/help/screenshots/help-referrals-03-detail.png`
+| Area | Open the product | Light | Dark |
+|---|---|---|---|
+| Workforce | `/workforce` | [View](/product-images/light/workforce.png) | [View](/product-images/dark/workforce.png) |
+| Attendance | `/workforce/attendance` | [View](/product-images/light/workforce_attendance.png) | [View](/product-images/dark/workforce_attendance.png) |
+| Leave | `/workforce/leave` | [View](/product-images/light/workforce_leave.png) | [View](/product-images/dark/workforce_leave.png) |
+| Payroll | `/payroll` | [View](/product-images/light/payroll.png) | [View](/product-images/dark/payroll.png) |
 
-### Expenses
-- [Guide](/help/expenses-and-tax)
-- `/help/screenshots/help-expenses-01-overview.png`
-- `/help/screenshots/help-expenses-02-primary-action.png`
-- `/help/screenshots/help-expenses-03-detail.png`
+## Configure the workspace
 
-### Tax
-- [Guide](/help/expenses-and-tax)
-- `/help/screenshots/help-tax-01-overview.png`
-- `/help/screenshots/help-tax-02-primary-action.png`
-- `/help/screenshots/help-tax-03-detail.png`
+| Area | Open the product | Light | Dark |
+|---|---|---|---|
+| Settings | `/settings` | [View](/product-images/light/settings.png) | [View](/product-images/dark/settings.png) |
+| Profile | `/settings/profile` | [View](/product-images/light/settings_profile.png) | [View](/product-images/dark/settings_profile.png) |
+| Security | `/settings/security` | [View](/product-images/light/settings_security.png) | [View](/product-images/dark/settings_security.png) |
+| Team and seats | `/settings/team` | [View](/product-images/light/settings_team.png) | [View](/product-images/dark/settings_team.png) |
+| Shop settings | `/settings/shop` | [View](/product-images/light/settings_shop.png) | [View](/product-images/dark/settings_shop.png) |
 
-### AI Reconciliation
-- [Guide](/help/ai-reconciliation-operations)
-- `/help/screenshots/help-reconciliation-01-overview.png`
-- `/help/screenshots/help-reconciliation-02-primary-action.png`
-- `/help/screenshots/help-reconciliation-03-detail.png`
+## If your screen looks different
 
-### Invoices & Earnings
-- [Guide](/help/invoices-and-earnings-ledger)
-- `/help/screenshots/help-income-01-overview.png`
-- `/help/screenshots/help-income-02-primary-action.png`
-- `/help/screenshots/help-income-03-detail.png`
-
-### CA Portal
-- [Guide](/help/ca-portal-audit-ledger)
-- `/help/screenshots/help-ca-portal-01-overview.png`
-- `/help/screenshots/help-ca-portal-02-primary-action.png`
-- `/help/screenshots/help-ca-portal-03-detail.png`
-
-### Settings
-- [Guide](/help/settings-guide)
-- `/help/screenshots/help-settings-01-overview.png`
-- `/help/screenshots/help-settings-02-primary-action.png`
-- `/help/screenshots/help-settings-03-detail.png`
-- `/help/screenshots/help-settings-modules-enabled.png`
-
-## Optional modules
-
-- Workforce: `/help/screenshots/help-optional-workforce-*.png`
-- Payroll: `/help/screenshots/help-optional-payroll-*.png`
-- Revenue Pipeline: `/help/screenshots/help-optional-revenue-pipeline-*.png`
-- Document Vault: `/help/screenshots/help-optional-document-vault-*.png`
-- Cash Flow: `/help/screenshots/help-optional-cash-flow-*.png`
-- AR Collections: `/help/screenshots/help-optional-ar-collections-*.png`
-- Reporting Center: `/help/screenshots/help-optional-reporting-center-*.png`
-- Import Manager: `/help/screenshots/help-optional-import-manager-*.png`
+- Confirm that you are in the intended company and workspace.
+- Check your role and module access; navigation hides features you cannot use.
+- On a narrow screen, open the bottom navigation or menu drawer instead of looking for the desktop sidebar.
+- Product images show seeded examples. Your amounts, records, and empty states will naturally differ.

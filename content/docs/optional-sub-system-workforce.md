@@ -12,11 +12,10 @@ dateModified: "2026-06-04"
 
 The Workforce module provides your team with a structured Human Resources workspace to manage people data, track attendance, and handle leave approvals centrally.
 
-<HelpImage src="/help/screenshots/help-optional-workforce-01-overview.png" alt="Workforce module landing page in dashboard" caption="Use this as the main people-operations control page." />
+<HelpImage src="/product-images/light/workforce.png" alt="Current Workforce workspace" caption="Use Workforce as the starting point for people, attendance, leave, reports, and setup." />
 
 ## Operating Workflow
 
-<HelpImage src="/help/screenshots/help-optional-workforce-02-primary-action.png" alt="Workforce page showing primary action area" caption="Primary actions: add people, manage attendance, and process leave." />
 
 <Steps>
   <Step title="Enable the Module">
@@ -35,7 +34,6 @@ The Workforce module provides your team with a structured Human Resources worksp
 
 ## Daily HR Operations
 
-<HelpImage src="/help/screenshots/help-optional-workforce-03-detail.png" alt="Workforce page detail section" caption="Operational detail view for HR workflows." />
 
 - **Attendance Tracking:** Employees can clock in/out, or managers can bulk-upload attendance logs.
 - **Leave Approvals:** Managers receive notifications when a team member requests time off, allowing for one-click approval or denial.

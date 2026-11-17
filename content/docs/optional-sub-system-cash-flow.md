@@ -12,11 +12,10 @@ dateModified: "2026-06-04"
 
 The Cash Flow module helps you predict liquidity risk. By analyzing historical trends and scheduled future transactions, it compares your planned vs. expected inflows and outflows.
 
-<HelpImage src="/help/screenshots/help-optional-cash-flow-01-overview.png" alt="Cash Flow overview page" caption="Cash Flow summary page for forecast snapshots." />
+<HelpImage src="/product-images/light/cash_flow.png" alt="Current Cash Flow workspace" caption="Review expected movement and planning context without treating a forecast as a booked transaction." />
 
 ## Forecasting and Scenario Planning
 
-<HelpImage src="/help/screenshots/help-optional-cash-flow-02-primary-action.png" alt="Cash Flow primary action area" caption="Primary controls for assumptions/scenarios and liquidity signals." />
 
 <Steps>
   <Step title="Enable the Module">
@@ -32,7 +31,6 @@ The Cash Flow module helps you predict liquidity risk. By analyzing historical t
 
 ## Analyzing Variance
 
-<HelpImage src="/help/screenshots/help-optional-cash-flow-03-detail.png" alt="Cash Flow detail section" caption="Detailed planning and variance context." />
 
 - **Expected vs. Actual:** The system automatically highlights variances where actual cash collected fell short of the forecasted amount for the month.
 - **Liquidity Alerts:** Receive warnings if your forecasted cash drops below a designated safety threshold within the upcoming 90 days.

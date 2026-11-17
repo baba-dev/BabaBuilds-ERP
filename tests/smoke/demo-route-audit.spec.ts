@@ -31,7 +31,7 @@ const EXTRA_ROUTES = [
   "/documents",
   "/documents/compliance",
   "/documents/settings",
-  "/invoice",
+  "/income/new",
   "/inbox/import",
   "/payroll/settings",
   "/setup",

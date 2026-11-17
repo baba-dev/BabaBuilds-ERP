@@ -12,13 +12,12 @@ dateModified: "2026-06-04"
 
 The Service Catalog is your controlled pricing and scope library. Instead of typing out line items, descriptions, and prices every time you draft an invoice or proposal, you can pull predefined services from this catalog. This ensures pricing consistency and speeds up billing operations.
 
-<HelpImage src="/help/screenshots/help-service-catalog-01-overview.png" alt="Service catalog overview" caption="Catalog overview of service templates." />
+<HelpImage src="/product-images/light/services.png" alt="Current Service Catalog workspace" caption="Keep reusable service names, rates, and billing units consistent before using them in proposals or invoices." />
 
 ## Building Your Catalog
 
 A well-structured catalog makes onboarding new team members easier, as they don't have to guess how much to charge for standard services.
 
-<HelpImage src="/help/screenshots/help-service-catalog-02-primary-action.png" alt="Service catalog create/edit area" caption="Create and maintain service definitions used across workflows." />
 
 <Steps>
   <Step title="Access the Catalog">
@@ -39,7 +38,6 @@ A well-structured catalog makes onboarding new team members easier, as they don'
 
 For more advanced setups, you can define different billing models within the catalog.
 
-<HelpImage src="/help/screenshots/help-service-catalog-03-detail.png" alt="Service catalog detail" caption="Detailed service metadata and rate controls." />
 
 - **Fixed Price vs Hourly:** Define whether the service is billed as a flat fee or requires a quantity (hours) to be inputted on the invoice.
 - **Internal Notes:** Add notes that are visible only to your team, not the client, such as standard turnaround times or required resources.

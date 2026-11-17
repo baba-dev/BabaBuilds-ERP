@@ -12,11 +12,10 @@ dateModified: "2026-06-04"
 
 The Reporting Center provides role-aware analytics with curated presets, visual dashboards, and workbook exports to help you understand business performance.
 
-<HelpImage src="/help/screenshots/help-optional-reporting-center-01-overview.png" alt="Reporting Center overview page" caption="Preset report gallery and reporting hub overview." />
+<HelpImage src="/product-images/light/reporting.png" alt="Current Reporting Center" caption="Choose a scoped report, confirm its filters, then export only the data the reader needs." />
 
 ## Generating Reports
 
-<HelpImage src="/help/screenshots/help-optional-reporting-center-02-primary-action.png" alt="Reporting Center primary actions" caption="Run report, inspect data, and apply filters." />
 
 <Steps>
   <Step title="Enable the Module">
@@ -35,7 +34,6 @@ The Reporting Center provides role-aware analytics with curated presets, visual 
 
 ## Deep Dives and Analytics
 
-<HelpImage src="/help/screenshots/help-optional-reporting-center-03-detail.png" alt="Reporting Center detail" caption="Detailed report output with export context." />
 
 - **Drill-Down Capabilities:** Click into high-level summary charts to view the individual ledger transactions making up that total.
 - **Saved Views:** If you run the same filtered report every month, save it as a Custom View for one-click access later.

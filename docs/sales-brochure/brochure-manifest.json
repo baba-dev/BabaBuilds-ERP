@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-05-14T20:22:04.365Z",
+  "generatedAt": "2026-11-17T16:47:59.272Z",
   "shots": {
     "landing": {
       "relPath": "assets/screenshots/landing.png",
@@ -16,9 +16,44 @@
       "title": "Help hub",
       "section": "marketing"
     },
+    "free_erp": {
+      "relPath": "assets/screenshots/free_erp.png",
+      "title": "Free ERP",
+      "section": "marketing"
+    },
     "for_small_business": {
       "relPath": "assets/screenshots/for_small_business.png",
       "title": "For small businesses",
+      "section": "marketing"
+    },
+    "for_contractors": {
+      "relPath": "assets/screenshots/for_contractors.png",
+      "title": "For contractors",
+      "section": "marketing"
+    },
+    "for_agencies": {
+      "relPath": "assets/screenshots/for_agencies.png",
+      "title": "For agencies",
+      "section": "marketing"
+    },
+    "for_ca": {
+      "relPath": "assets/screenshots/for_ca.png",
+      "title": "For chartered accountants",
+      "section": "marketing"
+    },
+    "reseller": {
+      "relPath": "assets/screenshots/reseller.png",
+      "title": "Reseller program",
+      "section": "marketing"
+    },
+    "privacy": {
+      "relPath": "assets/screenshots/privacy.png",
+      "title": "Privacy policy",
+      "section": "marketing"
+    },
+    "terms": {
+      "relPath": "assets/screenshots/terms.png",
+      "title": "Terms of service",
       "section": "marketing"
     },
     "dashboard": {
@@ -26,9 +61,19 @@
       "title": "Dashboard",
       "section": "overview"
     },
+    "companies": {
+      "relPath": "assets/screenshots/companies.png",
+      "title": "Companies",
+      "section": "workspace"
+    },
     "services": {
       "relPath": "assets/screenshots/services.png",
       "title": "Service catalog",
+      "section": "operations"
+    },
+    "shop_admin": {
+      "relPath": "assets/screenshots/shop_admin.png",
+      "title": "Shop workspace",
       "section": "operations"
     },
     "inventory": {
@@ -51,19 +96,14 @@
       "title": "Document vault",
       "section": "operations"
     },
-    "documents_inbox": {
-      "relPath": "assets/screenshots/documents_inbox.png",
-      "title": "Document inbox",
-      "section": "operations"
-    },
-    "documents_vault": {
-      "relPath": "assets/screenshots/documents_vault.png",
-      "title": "Document archive",
-      "section": "operations"
-    },
     "documents_compliance": {
       "relPath": "assets/screenshots/documents_compliance.png",
       "title": "Compliance documents",
+      "section": "operations"
+    },
+    "documents_settings": {
+      "relPath": "assets/screenshots/documents_settings.png",
+      "title": "Document settings",
       "section": "operations"
     },
     "import_manager": {
@@ -76,6 +116,36 @@
       "title": "Inbox import",
       "section": "operations"
     },
+    "email_billing": {
+      "relPath": "assets/screenshots/email_billing.png",
+      "title": "Email billing",
+      "section": "operations"
+    },
+    "email_billing_domains": {
+      "relPath": "assets/screenshots/email_billing_domains.png",
+      "title": "Email domains",
+      "section": "operations"
+    },
+    "email_billing_plans": {
+      "relPath": "assets/screenshots/email_billing_plans.png",
+      "title": "Email plans",
+      "section": "operations"
+    },
+    "email_billing_review": {
+      "relPath": "assets/screenshots/email_billing_review.png",
+      "title": "Email billing review",
+      "section": "operations"
+    },
+    "email_billing_servers": {
+      "relPath": "assets/screenshots/email_billing_servers.png",
+      "title": "Email servers",
+      "section": "operations"
+    },
+    "email_billing_settings": {
+      "relPath": "assets/screenshots/email_billing_settings.png",
+      "title": "Email billing settings",
+      "section": "operations"
+    },
     "proposals": {
       "relPath": "assets/screenshots/proposals.png",
       "title": "Proposals",
@@ -86,9 +156,24 @@
       "title": "Revenue pipeline",
       "section": "sales"
     },
+    "proposal_new": {
+      "relPath": "assets/screenshots/proposal_new.png",
+      "title": "New proposal",
+      "section": "sales"
+    },
+    "pos": {
+      "relPath": "assets/screenshots/pos.png",
+      "title": "Point of sale",
+      "section": "sales"
+    },
     "retainers": {
       "relPath": "assets/screenshots/retainers.png",
       "title": "Retainers",
+      "section": "sales"
+    },
+    "retainer_new": {
+      "relPath": "assets/screenshots/retainer_new.png",
+      "title": "New retainer",
       "section": "sales"
     },
     "income": {
@@ -96,9 +181,9 @@
       "title": "Income & invoices",
       "section": "sales"
     },
-    "invoice": {
-      "relPath": "assets/screenshots/invoice.png",
-      "title": "Invoice workspace",
+    "invoice_new": {
+      "relPath": "assets/screenshots/invoice_new.png",
+      "title": "New invoice",
       "section": "sales"
     },
     "expenses": {
@@ -106,19 +191,9 @@
       "title": "Expenses",
       "section": "finance"
     },
-    "cash_flow_overview": {
-      "relPath": "assets/screenshots/cash_flow_overview.png",
-      "title": "Cash flow overview",
-      "section": "finance"
-    },
-    "cash_flow_scenarios": {
-      "relPath": "assets/screenshots/cash_flow_scenarios.png",
-      "title": "Cash scenarios",
-      "section": "finance"
-    },
-    "cash_flow_alerts": {
-      "relPath": "assets/screenshots/cash_flow_alerts.png",
-      "title": "Liquidity alerts",
+    "cash_flow": {
+      "relPath": "assets/screenshots/cash_flow.png",
+      "title": "Cash flow",
       "section": "finance"
     },
     "reporting": {
@@ -146,9 +221,19 @@
       "title": "Tax advanced",
       "section": "finance"
     },
+    "tax_income": {
+      "relPath": "assets/screenshots/tax_income.png",
+      "title": "Income tax planner",
+      "section": "finance"
+    },
     "reconciliation": {
       "relPath": "assets/screenshots/reconciliation.png",
       "title": "AI reconciliation",
+      "section": "finance"
+    },
+    "reconciliation_import": {
+      "relPath": "assets/screenshots/reconciliation_import.png",
+      "title": "Import bank statement",
       "section": "finance"
     },
     "reconciliation_settings": {
@@ -181,9 +266,24 @@
       "title": "Leave",
       "section": "workspace"
     },
+    "workforce_reports": {
+      "relPath": "assets/screenshots/workforce_reports.png",
+      "title": "Workforce reports",
+      "section": "workspace"
+    },
+    "workforce_settings": {
+      "relPath": "assets/screenshots/workforce_settings.png",
+      "title": "Workforce settings",
+      "section": "workspace"
+    },
     "payroll": {
       "relPath": "assets/screenshots/payroll.png",
       "title": "Payroll",
+      "section": "workspace"
+    },
+    "payroll_new": {
+      "relPath": "assets/screenshots/payroll_new.png",
+      "title": "New payroll run",
       "section": "workspace"
     },
     "payroll_settings": {
@@ -191,14 +291,19 @@
       "title": "Payroll settings",
       "section": "workspace"
     },
-    "shop_admin": {
-      "relPath": "assets/screenshots/shop_admin.png",
-      "title": "Shop (admin)",
-      "section": "operations"
-    },
     "settings": {
       "relPath": "assets/screenshots/settings.png",
       "title": "Settings",
+      "section": "overview"
+    },
+    "settings_profile": {
+      "relPath": "assets/screenshots/settings_profile.png",
+      "title": "Profile settings",
+      "section": "overview"
+    },
+    "settings_security": {
+      "relPath": "assets/screenshots/settings_security.png",
+      "title": "Security settings",
       "section": "overview"
     },
     "settings_team": {
@@ -216,6 +321,11 @@
       "title": "Shop settings",
       "section": "operations"
     },
+    "settings_imports": {
+      "relPath": "assets/screenshots/settings_imports.png",
+      "title": "Import settings",
+      "section": "operations"
+    },
     "partner": {
       "relPath": "assets/screenshots/partner.png",
       "title": "Partner hub",
@@ -230,16 +340,6 @@
       "relPath": "assets/screenshots/help_in_app.png",
       "title": "In-app help",
       "section": "overview"
-    },
-    "proposal_detail": {
-      "relPath": "assets/screenshots/proposal_detail.png",
-      "title": "Proposal detail",
-      "section": "sales"
-    },
-    "payroll_run_detail": {
-      "relPath": "assets/screenshots/payroll_run_detail.png",
-      "title": "Payroll run detail",
-      "section": "workspace"
     },
     "public_shop": {
       "relPath": "assets/screenshots/public_shop.png",

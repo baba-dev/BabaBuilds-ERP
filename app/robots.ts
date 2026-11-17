@@ -8,7 +8,7 @@ const AUTHENTICATED_TOP_LEVEL_PATHS = [
   '/expenses/',
   '/inbox/',
   '/inventory/',
-  '/invoice/',
+  '/income/',
   '/launch/',
   '/ledger/',
   '/proposals/',

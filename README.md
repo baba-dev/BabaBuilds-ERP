@@ -1,15 +1,16 @@
 # BabaBuilds ERP
 
-![Next.js](https://img.shields.io/badge/Next.js-16.2.4-black?logo=next.js)
-![React](https://img.shields.io/badge/React-19.2.4-149eca?logo=react)
+![Next.js](https://img.shields.io/badge/Next.js-16.4.5-black?logo=next.js)
+![React](https://img.shields.io/badge/React-19.3.1-149eca?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6?logo=typescript)
 ![Prisma](https://img.shields.io/badge/Prisma-ORM-2d3748?logo=prisma)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169e1?logo=postgresql)
 ![NextAuth](https://img.shields.io/badge/Auth-NextAuth-7c3aed)
 ![License](https://img.shields.io/badge/License-Private-informational)
 
-BabaBuilds ERP is a full-stack ERP and operations suite for service-first businesses.  
-It combines quoting, service catalog management, shop + inventory workflows, invoicing, retainers, expenses, tax/compliance, AI-assisted reconciliation, and optional advanced modules (workforce, payroll, cash flow, reporting, and more) in one workspace-aware platform.
+BabaBuilds ERP gives service businesses one practical place to run sales, money, operations, and people workflows. Turn a proposal into an invoice, follow up on receivables, reconcile the bank, prepare tax evidence, manage stock, and keep the team moving without stitching together a collection of disconnected tools.
+
+The built-in demo creates a private, short-lived workspace with realistic synthetic data. It is the quickest way to explore the product safely—no customer data or credit card required.
 
 Built with **Next.js App Router + React Server Components + Prisma + PostgreSQL 17 + NextAuth**.
 
@@ -34,19 +35,41 @@ Built with **Next.js App Router + React Server Components + Prisma + PostgreSQL 
 
 ## Product Tour (Screenshots)
 
-### Highlights
+Every product image below comes from the seeded Software Company demo at a 1440×900 desktop viewport. Your browser automatically selects the light or dark version.
 
-| Area | Screenshot |
-|---|---|
-| Dashboard | ![Dashboard overview](public/help/screenshots/help-dashboard-01-overview.png) |
-| Service Catalog | ![Service catalog](public/help/screenshots/help-service-catalog-01-overview.png) |
-| Inventory | ![Inventory hub](public/help/screenshots/help-inventory-01-overview.png) |
-| Clients | ![Clients](public/help/screenshots/help-clients-01-overview.png) |
-| Quotes & Proposals | ![Proposals](public/help/screenshots/help-proposals-01-overview.png) |
-| Invoices & Earnings | ![Invoices and earnings](public/help/screenshots/help-income-01-overview.png) |
+### Start with the command center
 
-For the full gallery index, see:  
-`content/docs/help-screenshot-gallery.md`
+See the figures that need attention, upcoming work, receivables, cash movement, and recent activity without hunting through reports.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/product-images/screenshots/dark/dashboard.png">
+  <img src="docs/product-images/screenshots/light/dashboard.png" alt="BabaBuilds ERP dashboard in the redesigned workspace" width="1440" height="900">
+</picture>
+
+### Move from proposal to payment
+
+Create consistent proposals, understand pipeline health, convert approved work into invoices, and keep the original client context attached.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/product-images/screenshots/dark/proposals.png">
+  <img src="docs/product-images/screenshots/light/proposals.png" alt="Proposal workspace with lifecycle and value summaries" width="1440" height="900">
+</picture>
+
+### Keep operations and finance connected
+
+Inventory, expenses, documents, tax, reporting, and bank reconciliation share one workspace and one access model.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/product-images/screenshots/dark/inventory.png">
+  <img src="docs/product-images/screenshots/light/inventory.png" alt="Inventory workspace with stock and purchasing context" width="1440" height="900">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/product-images/screenshots/dark/reconciliation.png">
+  <img src="docs/product-images/screenshots/light/reconciliation.png" alt="AI-assisted bank reconciliation workspace" width="1440" height="900">
+</picture>
+
+Browse the [complete light/dark product image library](docs/product-images/README.md) for the full set of public, workspace, finance, compliance, payroll, and settings screens.
 
 ---
 
@@ -56,7 +79,7 @@ Based on static inspection of app modules, Prisma enums/models, scripts, and hel
 
 ### 1) Business setup, authentication, and access control
 - NextAuth-based sign-in architecture (email and/or Google providers)
-- Demo login route for local/dev onboarding
+- Guided persona demos with synthetic, automatically expiring workspaces
 - Workspace-aware user model and role system
 - Role/permission-gated feature access for optional modules
 
@@ -67,7 +90,7 @@ Based on static inspection of app modules, Prisma enums/models, scripts, and hel
 
 ### 3) Revenue operations
 - Service catalog operations (priceable services/products)
-- Shop/order-oriented operations for sellable items
+- Shop, order, and point-of-sale workflows for sellable items
 - Retainer and recurring revenue tracking
 - Invoice lifecycle with schema-backed statuses:
   - `PENDING`
@@ -170,7 +193,7 @@ AUTH_GOOGLE_ENABLED=false
 AUTH_EMAIL_ENABLED=false
 ```
 
-### 3) Prepare Prisma client and schema
+### 3) Prepare Prisma client and database
 
 ```bash
 npx prisma generate
@@ -189,7 +212,7 @@ npx ts-node prisma/seed.ts
 npm run dev
 ```
 
-Open: [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000), choose **Explore a live demo workspace**, select the business profile that best matches your work, and continue into the seeded workspace.
 
 ---
 
@@ -276,8 +299,9 @@ Note: Existing lint debt is known in the codebase; treat lint output as “basel
 ## Troubleshooting
 
 - **Auth fails early:** verify `NEXTAUTH_URL` and `NEXTAUTH_SECRET` are set correctly.
-- **Schema mismatch/local DB issues:** run `npx prisma generate && npx prisma db push`.
-- **Demo login MFA policy block:** known pre-existing bug in policy/provider whitelisting (see `lib/auth.ts` behavior).
+- **Schema mismatch/local DB issues:** confirm that the database is disposable, then run `npx prisma generate && npx prisma migrate deploy`.
+- **Demo sign-in loops back to login:** make sure `NEXTAUTH_URL` uses the same hostname you opened in the browser (for example, use `localhost` consistently rather than mixing it with `127.0.0.1`).
+- **A paid module is missing in a demo:** create a fresh demo workspace. Demo entitlements are bound to the short-lived workspace and fail closed when its expiry is missing.
 
 ---
 
@@ -285,8 +309,9 @@ Note: Existing lint debt is known in the codebase; treat lint output as “basel
 
 - Main README: `README.md`
 - Prisma schema: `prisma/schema.prisma`
-- Screenshot index: `content/docs/help-screenshot-gallery.md`
-- Screenshots folder: `public/help/screenshots/`
+- Product image library: `docs/product-images/README.md`
+- Help screenshot index: `content/docs/help-screenshot-gallery.md`
+- Help Center source: `content/docs/`
 - Frontend rollout docs:
   - `docs/frontend/component-adoption-matrix.md`
   - `docs/frontend/visual-qa-checklist.md`

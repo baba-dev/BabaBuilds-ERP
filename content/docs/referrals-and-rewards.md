@@ -12,11 +12,10 @@ dateModified: "2026-06-08"
 
 The Referrals module tracks your partner and customer-led growth initiatives, making it easy to see who is sending you business and ensuring they receive their promised rewards.
 
-<HelpImage src="/help/screenshots/help-referrals-01-overview.png" alt="Referrals overview page" caption="Referral dashboard with key growth metrics." />
+<HelpImage src="/product-images/light/referrals.png" alt="Current Referrals workspace" caption="Track referral activity, attribution, and reward follow-up from one view." />
 
 ## Managing Referral Workflows
 
-<HelpImage src="/help/screenshots/help-referrals-02-primary-action.png" alt="Referrals primary actions" caption="Primary controls for referral management and reward handling." />
 
 <Steps>
   <Step title="Log a Referral">
@@ -32,7 +31,6 @@ The Referrals module tracks your partner and customer-led growth initiatives, ma
 
 ## Performance Analytics
 
-<HelpImage src="/help/screenshots/help-referrals-03-detail.png" alt="Referrals detail section" caption="Detailed referral performance context." />
 
 - **Top Partners:** Identify which clients or affiliates are generating the highest volume of qualified leads.
 - **Conversion Rate:** Analyze how many referred leads actually turn into paying customers compared to your inbound marketing channels.

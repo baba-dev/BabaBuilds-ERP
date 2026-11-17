@@ -46,7 +46,7 @@ const FLOW_DEFS: FlowDef[] = [
       { label: "Add client", href: "/clients", description: "Choose the client that needs monthly retainers." },
       { label: "Define service package", href: "/services", description: "Create a reusable package for recurring billing." },
       { label: "Create retainer", href: "/retainers", description: "Set monthly amount, start date, and notes." },
-      { label: "Generate invoice", href: "/invoice", description: "Issue the first retainer invoice from your catalog." },
+      { label: "Generate invoice", href: "/income/new", description: "Issue the first retainer invoice from your catalog." },
     ],
   },
   {
@@ -56,9 +56,9 @@ const FLOW_DEFS: FlowDef[] = [
     icon: AlarmClock,
     steps: [
       { label: "Review AR queue", href: "/ar-collections", description: "Sort invoices by overdue days and priority score." },
-      { label: "Open invoice details", href: "/invoice", description: "Confirm amount due, reminders, and follow-up status." },
+      { label: "Open invoice details", href: "/income", description: "Confirm amount due, reminders, and follow-up status." },
       { label: "Send reminder", href: "/ar-collections", description: "Trigger follow-up and update promise-to-pay notes." },
-      { label: "Record payment", href: "/invoice", description: "Log payment and close overdue status." },
+      { label: "Record payment", href: "/income", description: "Log payment and close overdue status." },
     ],
   },
   {
@@ -67,8 +67,8 @@ const FLOW_DEFS: FlowDef[] = [
     description: "Run compliance readiness, then close your filing cycle.",
     icon: FileBarChart2,
     steps: [
-      { label: "Open tax hub", href: "/tax/hub", description: "Check blockers, obligations, and return status." },
-      { label: "Run readiness checks", href: "/tax/hub", description: "Validate tax-ready books and missing documents." },
+      { label: "Open tax hub", href: "/tax", description: "Check blockers, obligations, and return status." },
+      { label: "Run readiness checks", href: "/tax", description: "Validate tax-ready books and missing documents." },
       { label: "Review returns", href: "/tax", description: "Inspect return periods and amounts before filing." },
       { label: "Mark filing complete", href: "/tax", description: "Record month-end filed status and audit evidence." },
     ],

@@ -14,13 +14,12 @@ dateModified: "2026-06-04"
 
 Retainers provide predictable, recurring revenue, which is the lifeblood of a stable agency or consultancy. This guide helps you run them with discipline, giving you clear visibility into your Monthly Recurring Revenue (MRR) and upcoming renewals.
 
-<HelpImage src="/help/screenshots/help-retainers-01-overview.png" alt="Retainers hub overview" caption="Retainers list and MRR context." />
+<HelpImage src="/product-images/light/retainers.png" alt="Current Retainers Hub" caption="Review recurring agreements, billing cadence, and monthly recurring revenue in one place." />
 
 ## Creating a Retainer Agreement
 
 When a client signs a recurring contract, log it as a Retainer in the ERP to ensure it is tracked for MRR calculations and automated invoice drafting.
 
-<HelpImage src="/help/screenshots/help-retainers-02-primary-action.png" alt="Retainers create/edit actions" caption="Primary actions to configure recurring contracts." />
 
 <Steps>
   <Step title="Open Retainers Module">
@@ -41,7 +40,6 @@ When a client signs a recurring contract, log it as a Retainer in the ERP to ens
 
 A retainer isn't just a billing schedule; it's a relationship that requires monitoring.
 
-<HelpImage src="/help/screenshots/help-retainers-03-detail.png" alt="Retainers detail section" caption="Detailed retainer record context for renewal operations." />
 
 - **Upcoming Renewals Alert:** The dashboard and retainer module will flag contracts nearing their end date so you can initiate renewal conversations.
 - **MRR Impact:** Every active retainer contributes to your global MRR metric, allowing you to forecast cash flow accurately.

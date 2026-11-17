@@ -31,6 +31,4 @@ The public `/shop/<slug>` page now follows a premium storefront layout to improv
 4. Visitor either checks out (when payment is enabled) or sends an enquiry via email.
 5. Business team follows up with confirmation and invoice details.
 
-<HelpImage src="/help/screenshots/help-shop-01-overview.png" alt="Shop overview page" caption="Shop overview with listings and storefront controls." />
-<HelpImage src="/help/screenshots/help-shop-02-primary-action.png" alt="Shop primary actions" caption="Primary publishing and order-related controls." />
-<HelpImage src="/help/screenshots/help-shop-03-detail.png" alt="Shop detail section" caption="Detailed listing/order operational view." />
+<HelpImage src="/product-images/light/shop_admin.png" alt="Current Shop workspace" caption="Manage listings, storefront readiness, and incoming orders from the Shop workspace." />

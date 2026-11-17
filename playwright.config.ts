@@ -25,6 +25,9 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
+      : undefined,
   },
 
   /* Configure projects for major browsers */
@@ -36,7 +39,7 @@ export default defineConfig({
   ],
 
   /* Run your local dev server before starting the tests */
-  webServer: {
+  webServer: process.env.SKIP_WEB_SERVER ? undefined : {
     command: 'npm run dev',
     url: 'http://localhost:3000',
     env: {

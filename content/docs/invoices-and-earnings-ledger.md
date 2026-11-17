@@ -12,6 +12,4 @@ dateModified: "2026-04-22"
 
 Use this page to manage issued invoices, outstanding amounts, and remittance updates.
 
-<HelpImage src="/help/screenshots/help-income-01-overview.png" alt="Invoices and Earnings overview" caption="Ledger overview with billing and receivable posture." />
-<HelpImage src="/help/screenshots/help-income-02-primary-action.png" alt="Invoices and Earnings actions" caption="Primary actions for payment logging and invoice follow-up." />
-<HelpImage src="/help/screenshots/help-income-03-detail.png" alt="Invoices and Earnings detail" caption="Detailed ledger context for reconciliation and collections." />
+<HelpImage src="/product-images/light/income.png" alt="Current Invoices and Earnings workspace" caption="Follow invoice status, outstanding balances, and recorded payments from the shared earnings ledger." />

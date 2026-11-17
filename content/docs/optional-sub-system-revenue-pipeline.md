@@ -12,13 +12,12 @@ dateModified: "2026-06-04"
 
 The Revenue Pipeline module gives you a stage-wise visual representation of your sales process. It highlights bottlenecks and stalled deals so you can take action before potential revenue slips away.
 
-<HelpImage src="/help/screenshots/help-optional-revenue-pipeline-01-overview.png" alt="Revenue Pipeline overview page" caption="Pipeline overview with stage visibility." />
+<HelpImage src="/product-images/light/proposals_pipeline.png" alt="Current Revenue Pipeline workspace" caption="Use stage and value signals to focus follow-up on the work most likely to move." />
 
 ## Setting Up Your Pipeline
 
 Customize the pipeline stages to match your actual sales motion.
 
-<HelpImage src="/help/screenshots/help-optional-revenue-pipeline-02-primary-action.png" alt="Revenue Pipeline primary action area" caption="Focus on stalled/at-risk deals and suggested actions." />
 
 <Steps>
   <Step title="Enable the Module">
@@ -36,7 +35,6 @@ Customize the pipeline stages to match your actual sales motion.
 
 The true value of the pipeline is identifying where deals get stuck.
 
-<HelpImage src="/help/screenshots/help-optional-revenue-pipeline-03-detail.png" alt="Revenue Pipeline detail section" caption="Detailed stage and conversion diagnostics." />
 
 - **Aging Opportunities:** The system flags deals that have remained in the same stage for too long.
 - **Conversion Diagnostics:** View reports on your win/loss ratio and analyze the primary reasons deals are lost.

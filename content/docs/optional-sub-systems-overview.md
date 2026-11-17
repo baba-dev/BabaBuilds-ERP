@@ -14,7 +14,7 @@ dateModified: "2026-04-22"
 
 Use optional modules to extend ERP beyond core operations. All modules are non-destructive toggles.
 
-<HelpImage src="/help/screenshots/help-settings-modules-enabled.png" alt="Settings workspace modules section with optional modules enabled" caption="Workspace Modules in Settings is the control center for optional capabilities." />
+<HelpImage src="/product-images/light/settings.png" alt="Current Settings workspace" caption="Enable a module only when its data, permissions, and operational owner are ready." />
 
 ## Modules included in this rollout
 

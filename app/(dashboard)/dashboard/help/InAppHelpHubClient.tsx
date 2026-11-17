@@ -24,7 +24,6 @@ type Group = { category: DocsCategory; docs: DocMeta[] };
 function pickSuggestedSlugs(pathname: string | null | undefined): string[] {
   const path = pathname ?? "";
 
-  if (path.startsWith("/invoice")) return ["generating-invoices", "payment-gateways"];
   if (path.startsWith("/income")) return ["generating-invoices", "retainers-and-mrr"];
   if (path.startsWith("/clients")) return ["managing-clients", "generating-invoices"];
   if (path.startsWith("/expenses")) return ["expenses-and-tax", "accounting-traceability-matrix"];

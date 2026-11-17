@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-16T16:12:09.009Z",
+  "generatedAt": "2026-11-17T17:00:52.187Z",
   "summary": {
     "knownRoutes": 128,
-    "checkedReferencedRoutes": 101,
+    "checkedReferencedRoutes": 103,
     "brokenReferencedRoutes": 0
   },
   "gate": {
@@ -64,9 +64,7 @@
       "exists": true,
       "references": [
         "app/(dashboard)/admin/_components/AdminShell.tsx",
-        "app/(dashboard)/admin/layout.tsx",
-        "app/(dashboard)/dashboard/dashboard-right-rail.tsx",
-        "app/api/dashboard/route.ts"
+        "app/(dashboard)/admin/layout.tsx"
       ]
     },
     {
@@ -132,6 +130,7 @@
       "exists": true,
       "references": [
         "app/(dashboard)/ar-collections/layout.tsx",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/settings/_components/sections/Automation.tsx",
         "components/dashboard/GuidedFlowsHub.tsx",
         "components/navigation/nav-config.ts"
@@ -153,6 +152,7 @@
       "exists": true,
       "references": [
         "app/(dashboard)/cash-flow/layout.tsx",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/reconciliation/import/page.tsx",
         "app/(dashboard)/retainers/_components/RetainerDrawer.tsx",
         "app/(dashboard)/settings/_components/sections/Automation.tsx",
@@ -165,8 +165,8 @@
       "references": [
         "app/(dashboard)/clients/[id]/page.tsx",
         "app/(dashboard)/clients/page.tsx",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
-        "app/(dashboard)/dashboard/page.tsx",
         "app/(dashboard)/launch/page.tsx",
         "app/(dashboard)/proposals/_composer/ProposalComposer.tsx",
         "app/(dashboard)/settings/profile/page.tsx",
@@ -239,6 +239,7 @@
         "app/(dashboard)/ar-collections/layout.tsx",
         "app/(dashboard)/cash-flow/layout.tsx",
         "app/(dashboard)/companies/layout.tsx",
+        "app/(dashboard)/dashboard/parse-dashboard-response.ts",
         "app/(dashboard)/documents/compliance/page.tsx",
         "app/(dashboard)/documents/layout.tsx",
         "app/(dashboard)/documents/page.tsx",
@@ -363,6 +364,7 @@
       "route": "/expenses",
       "exists": true,
       "references": [
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
         "app/(dashboard)/tax/_components/ReconTab.tsx",
         "app/(dashboard)/tax/_components/SmallBusinessPanel.tsx",
@@ -516,8 +518,7 @@
       "exists": true,
       "references": [
         "app/(dashboard)/clients/page.tsx",
-        "app/(dashboard)/dashboard/dashboard-operations-panel.tsx",
-        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/import-manager/layout.tsx",
         "components/navigation/nav-config.ts"
       ]
@@ -533,15 +534,12 @@
       "route": "/income",
       "exists": true,
       "references": [
-        "app/(dashboard)/dashboard/dashboard-quick-actions.tsx",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
-        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
-        "app/(dashboard)/dashboard/page.tsx",
         "app/(dashboard)/income/new/page.tsx",
         "app/(dashboard)/launch/page.tsx",
         "app/(dashboard)/shop/_components/OrderDrawer.tsx",
         "app/api/chat/route.ts",
-        "app/api/dashboard/route.ts",
         "app/api/open-file/route.ts",
         "app/manifest.ts",
         "app/sw.ts",
@@ -555,13 +553,17 @@
       "route": "/income/new",
       "exists": true,
       "references": [
-        "app/(dashboard)/income/_components/IncomeWorkspace.tsx"
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
+        "app/(dashboard)/income/_components/IncomeWorkspace.tsx",
+        "app/(dashboard)/settings/profile/page.tsx",
+        "components/dashboard/GuidedFlowsHub.tsx"
       ]
     },
     {
       "route": "/inventory",
       "exists": true,
       "references": [
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/inventory/purchase-orders/page.tsx",
         "app/(dashboard)/shop/_components/CatalogPanel.tsx",
         "app/(dashboard)/shop/_components/StorefrontPanel.tsx",
@@ -569,13 +571,17 @@
       ]
     },
     {
+      "route": "/inventory/purchase-orders",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/dashboard-routes.ts"
+      ]
+    },
+    {
       "route": "/invoice",
       "exists": true,
       "references": [
-        "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
-        "app/(dashboard)/settings/profile/page.tsx",
         "app/api/chat/route.ts",
-        "components/dashboard/GuidedFlowsHub.tsx",
         "components/invoice/InvoiceGeneratorForm.tsx"
       ]
     },
@@ -691,8 +697,7 @@
       "route": "/proposals",
       "exists": true,
       "references": [
-        "app/(dashboard)/dashboard/dashboard-quick-actions.tsx",
-        "app/(dashboard)/dashboard/dashboard-sales-shop-panel.tsx",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/launch/page.tsx",
         "app/(dashboard)/proposals/_components/ProposalsTabs.tsx",
         "app/(dashboard)/proposals/_components/ProposalsWorkspace.tsx",
@@ -700,7 +705,6 @@
         "app/(dashboard)/proposals/new/page.tsx",
         "app/(dashboard)/proposals/pipeline/page.tsx",
         "app/api/chat/route.ts",
-        "app/api/dashboard/route.ts",
         "app/sw.ts",
         "components/dashboard/GuidedFlowsHub.tsx",
         "components/navigation/nav-config.ts"
@@ -710,6 +714,7 @@
       "route": "/proposals/new",
       "exists": true,
       "references": [
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/proposals/_components/ProposalsWorkspace.tsx",
         "app/(dashboard)/proposals/_composer/composer-types.ts",
         "app/(dashboard)/proposals/pipeline/page.tsx"
@@ -719,7 +724,7 @@
       "route": "/proposals/pipeline",
       "exists": true,
       "references": [
-        "app/(dashboard)/dashboard/dashboard-proposal-pipeline-summary.tsx",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/proposals/_components/ProposalsTabs.tsx",
         "app/(dashboard)/proposals/pipeline/page.tsx",
         "components/dashboard/GuidedFlowsHub.tsx",
@@ -730,13 +735,10 @@
       "route": "/reconciliation",
       "exists": true,
       "references": [
-        "app/(dashboard)/dashboard/dashboard-quick-actions.tsx",
-        "app/(dashboard)/dashboard/dashboard-trust-panel.tsx",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
-        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
         "app/(dashboard)/reconciliation/settings-page-client.tsx",
         "app/(dashboard)/settings/_components/sections/Banking.tsx",
-        "app/api/dashboard/route.ts",
         "app/manifest.ts",
         "components/navigation/nav-config.ts"
       ]
@@ -745,6 +747,7 @@
       "route": "/reconciliation/import",
       "exists": true,
       "references": [
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/reconciliation/page.tsx",
         "app/api/open-file/route.ts"
       ]
@@ -780,6 +783,7 @@
       "route": "/reporting",
       "exists": true,
       "references": [
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/reporting/[reportId]/page.tsx",
         "app/(dashboard)/reporting/layout.tsx",
         "app/api/chat/route.ts",
@@ -817,6 +821,7 @@
       "route": "/retainers",
       "exists": true,
       "references": [
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
         "app/(dashboard)/retainers/_components/RetainersWorkspace.tsx",
         "app/(dashboard)/retainers/_composer/RetainerComposer.tsx",
@@ -832,6 +837,7 @@
       "route": "/retainers/new",
       "exists": true,
       "references": [
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/retainers/_components/RetainersWorkspace.tsx"
       ]
     },
@@ -854,9 +860,8 @@
       "exists": true,
       "references": [
         "app/(dashboard)/ar-collections/page.tsx",
-        "app/(dashboard)/dashboard/dashboard-right-rail.tsx",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
-        "app/(dashboard)/dashboard/page.tsx",
         "app/(dashboard)/import-manager/layout.tsx",
         "app/(dashboard)/pos/page.tsx",
         "app/(dashboard)/proposals/pipeline/page.tsx",
@@ -880,7 +885,7 @@
       "route": "/settings/billing",
       "exists": true,
       "references": [
-        "app/(dashboard)/dashboard/dashboard-health-strip.tsx",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/proposals/_components/ProposalDialogs.tsx",
         "app/(dashboard)/referrals/page.tsx",
         "app/(dashboard)/settings/_components/sections/Modules.tsx",
@@ -893,10 +898,17 @@
       ]
     },
     {
+      "route": "/settings/imports",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/dashboard-routes.ts"
+      ]
+    },
+    {
       "route": "/settings/profile",
       "exists": true,
       "references": [
-        "app/(dashboard)/dashboard/page.tsx",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "components/notifications/CommsHub.tsx"
       ]
     },
@@ -905,6 +917,13 @@
       "exists": true,
       "references": [
         "app/(dashboard)/settings/security/page.tsx"
+      ]
+    },
+    {
+      "route": "/settings/shop",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/dashboard/dashboard-routes.ts"
       ]
     },
     {
@@ -919,7 +938,7 @@
       "route": "/setup",
       "exists": true,
       "references": [
-        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/login/page.tsx"
       ]
     },
@@ -927,10 +946,7 @@
       "route": "/shop",
       "exists": true,
       "references": [
-        "app/(dashboard)/dashboard/dashboard-quick-actions.tsx",
-        "app/(dashboard)/dashboard/dashboard-sales-shop-panel.tsx",
-        "app/(dashboard)/dashboard/intelligence-suggestion-routes.ts",
-        "app/(dashboard)/dashboard/page.tsx",
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/settings/_components/sections/Shop.tsx",
         "app/(dashboard)/settings/shop/page.tsx",
         "app/api/chat/route.ts",
@@ -960,11 +976,13 @@
       "route": "/tax",
       "exists": true,
       "references": [
+        "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
         "app/(dashboard)/income/_components/InvoiceGstPanel.tsx",
         "app/(dashboard)/settings/_components/sections/Tax.tsx",
         "app/(dashboard)/tax/TaxDashboardClient.tsx",
         "app/api/chat/route.ts",
+        "app/api/dashboard/route.ts",
         "app/sw.ts",
         "components/dashboard/GuidedFlowsHub.tsx",
         "components/gst/GstPreviewCard.tsx",
@@ -980,13 +998,6 @@
         "app/shop/[slug]/ShopClient.tsx",
         "app/sitemap.ts",
         "components/LandingFooter.tsx"
-      ]
-    },
-    {
-      "route": "/tax/hub",
-      "exists": true,
-      "references": [
-        "components/dashboard/GuidedFlowsHub.tsx"
       ]
     },
     {

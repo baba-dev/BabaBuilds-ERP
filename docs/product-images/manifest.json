@@ -1,0 +1,630 @@
+{
+  "generatedAt": "2026-11-17T16:47:59.272Z",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "shots": {
+    "landing": {
+      "paths": {
+        "light": "screenshots/light/landing.png",
+        "dark": "screenshots/dark/landing.png"
+      },
+      "title": "Marketing home",
+      "section": "marketing",
+      "route": "/"
+    },
+    "login": {
+      "paths": {
+        "light": "screenshots/light/login.png",
+        "dark": "screenshots/dark/login.png"
+      },
+      "title": "Sign in",
+      "section": "marketing",
+      "route": "/login"
+    },
+    "help_hub": {
+      "paths": {
+        "light": "screenshots/light/help_hub.png",
+        "dark": "screenshots/dark/help_hub.png"
+      },
+      "title": "Help hub",
+      "section": "marketing",
+      "route": "/help-hub"
+    },
+    "free_erp": {
+      "paths": {
+        "light": "screenshots/light/free_erp.png",
+        "dark": "screenshots/dark/free_erp.png"
+      },
+      "title": "Free ERP",
+      "section": "marketing",
+      "route": "/free-erp"
+    },
+    "for_small_business": {
+      "paths": {
+        "light": "screenshots/light/for_small_business.png",
+        "dark": "screenshots/dark/for_small_business.png"
+      },
+      "title": "For small businesses",
+      "section": "marketing",
+      "route": "/for-small-businesses"
+    },
+    "for_contractors": {
+      "paths": {
+        "light": "screenshots/light/for_contractors.png",
+        "dark": "screenshots/dark/for_contractors.png"
+      },
+      "title": "For contractors",
+      "section": "marketing",
+      "route": "/for-contractors"
+    },
+    "for_agencies": {
+      "paths": {
+        "light": "screenshots/light/for_agencies.png",
+        "dark": "screenshots/dark/for_agencies.png"
+      },
+      "title": "For agencies",
+      "section": "marketing",
+      "route": "/for-agencies"
+    },
+    "for_ca": {
+      "paths": {
+        "light": "screenshots/light/for_ca.png",
+        "dark": "screenshots/dark/for_ca.png"
+      },
+      "title": "For chartered accountants",
+      "section": "marketing",
+      "route": "/for-ca"
+    },
+    "reseller": {
+      "paths": {
+        "light": "screenshots/light/reseller.png",
+        "dark": "screenshots/dark/reseller.png"
+      },
+      "title": "Reseller program",
+      "section": "marketing",
+      "route": "/reseller"
+    },
+    "privacy": {
+      "paths": {
+        "light": "screenshots/light/privacy.png",
+        "dark": "screenshots/dark/privacy.png"
+      },
+      "title": "Privacy policy",
+      "section": "marketing",
+      "route": "/privacy"
+    },
+    "terms": {
+      "paths": {
+        "light": "screenshots/light/terms.png",
+        "dark": "screenshots/dark/terms.png"
+      },
+      "title": "Terms of service",
+      "section": "marketing",
+      "route": "/terms"
+    },
+    "dashboard": {
+      "paths": {
+        "light": "screenshots/light/dashboard.png",
+        "dark": "screenshots/dark/dashboard.png"
+      },
+      "title": "Dashboard",
+      "section": "overview",
+      "route": "/dashboard"
+    },
+    "companies": {
+      "paths": {
+        "light": "screenshots/light/companies.png",
+        "dark": "screenshots/dark/companies.png"
+      },
+      "title": "Companies",
+      "section": "workspace",
+      "route": "/companies"
+    },
+    "services": {
+      "paths": {
+        "light": "screenshots/light/services.png",
+        "dark": "screenshots/dark/services.png"
+      },
+      "title": "Service catalog",
+      "section": "operations",
+      "route": "/services"
+    },
+    "shop_admin": {
+      "paths": {
+        "light": "screenshots/light/shop_admin.png",
+        "dark": "screenshots/dark/shop_admin.png"
+      },
+      "title": "Shop workspace",
+      "section": "operations",
+      "route": "/shop"
+    },
+    "inventory": {
+      "paths": {
+        "light": "screenshots/light/inventory.png",
+        "dark": "screenshots/dark/inventory.png"
+      },
+      "title": "Inventory",
+      "section": "operations",
+      "route": "/inventory"
+    },
+    "inventory_po": {
+      "paths": {
+        "light": "screenshots/light/inventory_po.png",
+        "dark": "screenshots/dark/inventory_po.png"
+      },
+      "title": "Purchase orders",
+      "section": "operations",
+      "route": "/inventory/purchase-orders"
+    },
+    "clients": {
+      "paths": {
+        "light": "screenshots/light/clients.png",
+        "dark": "screenshots/dark/clients.png"
+      },
+      "title": "Clients",
+      "section": "operations",
+      "route": "/clients"
+    },
+    "documents": {
+      "paths": {
+        "light": "screenshots/light/documents.png",
+        "dark": "screenshots/dark/documents.png"
+      },
+      "title": "Document vault",
+      "section": "operations",
+      "route": "/documents"
+    },
+    "documents_compliance": {
+      "paths": {
+        "light": "screenshots/light/documents_compliance.png",
+        "dark": "screenshots/dark/documents_compliance.png"
+      },
+      "title": "Compliance documents",
+      "section": "operations",
+      "route": "/documents/compliance"
+    },
+    "documents_settings": {
+      "paths": {
+        "light": "screenshots/light/documents_settings.png",
+        "dark": "screenshots/dark/documents_settings.png"
+      },
+      "title": "Document settings",
+      "section": "operations",
+      "route": "/documents/settings"
+    },
+    "import_manager": {
+      "paths": {
+        "light": "screenshots/light/import_manager.png",
+        "dark": "screenshots/dark/import_manager.png"
+      },
+      "title": "Import manager",
+      "section": "operations",
+      "route": "/import-manager"
+    },
+    "inbox_import": {
+      "paths": {
+        "light": "screenshots/light/inbox_import.png",
+        "dark": "screenshots/dark/inbox_import.png"
+      },
+      "title": "Inbox import",
+      "section": "operations",
+      "route": "/inbox/import"
+    },
+    "email_billing": {
+      "paths": {
+        "light": "screenshots/light/email_billing.png",
+        "dark": "screenshots/dark/email_billing.png"
+      },
+      "title": "Email billing",
+      "section": "operations",
+      "route": "/email-billing"
+    },
+    "email_billing_domains": {
+      "paths": {
+        "light": "screenshots/light/email_billing_domains.png",
+        "dark": "screenshots/dark/email_billing_domains.png"
+      },
+      "title": "Email domains",
+      "section": "operations",
+      "route": "/email-billing/domains"
+    },
+    "email_billing_plans": {
+      "paths": {
+        "light": "screenshots/light/email_billing_plans.png",
+        "dark": "screenshots/dark/email_billing_plans.png"
+      },
+      "title": "Email plans",
+      "section": "operations",
+      "route": "/email-billing/plans"
+    },
+    "email_billing_review": {
+      "paths": {
+        "light": "screenshots/light/email_billing_review.png",
+        "dark": "screenshots/dark/email_billing_review.png"
+      },
+      "title": "Email billing review",
+      "section": "operations",
+      "route": "/email-billing/review"
+    },
+    "email_billing_servers": {
+      "paths": {
+        "light": "screenshots/light/email_billing_servers.png",
+        "dark": "screenshots/dark/email_billing_servers.png"
+      },
+      "title": "Email servers",
+      "section": "operations",
+      "route": "/email-billing/servers"
+    },
+    "email_billing_settings": {
+      "paths": {
+        "light": "screenshots/light/email_billing_settings.png",
+        "dark": "screenshots/dark/email_billing_settings.png"
+      },
+      "title": "Email billing settings",
+      "section": "operations",
+      "route": "/email-billing/settings"
+    },
+    "proposals": {
+      "paths": {
+        "light": "screenshots/light/proposals.png",
+        "dark": "screenshots/dark/proposals.png"
+      },
+      "title": "Proposals",
+      "section": "sales",
+      "route": "/proposals"
+    },
+    "proposals_pipeline": {
+      "paths": {
+        "light": "screenshots/light/proposals_pipeline.png",
+        "dark": "screenshots/dark/proposals_pipeline.png"
+      },
+      "title": "Revenue pipeline",
+      "section": "sales",
+      "route": "/proposals/pipeline"
+    },
+    "proposal_new": {
+      "paths": {
+        "light": "screenshots/light/proposal_new.png",
+        "dark": "screenshots/dark/proposal_new.png"
+      },
+      "title": "New proposal",
+      "section": "sales",
+      "route": "/proposals/new"
+    },
+    "pos": {
+      "paths": {
+        "light": "screenshots/light/pos.png",
+        "dark": "screenshots/dark/pos.png"
+      },
+      "title": "Point of sale",
+      "section": "sales",
+      "route": "/pos"
+    },
+    "retainers": {
+      "paths": {
+        "light": "screenshots/light/retainers.png",
+        "dark": "screenshots/dark/retainers.png"
+      },
+      "title": "Retainers",
+      "section": "sales",
+      "route": "/retainers"
+    },
+    "retainer_new": {
+      "paths": {
+        "light": "screenshots/light/retainer_new.png",
+        "dark": "screenshots/dark/retainer_new.png"
+      },
+      "title": "New retainer",
+      "section": "sales",
+      "route": "/retainers/new"
+    },
+    "income": {
+      "paths": {
+        "light": "screenshots/light/income.png",
+        "dark": "screenshots/dark/income.png"
+      },
+      "title": "Income & invoices",
+      "section": "sales",
+      "route": "/income"
+    },
+    "invoice_new": {
+      "paths": {
+        "light": "screenshots/light/invoice_new.png",
+        "dark": "screenshots/dark/invoice_new.png"
+      },
+      "title": "New invoice",
+      "section": "sales",
+      "route": "/income/new"
+    },
+    "expenses": {
+      "paths": {
+        "light": "screenshots/light/expenses.png",
+        "dark": "screenshots/dark/expenses.png"
+      },
+      "title": "Expenses",
+      "section": "finance",
+      "route": "/expenses"
+    },
+    "cash_flow": {
+      "paths": {
+        "light": "screenshots/light/cash_flow.png",
+        "dark": "screenshots/dark/cash_flow.png"
+      },
+      "title": "Cash flow",
+      "section": "finance",
+      "route": "/cash-flow"
+    },
+    "reporting": {
+      "paths": {
+        "light": "screenshots/light/reporting.png",
+        "dark": "screenshots/dark/reporting.png"
+      },
+      "title": "Reporting center",
+      "section": "finance",
+      "route": "/reporting"
+    },
+    "reporting_ar_aging": {
+      "paths": {
+        "light": "screenshots/light/reporting_ar_aging.png",
+        "dark": "screenshots/dark/reporting_ar_aging.png"
+      },
+      "title": "AR aging preset",
+      "section": "finance",
+      "route": "/reporting/ar_aging"
+    },
+    "ar_collections": {
+      "paths": {
+        "light": "screenshots/light/ar_collections.png",
+        "dark": "screenshots/dark/ar_collections.png"
+      },
+      "title": "AR collections",
+      "section": "finance",
+      "route": "/ar-collections"
+    },
+    "tax": {
+      "paths": {
+        "light": "screenshots/light/tax.png",
+        "dark": "screenshots/dark/tax.png"
+      },
+      "title": "Tax hub",
+      "section": "finance",
+      "route": "/tax"
+    },
+    "tax_advanced": {
+      "paths": {
+        "light": "screenshots/light/tax_advanced.png",
+        "dark": "screenshots/dark/tax_advanced.png"
+      },
+      "title": "Tax advanced",
+      "section": "finance",
+      "route": "/tax/advanced"
+    },
+    "tax_income": {
+      "paths": {
+        "light": "screenshots/light/tax_income.png",
+        "dark": "screenshots/dark/tax_income.png"
+      },
+      "title": "Income tax planner",
+      "section": "finance",
+      "route": "/tax/income-tax"
+    },
+    "reconciliation": {
+      "paths": {
+        "light": "screenshots/light/reconciliation.png",
+        "dark": "screenshots/dark/reconciliation.png"
+      },
+      "title": "AI reconciliation",
+      "section": "finance",
+      "route": "/reconciliation"
+    },
+    "reconciliation_import": {
+      "paths": {
+        "light": "screenshots/light/reconciliation_import.png",
+        "dark": "screenshots/dark/reconciliation_import.png"
+      },
+      "title": "Import bank statement",
+      "section": "finance",
+      "route": "/reconciliation/import"
+    },
+    "reconciliation_settings": {
+      "paths": {
+        "light": "screenshots/light/reconciliation_settings.png",
+        "dark": "screenshots/dark/reconciliation_settings.png"
+      },
+      "title": "Reconciliation settings",
+      "section": "finance",
+      "route": "/reconciliation/settings"
+    },
+    "ca_portal": {
+      "paths": {
+        "light": "screenshots/light/ca_portal.png",
+        "dark": "screenshots/dark/ca_portal.png"
+      },
+      "title": "CA portal",
+      "section": "compliance",
+      "route": "/ca-portal"
+    },
+    "workforce": {
+      "paths": {
+        "light": "screenshots/light/workforce.png",
+        "dark": "screenshots/dark/workforce.png"
+      },
+      "title": "Workforce",
+      "section": "workspace",
+      "route": "/workforce"
+    },
+    "workforce_people": {
+      "paths": {
+        "light": "screenshots/light/workforce_people.png",
+        "dark": "screenshots/dark/workforce_people.png"
+      },
+      "title": "People directory",
+      "section": "workspace",
+      "route": "/workforce/people"
+    },
+    "workforce_attendance": {
+      "paths": {
+        "light": "screenshots/light/workforce_attendance.png",
+        "dark": "screenshots/dark/workforce_attendance.png"
+      },
+      "title": "Attendance",
+      "section": "workspace",
+      "route": "/workforce/attendance"
+    },
+    "workforce_leave": {
+      "paths": {
+        "light": "screenshots/light/workforce_leave.png",
+        "dark": "screenshots/dark/workforce_leave.png"
+      },
+      "title": "Leave",
+      "section": "workspace",
+      "route": "/workforce/leave"
+    },
+    "workforce_reports": {
+      "paths": {
+        "light": "screenshots/light/workforce_reports.png",
+        "dark": "screenshots/dark/workforce_reports.png"
+      },
+      "title": "Workforce reports",
+      "section": "workspace",
+      "route": "/workforce/reports"
+    },
+    "workforce_settings": {
+      "paths": {
+        "light": "screenshots/light/workforce_settings.png",
+        "dark": "screenshots/dark/workforce_settings.png"
+      },
+      "title": "Workforce settings",
+      "section": "workspace",
+      "route": "/workforce/settings"
+    },
+    "payroll": {
+      "paths": {
+        "light": "screenshots/light/payroll.png",
+        "dark": "screenshots/dark/payroll.png"
+      },
+      "title": "Payroll",
+      "section": "workspace",
+      "route": "/payroll"
+    },
+    "payroll_new": {
+      "paths": {
+        "light": "screenshots/light/payroll_new.png",
+        "dark": "screenshots/dark/payroll_new.png"
+      },
+      "title": "New payroll run",
+      "section": "workspace",
+      "route": "/payroll/new"
+    },
+    "payroll_settings": {
+      "paths": {
+        "light": "screenshots/light/payroll_settings.png",
+        "dark": "screenshots/dark/payroll_settings.png"
+      },
+      "title": "Payroll settings",
+      "section": "workspace",
+      "route": "/payroll/settings"
+    },
+    "settings": {
+      "paths": {
+        "light": "screenshots/light/settings.png",
+        "dark": "screenshots/dark/settings.png"
+      },
+      "title": "Settings",
+      "section": "overview",
+      "route": "/settings"
+    },
+    "settings_profile": {
+      "paths": {
+        "light": "screenshots/light/settings_profile.png",
+        "dark": "screenshots/dark/settings_profile.png"
+      },
+      "title": "Profile settings",
+      "section": "overview",
+      "route": "/settings/profile"
+    },
+    "settings_security": {
+      "paths": {
+        "light": "screenshots/light/settings_security.png",
+        "dark": "screenshots/dark/settings_security.png"
+      },
+      "title": "Security settings",
+      "section": "overview",
+      "route": "/settings/security"
+    },
+    "settings_team": {
+      "paths": {
+        "light": "screenshots/light/settings_team.png",
+        "dark": "screenshots/dark/settings_team.png"
+      },
+      "title": "Team & seats",
+      "section": "overview",
+      "route": "/settings/team"
+    },
+    "settings_billing": {
+      "paths": {
+        "light": "screenshots/light/settings_billing.png",
+        "dark": "screenshots/dark/settings_billing.png"
+      },
+      "title": "Billing",
+      "section": "overview",
+      "route": "/settings/billing"
+    },
+    "settings_shop": {
+      "paths": {
+        "light": "screenshots/light/settings_shop.png",
+        "dark": "screenshots/dark/settings_shop.png"
+      },
+      "title": "Shop settings",
+      "section": "operations",
+      "route": "/settings/shop"
+    },
+    "settings_imports": {
+      "paths": {
+        "light": "screenshots/light/settings_imports.png",
+        "dark": "screenshots/dark/settings_imports.png"
+      },
+      "title": "Import settings",
+      "section": "operations",
+      "route": "/settings/imports"
+    },
+    "partner": {
+      "paths": {
+        "light": "screenshots/light/partner.png",
+        "dark": "screenshots/dark/partner.png"
+      },
+      "title": "Partner hub",
+      "section": "overview",
+      "route": "/partner"
+    },
+    "referrals": {
+      "paths": {
+        "light": "screenshots/light/referrals.png",
+        "dark": "screenshots/dark/referrals.png"
+      },
+      "title": "Referrals",
+      "section": "overview",
+      "route": "/referrals"
+    },
+    "help_in_app": {
+      "paths": {
+        "light": "screenshots/light/help_in_app.png",
+        "dark": "screenshots/dark/help_in_app.png"
+      },
+      "title": "In-app help",
+      "section": "overview",
+      "route": "/dashboard/help"
+    },
+    "public_shop": {
+      "paths": {
+        "light": "screenshots/light/public_shop.png",
+        "dark": "screenshots/dark/public_shop.png"
+      },
+      "title": "Public storefront",
+      "section": "public_shop",
+      "route": "/shop/:slug"
+    }
+  }
+}
