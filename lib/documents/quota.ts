@@ -18,9 +18,19 @@ function coerceNumber(n: unknown): number {
   return Number(n ?? 0);
 }
 
-export async function getWorkspaceQuotaSnapshot(workspaceId: string): Promise<WorkspaceQuotaSnapshot> {
+type TxLike = Prisma.TransactionClient | PrismaClient;
+
+/**
+ * Pass the transaction client (`tx`) when calling from inside `prisma.$transaction`.
+ * Using the global client there checks out extra pooled connections while the transaction
+ * still holds its own, which deadlocks the (small) pool under concurrent requests.
+ */
+export async function getWorkspaceQuotaSnapshot(
+  workspaceId: string,
+  db: TxLike = prisma,
+): Promise<WorkspaceQuotaSnapshot> {
   const [workspace, storage] = await Promise.all([
-    prisma.workspace.findUnique({
+    db.workspace.findUnique({
       where: { id: workspaceId },
       select: {
         planTier: true,
@@ -29,7 +39,7 @@ export async function getWorkspaceQuotaSnapshot(workspaceId: string): Promise<Wo
         signupIntentJson: true,
       },
     }),
-    prisma.workspaceDocumentStorage.findUnique({
+    db.workspaceDocumentStorage.findUnique({
       where: { workspaceId },
       select: { bytesUsedTotal: true },
     }),
@@ -74,7 +84,18 @@ export async function canWorkspaceUploadBytes(params: {
   return { ok: true, snapshot };
 }
 
-type TxLike = Prisma.TransactionClient | PrismaClient;
+/**
+ * Serialises quota check-and-consume per workspace. The zero-increment upsert creates the
+ * storage row if missing and takes its row lock, which is held until the transaction ends, so
+ * two concurrent uploads cannot both pass the quota check against the same stale usage.
+ */
+export async function lockWorkspaceDocumentStorage(tx: TxLike, workspaceId: string): Promise<void> {
+  await tx.workspaceDocumentStorage.upsert({
+    where: { workspaceId },
+    create: { workspaceId, bytesUsedTotal: 0, bytesUsedActive: 0 },
+    update: { bytesUsedTotal: { increment: 0 } },
+  });
+}
 
 export async function consumeWorkspaceDocumentBytes(
   tx: TxLike,

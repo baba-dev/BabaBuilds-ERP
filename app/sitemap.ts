@@ -5,6 +5,14 @@ import { prisma } from '@/lib/prisma';
 import { getAllDocs, groupDocsByCategory } from '@/lib/docs';
 
 const BASE_URL = 'https://erp.bababuilds.com';
+
+// The release artifact is built on CI against a disposable, empty PostgreSQL database, so a
+// build-time render can never contain the real shop slugs, and a time-based revalidate would still
+// serve that empty build output for its first interval after every deploy. Render on request
+// instead; the shop query below is memoised in-process so crawlers cannot turn this into DB load.
+export const dynamic = 'force-dynamic';
+const SHOP_SLUG_CACHE_MS = 5 * 60 * 1000;
+let shopSlugCache: { at: number; shops: Array<{ slug: string; updatedAt: Date }> } | null = null;
 const BUILD_DATE = new Date();
 
 type SitemapEntry = MetadataRoute.Sitemap[number];
@@ -83,7 +91,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let shops: Array<{ slug: string; updatedAt: Date }> = [];
 
   try {
-    shops = await getActiveShopSlugs();
+    if (!shopSlugCache || Date.now() - shopSlugCache.at > SHOP_SLUG_CACHE_MS) {
+      shopSlugCache = { at: Date.now(), shops: await getActiveShopSlugs() };
+    }
+    shops = shopSlugCache.shops;
   } catch (error) {
     console.error('Failed to fetch active shop slugs for sitemap generation.', error);
   }

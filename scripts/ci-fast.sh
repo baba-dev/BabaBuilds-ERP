@@ -18,6 +18,7 @@ node -e '
   || decodeURIComponent(u.pathname.slice(1))!=="bababuilds_erp_ci")
   process.exit(1);
 ' || { echo 'ci:fast requires local bababuilds_erp_ci PostgreSQL' >&2; exit 1; }
+node scripts/check-runtime.mjs || exit 1
 npx --no-install prisma migrate deploy || exit 1
 export CI_POSTGRES_FINANCE_TESTS=1
 
