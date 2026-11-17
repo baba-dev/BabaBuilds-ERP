@@ -74,7 +74,7 @@ jobs:
             test -f "$archive" && test ! -L "$archive"
             sudo -n install -d -o root -g root -m 0755 /usr/local/lib/bababuilds-platform
             sudo -n install -o root -g root -m 0644 "$uploaded" "$operator"
-            test "$(sudo -n git hash-object "$operator")" = "a8c87b019939abb3f74c0bdf834ea1931200ec55" || {
+            test "$(sudo -n git hash-object "$operator")" = "66236d2b9e5ab1a6ea6ebb7c8bacbdb5be04b239" || {
               echo 'NODE26_INSTALLER_REVIEWED_SOURCE_MISMATCH' >&2; exit 1;
             }
             test "$(sha256sum "$archive" | cut -d' ' -f1)" = \
