@@ -11,8 +11,8 @@ describe('ERP Redis foundation', () => {
   it('is completely opt-in and does not reuse a generic REDIS_URL', () => {
     const config = loadRedisConfig(env({ REDIS_URL: cacheUrl }));
     expect(config.enabled).toBe(false);
-    expect(config.urls).toEqual({ cache: null, queue: null });
-    expect(config.features).toEqual({ cache: false, rateLimits: false, jobs: false });
+    expect(config.urls).toEqual({ cache: null, queue: null, dataCache: null });
+    expect(config.features).toEqual({ cache: false, rateLimits: false, jobs: false, dashboardCache: false, reportCache: false });
     expect(config.namespace).toBe('erp:test:v1');
   });
 
@@ -22,11 +22,16 @@ describe('ERP Redis foundation', () => {
     expect(() => loadRedisConfig(env({
       ERP_REDIS_ENABLED: 'true', ERP_REDIS_QUEUE_URL: queueUrl,
       ERP_REDIS_CACHE_ENABLED: 'true',
-    }))).toThrow(/ERP_REDIS_CACHE_URL/);
+    }))).toThrow(/ERP_REDIS_DATA_CACHE_URL/);
     expect(() => loadRedisConfig(env({
       ERP_REDIS_ENABLED: 'true', ERP_REDIS_CACHE_URL: cacheUrl,
       ERP_REDIS_JOBS_ENABLED: 'true',
     }))).toThrow(/ERP_REDIS_QUEUE_URL/);
+  });
+
+  it('rejects independent cache flags without the master flag', () => {
+    expect(() => loadRedisConfig(env({ ERP_REDIS_ENABLED: 'true', ERP_REDIS_CACHE_URL: cacheUrl,
+      ERP_REDIS_DASHBOARD_CACHE_ENABLED: 'true' }))).toThrow(/ERP_REDIS_CACHE_ENABLED/);
   });
 
   it('validates URLs and timeouts without exposing secrets in errors', () => {

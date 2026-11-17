@@ -13,8 +13,8 @@ type Status = {
   redis: {
     status: "disabled" | "ready" | "unavailable" | "misconfigured";
     namespace: string | null;
-    features: { rateLimits: boolean; cache: boolean; jobs: boolean };
-    connections: { cache: { status: string; latencyMs?: number }; queue: { status: string; latencyMs?: number } };
+    features: { rateLimits: boolean; cache: boolean; jobs: boolean; dashboardCache: boolean; reportCache: boolean };
+    connections: { cache: { status: string; latencyMs?: number }; queue: { status: string; latencyMs?: number }; dataCache: { status: string; latencyMs?: number } };
   };
 };
 
@@ -68,7 +68,7 @@ export function SecurityClient() {
           </Chip>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          {(["cache", "queue"] as const).map((purpose) => (
+          {(["cache", "queue", "dataCache"] as const).map((purpose) => (
             <div key={purpose} className="rounded-lg border p-3 text-sm">
               <p className="font-medium capitalize">{purpose}</p>
               <p className="mt-1 text-muted-foreground">
@@ -81,7 +81,7 @@ export function SecurityClient() {
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
           Namespace: {data.redis.namespace ?? "not configured"} ·
-          Distributed rate limiting: {data.redis.features.rateLimits ? "enabled" : "disabled"}
+          Distributed rate limiting: {data.redis.features.rateLimits ? "enabled" : "disabled"} · Dashboard cache: {data.redis.features.dashboardCache ? "enabled" : "disabled"} · Report cache: {data.redis.features.reportCache ? "enabled" : "disabled"}
         </p>
       </Card>
 

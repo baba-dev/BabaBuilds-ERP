@@ -90,7 +90,7 @@ export async function pingRedis(
 
 /** Disconnect on shutdown in a future worker process, or during test teardown. */
 export function disconnectRedisClients(): void {
-  for (const purpose of ['cache', 'queue'] as const) {
+  for (const purpose of ['cache', 'queue', 'dataCache'] as const) {
     connections[purpose]?.client.disconnect();
     delete connections[purpose];
   }

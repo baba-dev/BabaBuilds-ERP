@@ -34,8 +34,8 @@ export async function getRedisHealth(
       status: 'misconfigured',
       enabled: env.ERP_REDIS_ENABLED === 'true',
       namespace: null,
-      features: { cache: false, rateLimits: false, jobs: false },
-      connections: { cache: notConfigured(), queue: notConfigured() },
+      features: { cache: false, rateLimits: false, jobs: false, dashboardCache: false, reportCache: false },
+      connections: { cache: notConfigured(), queue: notConfigured(), dataCache: notConfigured() },
       code: 'INVALID_CONFIGURATION',
     };
   }
@@ -43,13 +43,14 @@ export async function getRedisHealth(
   const connections: RedisHealth['connections'] = {
     cache: notConfigured(),
     queue: notConfigured(),
+    dataCache: notConfigured(),
   };
 
   if (!config.enabled) {
     return { status: 'disabled', enabled: false, namespace: config.namespace, features: config.features, connections };
   }
 
-  await Promise.all((['cache', 'queue'] as const).map(async (purpose) => {
+  await Promise.all((['cache', 'queue', 'dataCache'] as const).map(async (purpose) => {
     if (!config.urls[purpose]) return;
     try {
       const latencyMs = await probe(purpose, config);
