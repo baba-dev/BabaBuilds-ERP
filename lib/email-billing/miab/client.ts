@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { validateMailBillingUrlForFetch } from './guard';
+import { miabApiUrl, validateMailBillingUrlForFetch } from './guard';
 import {
   asRecord,
   extractDirectAliases,
@@ -11,7 +11,7 @@ import {
   type MailBillingInventory,
 } from './normalize';
 
-export type MailBillingAccessMode = 'READ_ONLY_ADAPTER' | 'DIRECT_MIAB_API';
+export type MailBillingAccessMode = 'READ_ONLY_ADAPTER' | 'DIRECT_MIAB_API' | 'MANAGED_API';
 
 const READ_ENDPOINTS = ['/mail/domains', '/mail/users?format=json', '/mail/aliases?format=json'] as const;
 const REQUIRED_DIRECT_ENDPOINTS = ['/mail/domains', '/mail/users?format=json'] as const;
@@ -19,7 +19,7 @@ const OPTIONAL_DIRECT_ENDPOINT = '/mail/aliases?format=json';
 
 function buildAuthHeader(accessMode: MailBillingAccessMode, token?: string): Record<string, string> {
   if (!token) return {};
-  if (accessMode === 'DIRECT_MIAB_API') {
+  if (accessMode === 'DIRECT_MIAB_API' || accessMode === 'MANAGED_API') {
     const value = token.startsWith('Basic ') ? token : `Basic ${Buffer.from(token).toString('base64')}`;
     return { Authorization: value };
   }
@@ -36,7 +36,13 @@ async function fetchJson(url: URL, accessMode: MailBillingAccessMode, token?: st
       signal: controller.signal,
     });
     if (!res.ok) throw new Error(`Mail billing source returned ${res.status}`);
-    return (await res.json()) as unknown;
+    const text = await res.text();
+    try {
+      return JSON.parse(text) as unknown;
+    } catch {
+      // Some Mail-in-a-Box endpoints (e.g. /mail/domains) answer with one value per line instead of JSON.
+      return text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    }
   } finally {
     clearTimeout(timeout);
   }
@@ -48,9 +54,9 @@ export function getDirectMiabReadEndpoints() {
 
 async function fetchDirectMiabInventory(base: URL, token?: string): Promise<MailBillingInventory> {
   const [domainsRaw, usersRaw] = await Promise.all(
-    REQUIRED_DIRECT_ENDPOINTS.map((ep) => fetchJson(new URL(ep, base), 'DIRECT_MIAB_API', token)),
+    REQUIRED_DIRECT_ENDPOINTS.map((ep) => fetchJson(miabApiUrl(base, ep), 'DIRECT_MIAB_API', token)),
   );
-  const aliasesRaw = await fetchJson(new URL(OPTIONAL_DIRECT_ENDPOINT, base), 'DIRECT_MIAB_API', token).catch(() => []);
+  const aliasesRaw = await fetchJson(miabApiUrl(base, OPTIONAL_DIRECT_ENDPOINT), 'DIRECT_MIAB_API', token).catch(() => []);
   const domainNames = extractDirectDomains(domainsRaw);
   const users = extractDirectUsers(usersRaw);
   const aliases = extractDirectAliases(aliasesRaw);

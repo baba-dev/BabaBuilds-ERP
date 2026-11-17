@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const mailBillingAccessModeSchema = z.enum(['READ_ONLY_ADAPTER', 'DIRECT_MIAB_API']);
+export const mailBillingAccessModeSchema = z.enum(['READ_ONLY_ADAPTER', 'DIRECT_MIAB_API', 'MANAGED_API']);
 export const mailBillingServerStatusSchema = z.enum(['ACTIVE', 'DISABLED', 'ERROR']);
 export const mailBillingBillingModeSchema = z.enum(['FIXED', 'PER_MAILBOX', 'BUNDLE_PLUS_EXTRA', 'MANUAL']);
 export const mailBillingFrequencySchema = z.enum(['MONTHLY', 'QUARTERLY', 'ANNUALLY']);
@@ -38,6 +38,8 @@ export const mailBillingServerPatchSchema = z
     token: z.string().optional(),
     clearToken: z.boolean().optional(),
     status: mailBillingServerStatusSchema.optional(),
+    /** Turns write operations on or off. Turning on checks the credential against the box first. */
+    writesEnabled: z.boolean().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, 'At least one field is required');
 

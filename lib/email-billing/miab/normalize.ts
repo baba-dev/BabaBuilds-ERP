@@ -24,16 +24,31 @@ export function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+/** Mail-in-a-Box reports quotas as "0" (unlimited), "500M", "5G", "1T" or a plain number of megabytes. */
+export function parseQuotaMb(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? Math.round(value) : null;
+  const match = String(value).trim().match(/^(\d+(?:\.\d+)?)\s*([kmgt]?)b?$/i);
+  if (!match) return null;
+  const n = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  const mb = unit === 'k' ? n / 1024 : unit === 'g' ? n * 1024 : unit === 't' ? n * 1024 * 1024 : n;
+  return Math.round(mb);
+}
+
 export function normalizeMailbox(raw: unknown) {
   const m = asRecord(raw);
   const email = String(m.email ?? '').trim().toLowerCase();
   if (!email || !email.includes('@')) return null;
-  const quotaValue = m.quotaMb ?? m.quota_mb;
+  const quotaValue = m.quotaMb ?? m.quota_mb ?? m.quota;
+  const privileges = asArray(m.privileges).map((p) => String(p).toLowerCase());
+  // Mail-in-a-Box marks archived mailboxes (kept on disk, login disabled) as status "inactive".
+  const archived = m.status === 'ARCHIVED' || String(m.status ?? '').toLowerCase() === 'inactive';
   return {
     email,
-    quotaMb: quotaValue === null || quotaValue === undefined ? null : Number(quotaValue),
-    isAdmin: Boolean(m.isAdmin ?? m.admin),
-    status: m.status === 'ARCHIVED' || m.status === 'REMOVED' ? (m.status as 'ARCHIVED' | 'REMOVED') : ('ACTIVE' as const),
+    quotaMb: parseQuotaMb(quotaValue),
+    isAdmin: Boolean(m.isAdmin ?? m.admin) || privileges.includes('admin'),
+    status: m.status === 'REMOVED' ? ('REMOVED' as const) : archived ? ('ARCHIVED' as const) : ('ACTIVE' as const),
     raw,
   };
 }
@@ -65,14 +80,20 @@ export function extractDirectDomains(domainsRaw: unknown) {
   return Object.keys(record);
 }
 
+/** Mail-in-a-Box groups results by domain: [{ domain, users: [...] }]. Accept that shape and a flat list. */
+function flattenGrouped(raw: unknown, keys: string[]): unknown[] {
+  const rows = Array.isArray(raw) ? raw : asArray(asRecord(raw)[keys[0]]);
+  return rows.flatMap((row) => {
+    const rec = asRecord(row);
+    const nested = keys.map((k) => rec[k]).find((v) => Array.isArray(v));
+    return Array.isArray(nested) ? nested : [row];
+  });
+}
+
 export function extractDirectUsers(usersRaw: unknown) {
-  if (Array.isArray(usersRaw)) return usersRaw;
-  const record = asRecord(usersRaw);
-  return asArray(record.users);
+  return flattenGrouped(usersRaw, ['users']);
 }
 
 export function extractDirectAliases(aliasesRaw: unknown) {
-  if (Array.isArray(aliasesRaw)) return aliasesRaw;
-  const record = asRecord(aliasesRaw);
-  return asArray(record.aliases);
+  return flattenGrouped(aliasesRaw, ['aliases', 'alias']);
 }

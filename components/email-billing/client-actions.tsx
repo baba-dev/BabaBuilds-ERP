@@ -40,6 +40,8 @@ type ServerRow = {
   name: string;
   baseUrl: string;
   accessMode: string;
+  writesEnabled?: boolean;
+  miabVersion?: string | null;
   status: string;
   hasToken: boolean;
 };
@@ -99,6 +101,8 @@ export function ServerDialog({ server, triggerLabel }: { server?: ServerRow; tri
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clearToken, setClearToken] = useState(false);
+  const [mode, setMode] = useState(server?.accessMode ?? 'READ_ONLY_ADAPTER');
+  const [writes, setWrites] = useState(server?.writesEnabled === true);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -113,6 +117,8 @@ export function ServerDialog({ server, triggerLabel }: { server?: ServerRow; tri
       status: String(form.get('status') ?? 'ACTIVE'),
       ...(token ? { token } : {}),
       ...(clearToken ? { clearToken: true } : {}),
+      // Only sent when editing a managed server; the API proves the credential on the box before it allows writes.
+      ...(server && mode === 'MANAGED_API' ? { writesEnabled: writes } : {}),
     };
     try {
       await postJson(server ? `/api/email-billing/servers/${server.id}` : '/api/email-billing/servers', payload, server ? 'PATCH' : 'POST');
@@ -142,9 +148,9 @@ export function ServerDialog({ server, triggerLabel }: { server?: ServerRow; tri
           <Field id="server-base-url" label={t('tables.baseUrl')}><Input id="server-base-url" name="baseUrl" type="url" defaultValue={server?.baseUrl ?? ''} required /></Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field id="server-access-mode" label={t('tables.accessMode')}>
-              <Select name="accessMode" defaultValue={server?.accessMode ?? 'READ_ONLY_ADAPTER'}>
+              <Select name="accessMode" value={mode} onValueChange={setMode}>
                 <SelectTrigger id="server-access-mode" className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="READ_ONLY_ADAPTER">READ_ONLY_ADAPTER</SelectItem><SelectItem value="DIRECT_MIAB_API">DIRECT_MIAB_API</SelectItem></SelectContent>
+                <SelectContent><SelectItem value="READ_ONLY_ADAPTER">READ_ONLY_ADAPTER</SelectItem><SelectItem value="DIRECT_MIAB_API">DIRECT_MIAB_API</SelectItem><SelectItem value="MANAGED_API">MANAGED_API</SelectItem></SelectContent>
               </Select>
             </Field>
             <Field id="server-status" label={t('tables.status')}>
@@ -157,6 +163,8 @@ export function ServerDialog({ server, triggerLabel }: { server?: ServerRow; tri
           <Field id="server-token" label={`${t('tables.token')} (${server?.hasToken ? t('labels.tokenSet') : t('labels.tokenNotConfigured')})`}>
             <Input id="server-token" name="token" type="password" autoComplete="new-password" placeholder={server?.hasToken ? 'SET' : ''} />
           </Field>
+          {mode === 'MANAGED_API' ? <p className="text-xs text-muted-foreground">{t('ops.managedHint')}</p> : null}
+          {server && mode === 'MANAGED_API' ? <label className="flex items-start gap-2 text-sm"><Checkbox checked={writes} onCheckedChange={(value) => setWrites(value === true)} className="mt-0.5" />{t('ops.enableWrites')}{server.miabVersion ? ` (${server.miabVersion})` : ''}</label> : null}
           {server?.hasToken ? <label className="flex items-center gap-2 text-sm"><Checkbox checked={clearToken} onCheckedChange={(value) => setClearToken(value === true)} />{t('forms.clearTokenConfirm')}</label> : null}
           <DialogFooter><Button type="submit" disabled={submitting}>{submitting ? t('actions.saving') : t('actions.save')}</Button></DialogFooter>
         </form>

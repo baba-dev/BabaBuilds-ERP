@@ -717,6 +717,7 @@ model Workspace {
   mailBillingSettings             MailBillingSettings?
   mailUsageSnapshots              MailUsageSnapshot[]
   mailBillingChanges              MailBillingChange[]
+  mailOperations                  MailOperation[]
 
   // IMS Relations
   products           Product[]
@@ -3753,11 +3754,16 @@ model MailBillingServer {
   lastSyncAt     DateTime?
   lastSyncStatus String?
   lastSyncError  String?
+  /// Version reported by the box (/system/version) the last time the connection was tested.
+  miabVersion    String?
+  /// Master switch for write operations. Off until an administrator turns it on for a MANAGED_API server.
+  writesEnabled  Boolean   @default(false)
 
   domains   MailBillingDomain[]
   mailboxes MailBillingMailbox[]
   syncRuns  MailBillingSyncRun[]
   reviewItems MailBillingReviewItem[]
+  operations MailOperation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3792,6 +3798,7 @@ model MailBillingDomain {
   mailboxes MailBillingMailbox[]
   subscriptions MailBillingSubscription[]
   reviewItems MailBillingReviewItem[]
+  operations MailOperation[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3818,6 +3825,14 @@ model MailBillingMailbox {
   lastSeenAt DateTime @default(now())
   archivedAt DateTime?
   rawJson Json?
+  /// Set while the mailbox login is locked by a suspend operation; sync never clears it.
+  suspendedAt DateTime?
+  suspendedReason String?
+  /// A delete is scheduled to run at this time unless cancelled (soft-delete window).
+  deleteScheduledFor DateTime?
+  /// The operation that created this mailbox, when it was created from the ERP.
+  provisionedByOperationId String?
+  operations MailOperation[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3979,6 +3994,45 @@ model MailBillingSettings {
   updatedAt DateTime @updatedAt
 
   @@index([workspaceId, defaultPlanId])
+}
+
+/// A change the ERP makes on the mail server. Payloads and results never contain passwords or tokens.
+model MailOperation {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  serverId    String
+  server      MailBillingServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  domainId    String?
+  domain      MailBillingDomain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  mailboxId   String?
+  mailbox     MailBillingMailbox? @relation(fields: [mailboxId], references: [id], onDelete: SetNull)
+
+  /// MAILBOX_CREATE | PASSWORD_RESET | QUOTA_SET | ALIAS_ADD | ALIAS_REMOVE | MAILBOX_SUSPEND | MAILBOX_RESUME | MAILBOX_DELETE
+  type   String
+  /// PENDING | RUNNING | SUCCEEDED | FAILED | CANCELLED
+  status String @default("PENDING")
+  /// UI | API | BILLING | AI
+  source String @default("UI")
+  /// Same key from the same workspace returns the original operation instead of repeating the change.
+  idempotencyKey String?
+  payloadJson Json?
+  resultJson  Json?
+  errorMessage String?
+  attempts    Int @default(0)
+  /// 1 for operations that hand out a one-time password (it is never stored, so they cannot be retried by a job).
+  maxAttempts Int @default(1)
+  runAfter    DateTime @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  requestedByUserId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, status, runAfter])
+  @@index([workspaceId, serverId, createdAt])
+  @@index([mailboxId])
 }
 
 /// One audited usage reading per subscription per day. It is the input to quantity changes, MRR and growth reports.

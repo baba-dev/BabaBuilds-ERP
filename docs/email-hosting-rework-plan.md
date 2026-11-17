@@ -1,6 +1,6 @@
 # Email Hosting (Mail-in-a-Box) rework: plan
 
-Status: decisions 2 (credential model) and plan availability are confirmed; Phase 0 is merged and Phase 1 (billing core) is implemented; Phases 2 to 4 are not started. Replaces the read-only `MIAB_BILLING` ("Email Billing") module described in `docs/email-billing.md`.
+Status: decisions 2 (credential model) and plan availability are confirmed; Phases 0 and 1 are merged and Phase 2 (managed operations) is implemented; Phases 3 and 4 are not started. Replaces the read-only `MIAB_BILLING` ("Email Billing") module described in `docs/email-billing.md`.
 
 ## 1. Goal
 
@@ -25,7 +25,7 @@ Turn the ERP into the control plane for a hosted-email business built on Mail-in
 
 ## 3. Decisions
 
-Confirmed: the credential model in item 2 (encrypted, dedicated MiaB admin account, never returned to the browser, adapter option kept) and that Email Hosting is available on all plans, free and paid. Still open: items 1, 3 and 4 (needed before Phase 2).
+Confirmed: the credential model in item 2 (encrypted, dedicated MiaB admin account, never returned to the browser, adapter option kept) and that Email Hosting is available on all plans, free and paid. Item 1 (the ERP may write to Mail-in-a-Box) and the lock-the-password suspension are confirmed. Still open: item 3 (who the email customers are; the owner said they are not ERP clients) and item 4 (box versions), which matter from Phase 3 and 4.
 
 1. **Scope reversal.** The current docs and guardrails say the ERP must never write to MiaB. This plan adds write operations behind an opt-in "Manage" access mode. Confirm this is wanted.
 2. **Credential model.** MiaB has no scoped tokens: an admin API credential can do anything on the box. Recommendation: store it encrypted (existing `lib/encryption.ts`, AES-256-GCM), use a dedicated MiaB admin account for the ERP, never return it to the browser, and keep the adapter option for operators who want a narrower proxy.
@@ -81,6 +81,8 @@ Key principle: **the ERP database is the commercial source of truth; MiaB is the
 
 **As built in Phase 1:** proration rides on the retainer engine's existing pending-usage lines (no parallel invoicing); only increases are prorated and decreases apply from the next invoice with no credit (a negative invoice line is not supported by the invoice engine); invoice linkage is read-side (invoice -> retainer -> usage snapshots/changes) rather than a new foreign key; MRR is taken from the active retainers so it matches the Retainers page. The mailbox *add-ons* item is deferred to a later phase.
 
+**As built in Phase 2:** writes go through `MailOperation` rows (idempotent, workspace-scoped, audited) behind a per-server switch that is only accepted after the credential is proven on the box. Operations that show a password never store it, so they run inline and are not retried by jobs. Deletes wait 7 days by default. New domains and admin-privilege changes were left out on purpose. Endpoint shapes were written from knowledge of the Mail-in-a-Box API and are covered by contract-style tests with mocked responses; they still need one run against a disposable box.
+
 ### 4.4 Dunning and suspension (integration with AR)
 
 - Hook into existing overdue-invoice detection (`lib/ar`, `lib/retainers/reminders.ts`): an overdue retainer invoice for a mail subscription moves it `ACTIVE -> PAST_DUE`, sends `BILLING_FAILED`-style notifications, then after `suspendAfterDays` queues `SUSPEND` operations.
@@ -134,7 +136,7 @@ Each phase is a separate PR that passes `npm run ci:fast`, is behind the existin
 |---|---|---|
 | 0. Hardening (done in this PR) | Split client into `miab/`; refactor one-liner routes into readable handlers with zod; add `email_hosting.*` permissions (keep `invoices.*` as a fallback); add missing `logActivity`; transactional sync; docs fix. | Existing tests green plus tests for each route's auth/validation; no behaviour change. |
 | 1. Billing core (done) | `MailUsageSnapshot`, trials, statuses, auto/approved quantity updates, proration, invoice linkage, MRR/churn reports, dashboard cards. | Money regression tests; cron idempotent; retainer remains the only invoice generator. |
-| 2. Managed operations | `MANAGED_API` mode, `MailOperation` queue, mailbox/alias/quota/password operations, one-time credential links, operations UI, verify-after-write, drift review items. | Integration test against a mocked MiaB; manual run on a disposable MiaB box. |
+| 2. Managed operations (done) | `MANAGED_API` mode, `MailOperation` queue, mailbox/alias/quota/password operations, one-time credential links, operations UI, verify-after-write, drift review items. | Integration test against a mocked MiaB; manual run on a disposable MiaB box. |
 | 3. Dunning and lifecycle | PAST_DUE/suspend/resume driven by AR and payments; soft-delete retention; notifications. | End-to-end test: overdue -> suspend -> pay -> resume; no data deletion path without human confirmation. |
 | 4. Health and portal | `/system/status`, SSL/backup/health checks with alerts; client-facing portal page for usage and invoices; proposals/POS/shop line type; AI propose-only tools. | Alerts verified; AI cannot execute writes (test). |
 

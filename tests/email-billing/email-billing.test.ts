@@ -99,18 +99,37 @@ describe('Email Billing API validation', () => {
 });
 
 describe('Email Billing route and assistant safety', () => {
-  it('does not expose forbidden operational endpoint names outside tests/docs', () => {
-    const roots = ['app/api/email-billing', 'app/(dashboard)/email-billing', 'lib/email-billing'];
-    const forbidden =
-      /create-mailbox|delete-mailbox|remove-mailbox|change-password|reset-password|mailbox-password|privilege|edit-dns|dns-edit|alias-add|alias-remove|mailbox-admin/i;
-    const files = roots.flatMap((root) =>
+  const emailBillingFiles = () =>
+    ['app/api/email-billing', 'app/(dashboard)/email-billing', 'components/email-billing', 'lib/email-billing'].flatMap((root) =>
       fs
         .readdirSync(root, { recursive: true })
         .map((f) => path.join(root, String(f)))
         .filter((f) => fs.statSync(f).isFile()),
     );
-    const offenders = files.filter((file) => forbidden.test(file) || forbidden.test(fs.readFileSync(file, 'utf8')));
+
+  it('never touches DNS, TLS, restart/update or admin-privilege endpoints anywhere in the module', () => {
+    const forbidden = /edit-dns|dns-edit|mailbox-admin|mail\/users\/privileges|\/dns\/|\/system\/(restart|update|reboot)|\/ssl\//i;
+    const offenders = emailBillingFiles().filter((file) => forbidden.test(file) || forbidden.test(fs.readFileSync(file, 'utf8')));
     expect(offenders).toEqual([]);
+  });
+
+  it('keeps mailbox and alias write code inside the operations layer', () => {
+    // Writes to the mail server are only reachable through lib/email-billing/ops (validated, authorised, audited) and the
+    // allow-listed client; everything else in the module stays read-only.
+    const allowed = [/^lib\/email-billing\/ops\//, /^lib\/email-billing\/miab\/writes\.ts$/, /^app\/api\/email-billing\/operations\//, /^components\/email-billing\//];
+    const writeCode = /miabWrite|MIAB_WRITE_ENDPOINTS|users\/(add|remove|password|quota)|aliases\/(add|remove)/;
+    const offenders = emailBillingFiles().filter((file) => {
+      const normalized = file.split(path.sep).join('/');
+      return !allowed.some((re) => re.test(normalized)) && writeCode.test(fs.readFileSync(file, 'utf8'));
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it('keeps the AI assistant unable to change anything on the mail server', () => {
+    for (const file of ['app/api/chat/route.ts', 'lib/email-billing/ai-tools.ts']) {
+      const source = fs.readFileSync(file, 'utf8');
+      expect(source, file).not.toMatch(/email-billing\/ops|miab\/writes|requestOperation|executeOperation|miabWrite/);
+    }
   });
 
   it('redacts server tokens from API source responses', () => {

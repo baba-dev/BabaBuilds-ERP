@@ -12,13 +12,42 @@ Email Billing (`MIAB_BILLING`) is an opt-in ERP module for hosted Mail-in-a-Box 
 
 ## What it does not do
 
-The ERP is not a Mail-in-a-Box admin panel. It does not create/delete mailboxes, change passwords, set quotas, manage admins/aliases, edit DNS, restart/update servers, or expose raw MiaB admin API access in the browser.
+The ERP is not a full Mail-in-a-Box admin panel. It never edits DNS, TLS certificates, backups, admin privileges or domains, and never restarts or updates a server. Mailbox and alias changes are possible only on a server in **managed mode** with writes switched on (see below); on every other server the module stays read-only. The raw Mail-in-a-Box admin API is never exposed to the browser.
 
 ## Recommended connection approach
 
 Use a small read-only adapter controlled by your infrastructure and configure its HTTPS URL as the server `baseUrl`. The adapter should return normalized inventory JSON with `syncedAt`, `domains`, `mailboxes`, quota/admin/status data, and alias counts.
 
-Direct MiaB API mode is server-side fallback only and is restricted to read endpoints: `/mail/domains`, `/mail/users?format=json`, and `/mail/aliases?format=json`.
+Direct MiaB API mode is server-side only and restricted to the read endpoints `/mail/domains`, `/mail/users?format=json` and `/mail/aliases?format=json` (relative to `/admin`). Responses grouped by domain, plain-text domain lists, quotas such as `5G` and `inactive` users are understood.
+
+## Managed mode: running mailboxes from the ERP
+
+A server whose access mode is `MANAGED_API` can be operated from the ERP. Set it up in this order:
+
+1. Create a **dedicated admin account** in Mail-in-a-Box for the ERP (do not reuse a person's account; Mail-in-a-Box has no scoped tokens, so this credential can do anything on the box). It must not have two-factor authentication enabled.
+2. Add the server with access mode `MANAGED_API`, the box address (the API is reached under `/admin`; a bare host name is fine) and the token `admin-email:password` (or `admin-email:api-key`). The token is stored encrypted and never returned to the browser.
+3. Run **Test connection**, then edit the server and tick **Allow write operations**. The ERP checks the credential against the box and records the box version before it allows anything. Changing the address, access mode or credential switches writes off again.
+
+What can be done (permission **Email Hosting: operate**, owners and admins by default; deleting needs **admin server**):
+
+| Operation | Notes |
+|---|---|
+| Create mailbox | Optional quota. Shows a generated password **once**; it is not stored. |
+| Reset password | New random password, shown once. |
+| Set quota | MB; 0 = unlimited. |
+| Add / remove alias | On a domain of the server. |
+| Suspend | Locks the login by setting a random password nobody knows. Mail keeps arriving. |
+| Resume | Issues a fresh password, shown once. |
+| Delete | Needs the address typed back and waits 7 days by default (0 to 30). Cancel any time before it runs. |
+
+Safety rules:
+
+- Admin mailboxes and the account the ERP connects with cannot be reset, suspended or deleted from the ERP.
+- Every change is recorded as an operation (Operations page, `/api/email-billing/operations`) with who asked, the result and any error. Passwords, tokens and server error text containing them are never stored or logged. Operations that show a password run immediately and are not retried by a job (a failure means request it again); other operations are retried with backoff by `/api/cron/email-hosting-operations`, which also runs scheduled deletes. A repeated request with the same `idempotencyKey` returns the first result instead of repeating the change.
+- After create and delete the ERP re-reads the box and records whether the change was confirmed. A later sync reconciles anything that drifted.
+- Creating or deleting a mailbox changes the billable count; the daily usage job then proposes (or applies) the quantity change as described above.
+- New domains are not created from the ERP yet: add the first mailbox for a new domain in Mail-in-a-Box, then sync.
+- The AI assistant has no access to any of this.
 
 ## Setup workflow
 
@@ -87,6 +116,6 @@ Mailbox-count changes are review-first by default. Retainer quantities are not c
 6. Create a subscription for a mapped domain.
 7. Create or link a retainer and verify the existing retainer cron remains responsible for invoice generation.
 
-## Explicit boundary
+## Boundary
 
-The ERP does not administer Mail-in-a-Box mailboxes. Mailbox operations must remain inside Mail-in-a-Box.
+Only mailbox and alias operations on a managed server with writes enabled are performed by the ERP. Everything else on the box (DNS, TLS, backups, admin privileges, domains, updates) stays in Mail-in-a-Box.
