@@ -10,6 +10,12 @@ type Status = {
   authFailures: { total: number; byReason: Array<{ count: number; provider: string; code: string; reason: string; lastSeenAt: string }> };
   rateLimits: { hits: number; byRoute: Array<{ route: string; count: number }>; topIps: Array<{ ip: string; count: number }> };
   auditChain: { valid: boolean; checked: number; violations: number };
+  redis: {
+    status: "disabled" | "ready" | "unavailable" | "misconfigured";
+    namespace: string | null;
+    features: { rateLimits: boolean; cache: boolean; jobs: boolean };
+    connections: { cache: { status: string; latencyMs?: number }; queue: { status: string; latencyMs?: number } };
+  };
 };
 
 const ICON = { ok: CheckCircle2, warn: AlertTriangle, missing: XCircle } as const;
@@ -53,6 +59,31 @@ export function SecurityClient() {
           {data.rateLimits.topIps.length ? <p className="mt-3 border-t border-border/60 pt-2 text-xs text-muted-foreground">Busiest sources: {data.rateLimits.topIps.map((i) => `${i.ip} (${i.count})`).join(", ")}</p> : null}
         </Card>
       </div>
+
+      <Card title="Redis infrastructure" hint="Status from ERP's own authenticated connections; no connection URLs or credentials shown.">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-medium">Overall: <span className="capitalize">{data.redis.status}</span></p>
+          <Chip tone={data.redis.status === "ready" ? "green" : data.redis.status === "disabled" ? "amber" : "red"}>
+            {data.redis.status}
+          </Chip>
+        </div>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {(["cache", "queue"] as const).map((purpose) => (
+            <div key={purpose} className="rounded-lg border p-3 text-sm">
+              <p className="font-medium capitalize">{purpose}</p>
+              <p className="mt-1 text-muted-foreground">
+                {data.redis.connections[purpose].status}
+                {data.redis.connections[purpose].latencyMs !== undefined
+                  ? " · " + data.redis.connections[purpose].latencyMs + " ms" : ""}
+              </p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Namespace: {data.redis.namespace ?? "not configured"} ·
+          Distributed rate limiting: {data.redis.features.rateLimits ? "enabled" : "disabled"}
+        </p>
+      </Card>
 
       <Card title="Tax audit chain" hint="Each tax-rate override is hash-linked to the one before it, so any edit or deletion shows.">
         <p className="flex items-center gap-2 text-sm">{data.auditChain.valid ? <><CheckCircle2 className="size-4 text-emerald-600" aria-hidden />Intact. {data.auditChain.checked} entries verified.</> : <><XCircle className="size-4 text-rose-600" aria-hidden />{data.auditChain.violations} entries failed verification out of {data.auditChain.checked}.</>}</p>
