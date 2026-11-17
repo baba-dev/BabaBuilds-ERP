@@ -32,4 +32,4 @@ From the repository root:
 PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run brochure:premium
 ```
 
-The renderer checks for exactly ten pages and rejects missing images before writing the PDF.
+The renderer checks for exactly ten pages, rejects missing images, writes the PDF, and refreshes the public web/PDF assets used by `/brochure`.

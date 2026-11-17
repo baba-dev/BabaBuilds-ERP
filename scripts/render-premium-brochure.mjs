@@ -7,6 +7,8 @@ const root = path.join(process.cwd(), "docs", "sales-brochure", "premium");
 const dist = path.join(root, "dist");
 const pdfPath = path.join(dist, "bababuilds-erp-command-after-dark.pdf");
 const previewPath = path.join(dist, "cover-preview.png");
+const publicBrochures = path.join(process.cwd(), "public", "brochures");
+const publicEdition = path.join(publicBrochures, "command-after-dark");
 
 const types = { ".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8", ".png": "image/png" };
 const server = http.createServer((request, response) => {
@@ -49,3 +51,13 @@ try {
   await browser.close();
   server.close();
 }
+
+fs.mkdirSync(publicBrochures, { recursive: true });
+fs.copyFileSync(pdfPath, path.join(publicBrochures, "bababuilds-erp-command-after-dark.pdf"));
+fs.copyFileSync(previewPath, path.join(publicBrochures, "bababuilds-erp-command-after-dark-cover.png"));
+fs.rmSync(publicEdition, { recursive: true, force: true });
+fs.mkdirSync(publicEdition, { recursive: true });
+fs.copyFileSync(path.join(root, "index.html"), path.join(publicEdition, "index.html"));
+fs.copyFileSync(path.join(root, "premium.css"), path.join(publicEdition, "premium.css"));
+fs.cpSync(path.join(root, "assets"), path.join(publicEdition, "assets"), { recursive: true });
+console.log(`Published web and PDF assets to ${path.relative(process.cwd(), publicBrochures)}`);

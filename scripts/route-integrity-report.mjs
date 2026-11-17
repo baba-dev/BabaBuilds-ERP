@@ -24,6 +24,7 @@ const STATIC_ASSET_EXTENSIONS = new Set([
   '.svg',
   '.ico',
   '.css',
+  '.html',
   '.js',
   '.json',
   '.pdf',

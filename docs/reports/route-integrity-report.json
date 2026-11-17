@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-11-17T17:00:52.187Z",
+  "generatedAt": "2026-11-17T18:53:52.552Z",
   "summary": {
-    "knownRoutes": 128,
+    "knownRoutes": 129,
     "checkedReferencedRoutes": 103,
     "brokenReferencedRoutes": 0
   },
@@ -27,6 +27,7 @@
         "app/api/settings/route.ts",
         "app/api/shop/[slug]/assets/[...asset]/route.ts",
         "app/api/user/profile/route.ts",
+        "app/brochure/page.tsx",
         "app/documents/[...path]/route.ts",
         "app/help/HelpSidebar.tsx",
         "app/invite/[token]/page.tsx",
