@@ -3,6 +3,7 @@
 import { AlertTriangle, CheckCircle2, CircleDashed, XCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, Chip, ErrorNote, useAdminJson } from "./admin-kit";
+import { JobsHealthCard } from "./JobsHealthCard";
 
 type Check = { key: string; label: string; status: "ok" | "warn" | "missing"; required: boolean; hint: string };
 type Status = {
@@ -85,6 +86,8 @@ export function SecurityClient() {
           Distributed rate limiting: {data.redis.features.rateLimits ? "enabled" : "disabled"} · Dashboard cache: {data.redis.features.dashboardCache ? "enabled" : "disabled"} · Report cache: {data.redis.features.reportCache ? "enabled" : "disabled"}
         </p>
       </Card>
+
+      <JobsHealthCard />
 
       <Card title="Data-cache activity" hint="Per-process counters since the current ERP release started. They are not cluster-wide totals.">
         <div className="grid gap-3 sm:grid-cols-2">
