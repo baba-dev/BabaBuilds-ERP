@@ -5,6 +5,8 @@ export type ErpJobsConfig = {
   enabled: boolean;
   workerEnabled: boolean;
   inAppDeadlineEnabled: boolean;
+  /** Explicit, exact ID of the single internal canary workspace. Empty means no canary. */
+  inAppDeadlineWorkspaceIds: readonly string[];
   namespace: string;
   endpoint: string | null;
 };
@@ -16,10 +18,26 @@ function enabledFlag(env: NodeJS.ProcessEnv, name: string): boolean {
   throw new Error('Invalid boolean jobs flag: ' + name);
 }
 
+/** Canary may target exactly one explicit workspace, never wildcard/all/CSV lists. */
+export function parseDeadlineCanaryWorkspaces(raw: string | undefined): readonly string[] {
+  const value = raw?.trim() ?? '';
+  if (!value) return [];
+  if (!/^[A-Za-z0-9_-]{8,80}$/.test(value)) {
+    throw new Error('ERP_REDIS_INAPP_DEADLINE_WORKSPACE_IDS must be one valid workspace ID');
+  }
+  return [value];
+}
+
 export function loadErpJobsConfig(env: NodeJS.ProcessEnv = process.env): ErpJobsConfig {
   const redis = loadRedisConfig(env);
   const workerEnabled = enabledFlag(env, 'ERP_REDIS_JOB_WORKER_ENABLED');
   const inAppDeadlineEnabled = enabledFlag(env, 'ERP_REDIS_INAPP_DEADLINE_ENABLED');
+  const inAppDeadlineWorkspaceIds = parseDeadlineCanaryWorkspaces(
+    env.ERP_REDIS_INAPP_DEADLINE_WORKSPACE_IDS,
+  );
+  if (inAppDeadlineEnabled && inAppDeadlineWorkspaceIds.length !== 1) {
+    throw new Error('Explicit ERP_REDIS_INAPP_DEADLINE_WORKSPACE_IDS required for pilot');
+  }
   if (inAppDeadlineEnabled && !workerEnabled) {
     throw new Error('ERP_REDIS_JOB_WORKER_ENABLED required for deadline pilot');
   }
@@ -39,14 +57,21 @@ export function loadErpJobsConfig(env: NodeJS.ProcessEnv = process.env): ErpJobs
   }
   return {
     enabled: redis.features.jobs,
-    workerEnabled, inAppDeadlineEnabled,
+    workerEnabled, inAppDeadlineEnabled, inAppDeadlineWorkspaceIds,
     namespace: redis.namespace,
     endpoint: raw ?? null,
   };
 }
 
-export function inAppDeadlineQueueEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+export function inAppDeadlineQueueEnabled(
+  workspaceId: string,
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
   // Misconfiguration never triggers the queued pilot; retain legacy behavior.
-  try { return loadErpJobsConfig(env).inAppDeadlineEnabled; }
+  try {
+    const config = loadErpJobsConfig(env);
+    return config.inAppDeadlineEnabled &&
+      config.inAppDeadlineWorkspaceIds.includes(workspaceId);
+  }
   catch { return false; }
 }
