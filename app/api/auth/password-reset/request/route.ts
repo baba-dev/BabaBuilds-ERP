@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const email = normalizeLoginEmail(body.email || "");
   const ip = getIp(req);
   const key = `password-reset:${hashRateLimitValue(email || "missing")}:${hashRateLimitValue(ip)}`;
-  const limited = checkPasswordAuthRateLimit(key);
+  const limited = await checkPasswordAuthRateLimit(key);
   if (!limited.ok) {
     recordAuthFailure({ reason: "PASSWORD_RESET_RATE_LIMITED", code: "PASSWORD_RESET_RATE_LIMITED", provider: "password-login" });
     return NextResponse.json({ ok: true, retryAfter: limited.retryAfterSeconds });
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
 
   const user = await prisma.user.findUnique({ where: { email }, select: { id: true, isDemo: true } });
   if (!user || user.isDemo) {
-    recordPasswordAuthFailure(key);
+    await recordPasswordAuthFailure(key);
     recordPasswordAuthAuditEvent({ email, outcome: "reset_requested", ip });
     return NextResponse.json({ ok: true });
   }

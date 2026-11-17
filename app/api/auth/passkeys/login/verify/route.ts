@@ -8,7 +8,7 @@ import { consumeChallenge, fromBase64URL, getIp, getOrigin, getRpID, issueLoginT
 export async function POST(request: Request) {
   const ip = getIp(request);
   const key = `passkey-login:${hashRateLimitValue(ip)}`;
-  const limited = checkPasswordAuthRateLimit(key);
+  const limited = await checkPasswordAuthRateLimit(key);
   if (!limited.ok) {
     recordAuthFailure({ reason: "PASSKEY_LOGIN_RATE_LIMITED", code: "PASSKEY_LOGIN_RATE_LIMITED", provider: "passkey-login" });
     return NextResponse.json({ error: "Too many passkey attempts.", retryAfter: limited.retryAfterSeconds }, { status: 429 });
@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const credentialID = (body as { id?: unknown } | null)?.id;
   if (typeof credentialID !== "string" || credentialID.length === 0) {
-    recordPasswordAuthFailure(key);
+    await recordPasswordAuthFailure(key);
     return NextResponse.json({ error: "Missing credential" }, { status: 400 });
   }
 
@@ -26,19 +26,19 @@ export async function POST(request: Request) {
     include: { user: true },
   });
   if (!credential?.user?.email) {
-    recordPasswordAuthFailure(key);
+    await recordPasswordAuthFailure(key);
     return NextResponse.json({ error: "Unknown passkey" }, { status: 404 });
   }
 
   const challenge = readClientChallenge(body);
   if (!challenge) {
-    recordPasswordAuthFailure(key);
+    await recordPasswordAuthFailure(key);
     return NextResponse.json({ error: "Invalid passkey response" }, { status: 400 });
   }
 
   const stored = await consumeChallenge(challenge, "authentication");
   if (!stored) {
-    recordPasswordAuthFailure(key);
+    await recordPasswordAuthFailure(key);
     return NextResponse.json({ error: "Challenge expired" }, { status: 400 });
   }
 
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   });
 
   if (!verification.verified) {
-    recordPasswordAuthFailure(key);
+    await recordPasswordAuthFailure(key);
     return NextResponse.json({ error: "Passkey verification failed" }, { status: 400 });
   }
 
