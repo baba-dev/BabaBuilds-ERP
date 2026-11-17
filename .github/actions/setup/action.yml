@@ -35,7 +35,7 @@ runs:
           }
         }
         const schema = fs.readFileSync('prisma/schema.prisma','utf8');
-        if (!/provider\\s*=\\s*["']postgresql["']/.test(schema)) {
+        if (!schema.includes('provider = "postgresql"')) {
           throw Error('ERP must use PostgreSQL');
         }
         console.log('NODE26_PRISMA7_POSTGRES_CONTRACT_PASS');
