@@ -11,7 +11,7 @@ const bodySchema = z.object({ horizonType: z.enum(["DAILY_30", "WEEKLY_13", "MON
 export async function POST(request: Request) {
   const auth = await requireCashFlowAccess("cash_flow.view");
   if (!auth.ok) return auth.response;
-  const limit = enforceRouteRateLimit({ request, route: "/api/cash-flow/refresh", scope: "refresh", max: 10, windowMs: 10 * 60_000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/cash-flow/refresh", scope: "refresh", max: 10, windowMs: 10 * 60_000 });
   if (!limit.ok) return limit.response;
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return cashFlowError(400, "INVALID_BODY", "Unknown horizon.");

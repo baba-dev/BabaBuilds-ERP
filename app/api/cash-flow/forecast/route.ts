@@ -50,7 +50,7 @@ function alertsFor(r: ForecastSnapshotResult) {
 export async function GET(request: Request) {
   const auth = await requireCashFlowAccess("cash_flow.view");
   if (!auth.ok) return auth.response;
-  const limit = enforceRouteRateLimit({ request, route: "/api/cash-flow/forecast", scope: "forecast", max: 120, windowMs: 60_000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/cash-flow/forecast", scope: "forecast", max: 120, windowMs: 60_000 });
   if (!limit.ok) return limit.response;
   const sp = new URL(request.url).searchParams;
   const horizon = horizonSchema.safeParse(sp.get("horizonType") ?? "WEEKLY_13");
@@ -92,7 +92,7 @@ const whatIfSchema = z.object({
 export async function POST(request: Request) {
   const auth = await requireCashFlowAccess("cash_flow.view");
   if (!auth.ok) return auth.response;
-  const limit = enforceRouteRateLimit({ request, route: "/api/cash-flow/forecast", scope: "what-if", max: 60, windowMs: 60_000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/cash-flow/forecast", scope: "what-if", max: 60, windowMs: 60_000 });
   if (!limit.ok) return limit.response;
   const parsed = whatIfSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return cashFlowError(400, "INVALID_BODY", "Check the what-if values.");

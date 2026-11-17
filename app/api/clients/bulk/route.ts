@@ -16,7 +16,7 @@ const body = z.object({
 
 /** One action on up to 200 clients. Every client is checked against the workspace; the result says how many changed. */
 export async function POST(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/clients/bulk", scope: "client-bulk", max: 20, windowMs: 10 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/clients/bulk", scope: "client-bulk", max: 20, windowMs: 10 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const auth = await requireClientAccess("clients.manage");
   if (!auth.ok) return auth.response;

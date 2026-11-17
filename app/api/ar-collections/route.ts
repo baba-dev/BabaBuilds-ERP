@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const auth = await requireArAccess('invoices.send');
   if (!auth.ok) return auth.response;
-  const limit = enforceRouteRateLimit({ request, route: '/api/ar-collections', scope: 'run-reminders', max: 10, windowMs: 10 * 60_000 });
+  const limit = await enforceRouteRateLimit({ request, route: '/api/ar-collections', scope: 'run-reminders', max: 10, windowMs: 10 * 60_000 });
   if (!limit.ok) return limit.response;
   const body = (await request.json().catch(() => ({}))) as { action?: string };
   if (body.action !== 'RUN_REMINDERS') return arError(400, 'INVALID_ACTION', 'Invalid action');

@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
 
   if (action === 'remind') {
     if (!(await checkPermissionSilent(userId, workspaceId, 'invoices.send'))) return arError(403, 'FORBIDDEN', 'You need permission to send reminders.');
-    const limit = enforceRouteRateLimit({ request, route: '/api/ar-collections/bulk', scope: 'remind', max: 6, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request, route: '/api/ar-collections/bulk', scope: 'remind', max: 6, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
     const recent = await prisma.invoice.findMany({ where: { workspaceId, id: { in: ids }, lastReminderSentAt: { gt: new Date(Date.now() - 60_000) } }, select: { id: true } });
     const skip = new Set(recent.map((r) => r.id));

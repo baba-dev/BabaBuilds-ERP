@@ -10,7 +10,7 @@ type RegisterType = (typeof TYPES)[number];
 
 /** One register as CSV. Needs ca.export, is rate limited, and every download is written to the audit trail. */
 export async function GET(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/ca/export/registers", scope: "ca-export-register", max: 20, windowMs: 10 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/ca/export/registers", scope: "ca-export-register", max: 20, windowMs: 10 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const auth = await requireCaAccess("ca.export");
   if (!auth.ok) return auth.response;

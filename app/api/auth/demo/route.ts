@@ -82,7 +82,7 @@ export async function POST(request: Request) {
 
     const routeLimit = hasValidAgentKey
       ? { ok: true as const }
-      : enforceRouteRateLimit({
+      : await enforceRouteRateLimit({
           request,
           route: '/api/auth/demo',
           scope: 'demo-auth',
