@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   provision:
-    if: ${{ github.ref == 'refs/heads/main' }
+    if: ${{ github.ref == 'refs/heads/main' }}
     name: Verify Node.js release signature and install inactive ARM64 runtime
     environment: erp-production
     runs-on: ubuntu-24.04
@@ -62,22 +62,22 @@ jobs:
       - name: Stage signed-artifact-verified runtime and reviewed installer
         uses: appleboy/scp-action@v1
         with:
-          host: ${{ secrets.HOST }
-          username: ${{ secrets.USERNAME }
-          key: ${{ secrets.SSH_KEY }
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
           source: ops/shared-runtime/provision_node26.py,runtime-artifacts/node-v26.13.1-linux-arm64.tar.xz
-          target: /tmp/bababuilds-node26-${{ github.sha }
+          target: /tmp/bababuilds-node26-${{ github.sha }}
       - name: Install side-by-side only; confirm all live services untouched
         uses: appleboy/ssh-action@v1.2.5
         with:
-          host: ${{ secrets.HOST }
-          username: ${{ secrets.USERNAME }
-          key: ${{ secrets.SSH_KEY }
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
           script_stop: true
           command_timeout: 14m
           script: |
             set -Eeuo pipefail
-            incoming="/tmp/bababuilds-node26-${{ github.sha }"
+            incoming="/tmp/bababuilds-node26-${{ github.sha }}"
             uploaded="$incoming/ops/shared-runtime/provision_node26.py"
             archive="$incoming/runtime-artifacts/node-v26.13.1-linux-arm64.tar.xz"
             operator="/usr/local/lib/bababuilds-platform/provision_node26.py"
