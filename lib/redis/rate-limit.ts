@@ -12,6 +12,28 @@ export type RedisRateLimitResult = {
 
 export type RedisRateLimitAction = 'hit' | 'peek' | 'failure';
 
+const REDIS_RETRY_COOLDOWN_MS = 5_000;
+const unavailableUntil: Record<'cache' | 'queue', number> = { cache: 0, queue: 0 };
+
+/** Avoid a new Redis socket/timeout per request when a local Redis service is down. */
+async function withLimiterConnection<T>(
+  purpose: 'cache' | 'queue',
+  work: () => Promise<T>,
+): Promise<T> {
+  if (Date.now() < unavailableUntil[purpose]) {
+    throw new Error('REDIS_RATE_LIMIT_COOLDOWN');
+  }
+  try {
+    const value = await work();
+    unavailableUntil[purpose] = 0;
+    return value;
+  } catch {
+    unavailableUntil[purpose] = Date.now() + REDIS_RETRY_COOLDOWN_MS;
+    throw new Error('REDIS_RATE_LIMIT_UNAVAILABLE');
+  }
+}
+
+
 /**
  * Atomic fixed-window limiter. A peek never creates a bucket or spends quota.
  * A hit spends one unit only if the bucket is below its cap.
@@ -73,17 +95,20 @@ export async function redisRateLimit(
   validateLimit(max, windowMs);
   // Security counters live in the non-evicting, AOF-backed ERP queue pool.
   // Ordinary endpoint limits may use the bounded LRU cache pool.
-  const client = await getRedisClient(domain === 'auth' ? 'queue' : 'cache', config);
-  if (!client) throw new Error('REDIS_RATE_LIMIT_UNAVAILABLE');
-  const key = redisKey(config, 'rate-limit', domain, rateLimitIdentity(domain, identity));
-  const raw: unknown = await client.eval(FIXED_WINDOW_LUA, 1, key, action, max, windowMs);
-  if (!Array.isArray(raw) || raw.length !== 3) throw new Error('REDIS_RATE_LIMIT_INVALID_RESULT');
-  const [allowed, count, ttl] = raw.map(Number);
-  if (![allowed, count, ttl].every(Number.isSafeInteger) || ![0, 1].includes(allowed) ||
-      count < 0 || ttl < 0 || ttl > windowMs) {
-    throw new Error('REDIS_RATE_LIMIT_INVALID_RESULT');
-  }
-  return { ok: allowed === 1, count, retryAfterMs: Math.max(0, ttl) };
+  const purpose = domain === 'auth' ? 'queue' : 'cache';
+  return withLimiterConnection(purpose, async () => {
+    const client = await getRedisClient(purpose, config);
+    if (!client) throw new Error('REDIS_RATE_LIMIT_UNAVAILABLE');
+    const key = redisKey(config, 'rate-limit', domain, rateLimitIdentity(domain, identity));
+    const raw: unknown = await client.eval(FIXED_WINDOW_LUA, 1, key, action, max, windowMs);
+    if (!Array.isArray(raw) || raw.length !== 3) throw new Error('REDIS_RATE_LIMIT_INVALID_RESULT');
+    const [allowed, count, ttl] = raw.map(Number);
+    if (![allowed, count, ttl].every(Number.isSafeInteger) || ![0, 1].includes(allowed) ||
+        count < 0 || ttl < 0 || ttl > windowMs) {
+      throw new Error('REDIS_RATE_LIMIT_INVALID_RESULT');
+    }
+    return { ok: allowed === 1, count, retryAfterMs: Math.max(0, ttl) };
+  });
 }
 
 export async function clearRedisRateLimit(
@@ -92,9 +117,11 @@ export async function clearRedisRateLimit(
 ): Promise<boolean> {
   const config = loadRedisConfig();
   if (!config.features.rateLimits) return false;
-  const client = await getRedisClient('queue', config);
-  if (!client) throw new Error('REDIS_RATE_LIMIT_UNAVAILABLE');
-  const key = redisKey(config, 'rate-limit', domain, rateLimitIdentity(domain, identity));
-  await client.del(key);
-  return true;
+  return withLimiterConnection('queue', async () => {
+    const client = await getRedisClient('queue', config);
+    if (!client) throw new Error('REDIS_RATE_LIMIT_UNAVAILABLE');
+    const key = redisKey(config, 'rate-limit', domain, rateLimitIdentity(domain, identity));
+    await client.del(key);
+    return true;
+  });
 }
