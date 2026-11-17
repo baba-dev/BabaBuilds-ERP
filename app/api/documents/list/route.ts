@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireModule, ModuleDisabledError } from "@/lib/modules";
 import { requirePermission, RbacDeniedError, rbacDeniedResponse } from "@/lib/rbac";
+import { containsInsensitive } from "@/lib/prisma-filters";
 
 const parseBool = (v: string | null) => v === "1" || v === "true";
 
@@ -35,8 +36,8 @@ export async function GET(req: Request) {
       ...(q
         ? {
             OR: [
-              { title: { contains: q } },
-              { category: { contains: q } },
+              { title: containsInsensitive(q) },
+              { category: containsInsensitive(q) },
             ],
           }
         : {}),

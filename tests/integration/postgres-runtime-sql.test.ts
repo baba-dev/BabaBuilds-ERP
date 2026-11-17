@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { aggregate } from '@/lib/reporting/semantic';
-import { clientMetrics } from '@/lib/clients/queries';
+import { clientMetrics, listClients } from '@/lib/clients/queries';
 import { loadPlatformOverview } from '@/lib/admin/overview';
 
 let enabled = false;
@@ -62,6 +62,10 @@ describe.runIf(enabled)('PostgreSQL runtime aggregation and CRM SQL', () => {
       expect(crm.get(client.id)).toMatchObject({
         invoiceCount: 1, billed: 100, outstanding: 80
       });
+      const clientSearch = await listClients(workspace.id, {
+        q: `CLIENT ${tag.toUpperCase()}`,
+      }, now);
+      expect(clientSearch.data.map((row) => row.id)).toContain(client.id);
       const platform = await loadPlatformOverview(new Date('2026-11-16T00:00:00Z'));
       expect(platform.invoices.gmvAll).toBeGreaterThanOrEqual(100);
       expect(platform.invoices.total).toBeGreaterThanOrEqual(1);

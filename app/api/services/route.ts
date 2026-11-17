@@ -5,6 +5,7 @@ import { parseServiceForm, sameServiceName } from "@/lib/services/validation";
 import { saveServiceImage } from "@/lib/services/image-upload";
 import { requireServiceAccess, serviceError } from "@/lib/services/access";
 import { SERVICE_INCLUDE, withUsage } from "@/lib/services/serialize";
+import { containsInsensitive } from "@/lib/prisma-filters";
 
 export async function GET(request: Request) {
   try {
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
     const services = await prisma.serviceTemplate.findMany({
       where: {
         workspaceId: auth.access.workspaceId,
-        ...(q ? { OR: [{ name: { contains: q } }, { description: { contains: q } }] } : {}),
+        ...(q ? { OR: [{ name: containsInsensitive(q) }, { description: containsInsensitive(q) }] } : {}),
       },
       include: SERVICE_INCLUDE,
       orderBy: { name: "asc" },
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
     const [nic, sac, sameName] = await Promise.all([
       data.nicCodeId ? prisma.nICCode.findUnique({ where: { id: data.nicCodeId }, select: { id: true } }) : Promise.resolve(true),
       data.sacCodeId ? prisma.sACCode.findUnique({ where: { id: data.sacCodeId }, select: { id: true } }) : Promise.resolve(true),
-      prisma.serviceTemplate.findMany({ where: { workspaceId, name: { contains: data.name } }, select: { name: true } }),
+      prisma.serviceTemplate.findMany({ where: { workspaceId, name: containsInsensitive(data.name) }, select: { name: true } }),
     ]);
     if (!nic || !sac) return serviceError(400, "INVALID_TAX_CODE", "The selected tax classification no longer exists.");
     if (sameName.some((s) => sameServiceName(s.name, data.name))) {

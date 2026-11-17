@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { handleAdminApiError, verifySuperAdmin } from "../authz";
 import { prisma } from "@/lib/prisma";
 import { logActivity, validateTaxOverrideAuditChain } from "@/lib/security/activity-log";
+import { containsInsensitive } from "@/lib/prisma-filters";
 
 const PAGE_SIZE = 50;
 
@@ -20,9 +21,9 @@ export async function GET(req: NextRequest) {
       const where = search
         ? {
             OR: [
-              { action: { contains: search } },
-              { actorEmail: { contains: search } },
-              { scopeType: { contains: search } },
+              { action: containsInsensitive(search) },
+              { actorEmail: containsInsensitive(search) },
+              { scopeType: containsInsensitive(search) },
             ],
           }
         : {};
@@ -68,10 +69,10 @@ export async function GET(req: NextRequest) {
     const where: Record<string, unknown> = {};
     if (search) {
       where.OR = [
-        { action: { contains: search } },
-        { actorEmail: { contains: search } },
-        { entityType: { contains: search } },
-        { ipAddress: { contains: search } },
+        { action: containsInsensitive(search) },
+        { actorEmail: containsInsensitive(search) },
+        { entityType: containsInsensitive(search) },
+        { ipAddress: containsInsensitive(search) },
       ];
     }
     if (statusFilter && statusFilter !== "ALL") {

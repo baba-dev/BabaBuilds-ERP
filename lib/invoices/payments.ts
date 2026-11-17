@@ -16,6 +16,11 @@ import type { PaymentMethodValue } from "@/lib/invoices/types";
 import { determineInvoicePaymentStatus } from "@/app/api/invoices/[id]/pay/logic";
 
 const HALF_PAISA = new Prisma.Decimal("0.005");
+const PAYMENT_TRANSACTION_ATTEMPTS = 4;
+const PAYMENT_TRANSACTION_OPTIONS = {
+  isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+  timeout: 15_000,
+} as const;
 
 export type PaymentFailure = {
   ok: false;
@@ -86,6 +91,23 @@ function statusForTotals(received: Prisma.Decimal, total: Prisma.Decimal) {
   return received.lte(0) ? INVOICE_STATUS.PENDING : determineInvoicePaymentStatus(received, total);
 }
 
+function isSerializationConflict(error: unknown) {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034";
+}
+
+async function runPaymentTransaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  for (let attempt = 1; attempt <= PAYMENT_TRANSACTION_ATTEMPTS; attempt += 1) {
+    try {
+      return await prisma.$transaction(operation, PAYMENT_TRANSACTION_OPTIONS);
+    } catch (error) {
+      const retryable = error instanceof ConcurrentInvoiceUpdateError || isSerializationConflict(error);
+      if (!retryable) throw error;
+      if (attempt === PAYMENT_TRANSACTION_ATTEMPTS) throw new ConcurrentInvoiceUpdateError();
+    }
+  }
+  throw new ConcurrentInvoiceUpdateError();
+}
+
 export async function recordInvoicePayment(
   input: RecordPaymentInput,
 ): Promise<
@@ -117,7 +139,7 @@ export async function recordInvoicePayment(
     | { kind: "fail"; failure: PaymentFailure };
 
   try {
-    result = await prisma.$transaction(async (tx) => {
+    result = await runPaymentTransaction(async (tx) => {
       const invoice = await tx.invoice.findFirst({ where: { id: input.invoiceId, workspaceId: input.workspaceId } });
       if (!invoice) {
         return { kind: "fail" as const, failure: { ok: false, status: 404, code: "INVOICE_NOT_FOUND", message: "Invoice not found." } as PaymentFailure };
@@ -159,7 +181,12 @@ export async function recordInvoicePayment(
 
       const newStatus = toInvoiceStatus(statusForTotals(cumulative, total));
       const updated = await tx.invoice.updateMany({
-        where: { id: invoice.id, workspaceId: input.workspaceId, status: invoice.status },
+        where: {
+          id: invoice.id,
+          workspaceId: input.workspaceId,
+          status: invoice.status,
+          amountReceived: invoice.amountReceived,
+        },
         data: { status: newStatus, amountReceived: cumulative, dateReceived: input.receivedAt },
       });
       if (updated.count === 0) {

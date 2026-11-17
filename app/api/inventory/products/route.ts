@@ -8,6 +8,7 @@ import { removeProductImage, storeProductImage } from '@/lib/inventory/product-i
 import { stockStatus } from '@/lib/inventory/stock';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
 import { prisma } from '@/lib/prisma';
+import { containsInsensitive } from '@/lib/prisma-filters';
 import { logActivity } from '@/lib/security/activity-log';
 import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 import { inventoryErrorResponse, requireInventory } from '../_guard';
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
         archivedAt: q.archived === 'true' ? { not: null } : null,
         ...(q.status ? { status: q.status } : {}),
         ...(q.category ? { category: q.category } : {}),
-        ...(q.q ? { OR: [{ name: { contains: q.q } }, { sku: { contains: q.q } }, { barcode: { contains: q.q } }] } : {}),
+        ...(q.q ? { OR: [{ name: containsInsensitive(q.q) }, { sku: containsInsensitive(q.q) }, { barcode: containsInsensitive(q.q) }] } : {}),
       },
       orderBy: q.sort === 'name' ? [{ name: 'asc' }, { id: 'asc' }] : q.sort === 'updated' ? [{ updatedAt: 'desc' }, { id: 'asc' }] : [{ currentStock: 'asc' }, { id: 'asc' }],
       take: q.limit + 1,

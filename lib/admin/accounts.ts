@@ -1,6 +1,7 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { containsInsensitive } from "@/lib/prisma-filters";
 import { effectiveAccess } from "./plans";
 
 export const ACCESS_FILTERS = ["TRIAL", "PAID", "EXPIRED_PAID", "EXPIRED_TRIAL", "FREE", "SUSPENDED"] as const;
@@ -30,7 +31,7 @@ export async function listAccounts(query: AccountQuery, now = new Date()) {
   if (query.access) and.push(accessWhere(query.access, now));
   if (query.demo === "only") and.push({ isDemo: true });
   else if (query.demo !== "all") and.push({ isDemo: false });
-  if (q) and.push({ OR: [{ name: { contains: q } }, { id: { equals: q } }, { users: { some: { user: { email: { contains: q } } } } }] });
+  if (q) and.push({ OR: [{ name: containsInsensitive(q) }, { id: { equals: q } }, { users: { some: { user: { email: containsInsensitive(q) } } } }] });
   const where: Prisma.WorkspaceWhereInput = and.length ? { AND: and } : {};
   const orderBy: Prisma.WorkspaceOrderByWithRelationInput = query.sort === "oldest" ? { createdAt: "asc" } : query.sort === "name" ? { name: "asc" } : query.sort === "ending" ? { subscriptionEndsAt: "asc" } : { createdAt: "desc" };
 

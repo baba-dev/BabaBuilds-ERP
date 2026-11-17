@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { randomUUID } from "node:crypto";
+import { recordInvoicePayment } from "@/lib/invoices/payments";
 
 // Never run these writes against production or an existing customer database.
 const url = process.env.DATABASE_URL;
@@ -76,4 +77,45 @@ describe.runIf(valid)("PostgreSQL financial concurrency", () => {
       await prisma.$disconnect();
     }
   }, 60000);
+
+  it("keeps invoice totals equal to the ledger during concurrent partial payments", async () => {
+    const prisma = new PrismaClient();
+    const workspace = await prisma.workspace.create({
+      data: { name: "pg-partial-payment-" + randomUUID() },
+    });
+    const invoice = await prisma.invoice.create({
+      data: {
+        workspaceId: workspace.id,
+        invoiceNumber: randomUUID(),
+        financialYear: "2026-27",
+        invoiceDate: new Date(),
+        clientName: "Concurrent partial fixture",
+        serviceDescription: "Production payment service",
+        totalAmount: new Prisma.Decimal("100.00"),
+        grandTotal: new Prisma.Decimal("100.00"),
+        amountReceived: new Prisma.Decimal("0.00"),
+        pdfPath: "",
+      },
+    });
+
+    try {
+      const results = await Promise.all([
+        recordInvoicePayment({ workspaceId: workspace.id, userId: "audit-user", invoiceId: invoice.id, amount: 10, receivedAt: new Date(), method: "UPI", idempotencyKey: "partial-a-" + invoice.id }),
+        recordInvoicePayment({ workspaceId: workspace.id, userId: "audit-user", invoiceId: invoice.id, amount: 10, receivedAt: new Date(), method: "UPI", idempotencyKey: "partial-b-" + invoice.id }),
+        recordInvoicePayment({ workspaceId: workspace.id, userId: "audit-user", invoiceId: invoice.id, amount: 10, receivedAt: new Date(), method: "UPI", idempotencyKey: "partial-c-" + invoice.id }),
+      ]);
+      expect(results.every((result) => result.ok)).toBe(true);
+
+      const [fresh, ledger] = await Promise.all([
+        prisma.invoice.findUniqueOrThrow({ where: { id: invoice.id } }),
+        prisma.invoicePayment.aggregate({ where: { invoiceId: invoice.id, reversedAt: null }, _sum: { amount: true } }),
+      ]);
+      expect(fresh.status).toBe("PARTIALLY_PAID");
+      expect(fresh.amountReceived?.toString()).toBe("30");
+      expect(ledger._sum.amount?.toString()).toBe("30");
+    } finally {
+      await prisma.workspace.delete({ where: { id: workspace.id } });
+      await prisma.$disconnect();
+    }
+  }, 60_000);
 });

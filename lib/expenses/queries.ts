@@ -1,6 +1,7 @@
 import "server-only";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { containsInsensitive } from "@/lib/prisma-filters";
 import { PRESET_CATEGORIES } from "./categories";
 import { previousRange, type PeriodRange } from "./period";
 import { reconciledExpenseIds } from "./bank-match";
@@ -30,7 +31,7 @@ export function expenseWhere(workspaceId: string, q: Omit<ExpenseListQuery, "sor
   const range = q.range;
   if (range.from || range.to) and.push({ date: { ...(range.from ? { gte: range.from } : {}), ...(range.to ? { lt: range.to } : {}) } });
   const text = q.q?.trim();
-  if (text) and.push({ OR: [{ vendor: { contains: text } }, { description: { contains: text } }, { category: { contains: text } }, { vendorInvoiceNo: { contains: text } }, { vendorGstin: { contains: text.toUpperCase() } }] });
+  if (text) and.push({ OR: [{ vendor: containsInsensitive(text) }, { description: containsInsensitive(text) }, { category: containsInsensitive(text) }, { vendorInvoiceNo: containsInsensitive(text) }, { vendorGstin: containsInsensitive(text) }] });
   if (q.category) and.push({ category: q.category });
   if (q.status === "paid") and.push({ paymentStatus: "PAID" });
   if (q.status === "unpaid") and.push({ paymentStatus: "UNPAID" });

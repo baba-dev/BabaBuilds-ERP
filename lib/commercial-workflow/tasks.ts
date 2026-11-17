@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { containsInsensitive } from '@/lib/prisma-filters';
 
 export async function createCommercialActionTask(
   workspaceId: string,
@@ -12,8 +13,8 @@ export async function createCommercialActionTask(
       workspaceId,
       status: 'PENDING',
       OR: [
-        { title: { contains: proposalTitle } },
-        { description: { contains: proposalId } }
+        { title: containsInsensitive(proposalTitle) },
+        { description: containsInsensitive(proposalId) }
       ]
     }
   });
