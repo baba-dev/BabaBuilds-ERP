@@ -9,6 +9,7 @@ import { RbacDeniedError, requirePermission } from '@/lib/rbac';
 import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 import { buildPrivatePath, ensureDir, sanitizeFilename, sniffAllowedContent } from '@/lib/uploads/private-storage';
 import { scanBuffer } from '@/lib/security/clamav';
+import { classifySharedContent, MAX_SHARED_FILE_COUNT, MAX_SHARED_STAGED_BYTES, MAX_SHARED_SINGLE_FILE_BYTES } from '@/lib/uploads/share-target-staging';
 
 export const runtime = 'nodejs';
 
@@ -58,7 +59,19 @@ export async function POST(request: Request) {
   });
   if (!limit.ok) return limit.response;
 
+  // Reject advertised oversize bodies before multipart parsing where possible.
+  const declaredLength = Number(request.headers.get('content-length') ?? '0');
+  if (Number.isFinite(declaredLength) && declaredLength > MAX_SHARED_STAGED_BYTES + 512 * 1024) {
+    return new NextResponse('Shared files exceed the staging limit.', { status: 413 });
+  }
+
   const formData = await request.formData();
+  const fileEntries = [...formData.values()].filter((value): value is File => value instanceof File && value.size > 0);
+  if (fileEntries.length > MAX_SHARED_FILE_COUNT ||
+      fileEntries.some((file) => file.size > MAX_SHARED_SINGLE_FILE_BYTES) ||
+      fileEntries.reduce((total, file) => total + file.size, 0) > MAX_SHARED_STAGED_BYTES) {
+    return new NextResponse('Shared files exceed the staging limit.', { status: 413 });
+  }
   const title = formData.get('title');
   const text = formData.get('text');
   const sharedUrl = formData.get('url');
@@ -75,27 +88,18 @@ export async function POST(request: Request) {
   for (const [fieldName, value] of formData.entries()) {
     if (!(value instanceof File) || value.size === 0) continue;
 
-    const mimeType = value.type || 'application/octet-stream';
-    const isImage = mimeType.startsWith('image/');
-    const isPdf = mimeType === 'application/pdf';
-
-    if (!isImage && !isPdf) continue;
-
-    const ext = path.extname(value.name) || (isPdf ? '.pdf' : '.bin');
-    const storedName = `${Date.now()}-${randomUUID()}-${sanitizeFilename(path.basename(value.name, ext))}${ext.toLowerCase()}`;
-    const absolutePath = path.join(uploadRoot, storedName);
     const bytes = await value.arrayBuffer();
-
     const buffer = Buffer.from(bytes);
+    // Store only a type verified from bytes; never trust an arbitrary extension
+    // such as .html from the source application.
+    const verified = classifySharedContent(value.type, sniffAllowedContent(buffer), value.name);
+    if (!verified) continue;
     const isSafe = await scanBuffer(buffer);
     if (!isSafe) continue;
 
-    // Content-sniff to avoid trusting filename or MIME type.
-    const sniffed = sniffAllowedContent(buffer);
-    if (!sniffed) continue;
-    if (isPdf && sniffed !== 'pdf') continue;
-    if (isImage && sniffed === 'pdf') continue;
-
+    const originalBase = sanitizeFilename(path.basename(value.name, path.extname(value.name)));
+    const storedName = `${Date.now()}-${randomUUID()}-${originalBase}${verified.extension}`;
+    const absolutePath = path.join(uploadRoot, storedName);
     fs.writeFileSync(absolutePath, buffer, { mode: 0o600 });
 
     const relativePath = `/uploads/share-target/${workspaceId}/${uploadId}/${storedName}`;
@@ -103,7 +107,7 @@ export async function POST(request: Request) {
     files.push({
       fieldName,
       originalName: value.name,
-      mimeType,
+      mimeType: verified.mimeType,
       size: value.size,
       storedName,
       relativePath,
