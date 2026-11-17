@@ -137,11 +137,11 @@ def member_safe(member: tarfile.TarInfo) -> bool:
     return True
 
 
-def validate_archive(archive: Path) -> None:
+def validate_archive(archive: Path, *, require_root_owned: bool = True) -> None:
     if archive.is_symlink() or not archive.is_file():
         fail("Archive must be a regular non-symlink file")
     metadata = archive.stat()
-    if metadata.st_uid != 0 or metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+    if require_root_owned and (metadata.st_uid != 0 or metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH)):
         fail("Archive must be root-owned and not group/world-writable")
     if archive.stat().st_size > 75 * 1024 * 1024:
         fail("Unexpectedly large Node.js distribution archive")
