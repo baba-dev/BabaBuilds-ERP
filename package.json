@@ -7,6 +7,8 @@
     "npm": ">=11.20.0 <12"
   },
   "scripts": {
+    "check:runtime": "node scripts/check-runtime.mjs",
+    "predev": "node scripts/check-runtime.mjs",
     "dev": "next dev",
     "postinstall": "prisma generate",
     "prebuild:partner-kit": "npx tsx scripts/build-partner-kit.ts",
@@ -35,6 +37,7 @@
     "test:browser:headed": "playwright test tests/smoke --project=chromium --headed",
     "test:browser:ui": "playwright test tests/smoke --project=chromium --ui",
     "test:payments": "vitest run tests/payments && playwright test tests/payments",
+    "pretest": "node scripts/check-runtime.mjs",
     "test": "vitest run",
     "invoices:samples": "npx tsx scripts/render-sample-invoices.ts",
     "brochure:shell": "npx tsx scripts/generate-brochure-shell.ts",

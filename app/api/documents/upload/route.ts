@@ -21,6 +21,7 @@ import {
   canWorkspaceUploadBytes,
   consumeWorkspaceDocumentBytes,
   getWorkspaceQuotaSnapshot,
+  lockWorkspaceDocumentStorage,
 } from '@/lib/documents/quota';
 import { promises as fs } from 'fs';
 import type { DocumentCategory, DocumentScope } from '@/lib/documents/policy';
@@ -198,8 +199,11 @@ export async function POST(request: Request) {
   // Create Document + DocumentFile and consume quota transactionally.
   // If quota consumption fails, we do not write file bytes.
   const created = await prisma.$transaction(async (tx) => {
-    // Re-check quota transactionally (prevent race)
-    const snapshot = await getWorkspaceQuotaSnapshot(workspaceId);
+    // Re-check quota transactionally (prevent race): lock the workspace's storage row first so
+    // concurrent uploads serialise, and read through `tx` (never the global client) so this
+    // request holds exactly one pooled connection.
+    await lockWorkspaceDocumentStorage(tx, workspaceId);
+    const snapshot = await getWorkspaceQuotaSnapshot(workspaceId, tx);
     if (snapshot.bytesCapTotal !== Infinity && snapshot.bytesUsedTotal + file.size > snapshot.bytesCapTotal) {
       return apiError(
         403,

@@ -37,10 +37,9 @@ vi.mock("@/lib/auth/password", () => ({
   verifyPassword: vi.fn(),
 }));
 vi.mock("@/lib/auth/rate-limit", () => ({
-  checkPasswordAuthRateLimit: vi.fn(),
   clearPasswordAuthRateLimit: vi.fn(),
   hashRateLimitValue: vi.fn((value) => value),
-  recordPasswordAuthFailure: vi.fn(),
+  reservePasswordAuthAttempt: vi.fn(),
 }));
 vi.mock("@/lib/auth/provider-flags", () => ({ isGoogleAuthEnabled: vi.fn(() => false) }));
 vi.mock("@/lib/security/access-risk", () => ({
