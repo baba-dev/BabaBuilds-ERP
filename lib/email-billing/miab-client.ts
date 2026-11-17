@@ -25,8 +25,8 @@ const REQUIRED_DIRECT_ENDPOINTS = ['/mail/domains', '/mail/users?format=json'] a
 const OPTIONAL_DIRECT_ENDPOINT = '/mail/aliases?format=json';
 
 function isPrivateHostname(hostname: string) {
-  const h = hostname.toLowerCase();
-  if (['localhost', '0.0.0.0', '::', '::1'].includes(h) || h.endsWith('.local')) return true;
+  const h = hostname.toLowerCase().replace(/\\.$/, '');
+  if (['localhost', '0.0.0.0', '::', '::1'].includes(h) || h.endsWith('.localhost') || h.endsWith('.local')) return true;
   return isPrivateOrReservedAddress(h);
 }
 
@@ -43,6 +43,15 @@ function inIpv4Range(address: string, base: string, maskBits: number) {
   const mask = maskBits === 0 ? 0 : (0xffffffff << (32 - maskBits)) >>> 0;
   return (value & mask) === (baseValue & mask);
 }
+
+// Check IPv6 ranges by CIDR, not by string prefix: fe90::/10 and feb0::/10
+// are link-local too, and IPv4-mapped hex addresses must not bypass checks.
+const blockedV6 = new net.BlockList();
+for (const [prefix, bits] of [
+  ['::', 128], ['::1', 128], ['::ffff:0:0', 96],
+  ['fe80::', 10], ['fc00::', 7], ['ff00::', 8],
+  ['2001:db8::', 32],
+] as const) blockedV6.addSubnet(prefix, bits, 'ipv6');
 
 export function isPrivateOrReservedAddress(address: string) {
   const normalized = address.toLowerCase().replace(/^\[|\]$/g, '');
@@ -70,14 +79,7 @@ export function isPrivateOrReservedAddress(address: string) {
   }
 
   if (ipVersion === 6) {
-    return (
-      normalized === '::' ||
-      normalized === '::1' ||
-      normalized.startsWith('fe80:') ||
-      normalized.startsWith('fc') ||
-      normalized.startsWith('fd') ||
-      normalized.startsWith('ff')
-    );
+    return blockedV6.check(normalized, 'ipv6');
   }
 
   return false;

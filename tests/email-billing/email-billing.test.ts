@@ -42,6 +42,12 @@ describe('Email Billing module registration and guardrails', () => {
     expect(isPrivateOrReservedAddress('100.64.0.1')).toBe(true);
     expect(isPrivateOrReservedAddress('198.18.0.1')).toBe(true);
     expect(isPrivateOrReservedAddress('::1')).toBe(true);
+    for (const address of ['fe80::1', 'fe90::1', 'fea0::1', 'febf::1', 'fd12::1', '::ffff:7f00:1', '2001:db8::1']) {
+      expect(isPrivateOrReservedAddress(address)).toBe(true);
+    }
+    expect(isPrivateOrReservedAddress('2606:4700:4700::1111')).toBe(false);
+    expect(() => validateMailBillingUrl('https://localhost./', 'production')).toThrow(/blocked/);
+    expect(() => validateMailBillingUrl('https://admin.localhost/', 'production')).toThrow(/blocked/);
     expect(validateMailBillingUrl('https://mail.example.com', 'production').hostname).toBe('mail.example.com');
   });
 });
