@@ -27,7 +27,8 @@ ARCHIVE_SHA256 = "89e1853138db51e8b82d3e98ba9c0d3f2956a28e5e55ea1b7e12d25aae92d5
 ROOT = Path("/opt/bababuilds/runtimes")
 DEST = ROOT / "node-v26.13.1-linux-arm64"
 MARKER = ".bababuilds-runtime.json"
-LOCK = Path("/run/lock/bababuilds-node26-bootstrap.lock")
+LOCK_DIR = Path("/run/lock/bababuilds-platform")
+LOCK = LOCK_DIR / "node26-bootstrap.lock"
 SERVICES = (
     "bababuilds-erp.service", "postgresql@17-main.service",
     "menuminute-web.service", "menuminute-worker.service",
@@ -139,6 +140,9 @@ def member_safe(member: tarfile.TarInfo) -> bool:
 def validate_archive(archive: Path) -> None:
     if archive.is_symlink() or not archive.is_file():
         fail("Archive must be a regular non-symlink file")
+    metadata = archive.stat()
+    if metadata.st_uid != 0 or metadata.st_mode & (stat.S_IWGRP | stat.S_IWOTH):
+        fail("Archive must be root-owned and not group/world-writable")
     if archive.stat().st_size > 75 * 1024 * 1024:
         fail("Unexpectedly large Node.js distribution archive")
     if sha256(archive) != ARCHIVE_SHA256:
@@ -226,7 +230,13 @@ def main() -> None:
         fail("Root is required")
     if platform.machine() != "aarch64":
         fail("ARM64 VPS required")
-    with LOCK.open("a+") as lock:
+    LOCK_DIR.mkdir(mode=0o755, exist_ok=True)
+    trusted_directory(LOCK_DIR)
+    fd = os.open(LOCK, os.O_CREAT | os.O_RDWR | os.O_CLOEXEC | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, "a+") as lock:
+        locked = os.fstat(lock.fileno())
+        if locked.st_uid != 0 or stat.S_IMODE(locked.st_mode) != 0o600:
+            fail("Unexpected root-only lock file metadata")
         fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         if opts.inventory:
             if opts.archive is not None:
