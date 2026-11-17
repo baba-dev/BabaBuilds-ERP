@@ -8,6 +8,11 @@ on:
     paths:
       - ops/shared-runtime/**
       - .github/workflows/shared-node26-foundation.yml
+  pull_request:
+    branches: [main]
+    paths:
+      - ops/shared-runtime/**
+      - .github/workflows/shared-node26-foundation.yml
   workflow_dispatch:
 
 permissions:
@@ -19,6 +24,18 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  verify-pr:
+    if: ${{ github.event_name == 'pull_request' }}
+    name: Verify signed Node distribution on unprivileged runner (no VPS access)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Verify official Node.js GPG signature, digest, and archive safety
+        run: bash ops/shared-runtime/verify_distribution.sh
+
   provision:
     if: ${{ github.ref == 'refs/heads/main' }}
     name: Verify Node.js release signature and install inactive ARM64 runtime
@@ -29,36 +46,8 @@ jobs:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Verify signed Node.js release and pinned ARM64 artifact
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          expected="89e1853138db51e8b82d3e98ba9c0d3f2956a28e5e55ea1b7e12d25aae92d5dd"
-          archive="node-v26.13.1-linux-arm64.tar.xz"
-          base="https://nodejs.org/dist/v26.13.1"
-          key="ops/shared-runtime/nodejs-release-key-5BE8A3F6.asc"
-          expected_signer="5BE8A3F6C8A5C01D106C0AD820B1A390B168D356"
-          actual_signer="$(gpg --batch --with-colons --show-keys "$key" | awk -F: '$1=="fpr"{print $10; exit}')"
-          test "$actual_signer" = "$expected_signer" || {
-            echo 'REJECT: signing key fingerprint mismatch' >&2; exit 1;
-          }
-          export GNUPGHOME="$RUNNER_TEMP/bababuilds-nodejs-gpg"
-          mkdir -m 0700 "$GNUPGHOME"
-          gpg --batch --import "$key"
-          curl --fail --location --proto '=https' --tlsv1.2 --retry 4 --max-time 120 \
-            "$base/SHASUMS256.txt" --output "$RUNNER_TEMP/SHASUMS256.txt"
-          curl --fail --location --proto '=https' --tlsv1.2 --retry 4 --max-time 120 \
-            "$base/SHASUMS256.txt.sig" --output "$RUNNER_TEMP/SHASUMS256.txt.sig"
-          gpgv --keyring "$GNUPGHOME/pubring.kbx" \
-            "$RUNNER_TEMP/SHASUMS256.txt.sig" "$RUNNER_TEMP/SHASUMS256.txt"
-          test "$(grep -Fxc "$expected  $archive" "$RUNNER_TEMP/SHASUMS256.txt")" = 1 || {
-            echo 'REJECT: signed manifest does not match pinned artifact' >&2; exit 1;
-          }
-          mkdir -p runtime-artifacts
-          curl --fail --location --proto '=https' --tlsv1.2 --retry 4 --max-time 300 \
-            "$base/$archive" --output "runtime-artifacts/$archive"
-          printf '%s  %s\n' "$expected" "runtime-artifacts/$archive" | sha256sum --check --status
-          echo 'NODE26_OFFICIAL_SIGNED_ARTIFACT_VERIFIED release=v26.13.1 arch=linux-arm64'
+      - name: Verify signed release before allowing VPS transfer
+        run: bash ops/shared-runtime/verify_distribution.sh
       - name: Stage signed-artifact-verified runtime and reviewed installer
         uses: appleboy/scp-action@v1
         with:
