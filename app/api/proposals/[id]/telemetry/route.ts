@@ -85,7 +85,7 @@ export async function POST(
         return NextResponse.json({ success: true });
       }
       const ip = getClientIp(request);
-      const limited = checkRateLimit(`proposal-telemetry:${token}:${ip}`, 120, 60_000);
+      const limited = await checkRateLimit(`proposal-telemetry:${token}:${ip}`, 120, 60_000);
       if (!limited.ok) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
 
       if (eventType === "VIEW") {

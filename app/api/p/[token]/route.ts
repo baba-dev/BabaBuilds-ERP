@@ -18,7 +18,7 @@ const NO_STORE = { "Cache-Control": "private, no-store" };
 export async function GET(request: Request, { params }: Ctx) {
   const { token } = await params;
   const ip = getClientIp(request);
-  const limited = checkRateLimit(`proposal-public-get:${ip}`, 120, 60_000);
+  const limited = await checkRateLimit(`proposal-public-get:${ip}`, 120, 60_000);
   if (!limited.ok) return proposalError(429, "RATE_LIMITED", "Too many requests.");
 
   const row = await findPublicProposal(token);
@@ -42,7 +42,7 @@ export async function PATCH(request: Request, { params }: Ctx) {
   const { token } = await params;
   const ip = getClientIp(request);
   // Guessing the verification email must be expensive.
-  const limited = checkRateLimit(`proposal-accept:${token}:${ip}`, 8, 15 * 60_000);
+  const limited = await checkRateLimit(`proposal-accept:${token}:${ip}`, 8, 15 * 60_000);
   if (!limited.ok) return proposalError(429, "RATE_LIMITED", "Too many attempts. Please wait a few minutes and try again.");
 
   const parsed = acceptSchema.safeParse(await request.json().catch(() => null));

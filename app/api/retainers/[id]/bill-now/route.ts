@@ -9,7 +9,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   if (!auth.ok) return auth.response;
   const { workspaceId, userId } = auth.access;
   const { id } = await params;
-  const limited = checkRateLimit(`retainer-bill:${workspaceId}:${id}`, 5, 60_000);
+  const limited = await checkRateLimit(`retainer-bill:${workspaceId}:${id}`, 5, 60_000);
   if (!limited.ok) return retainerError(429, "RATE_LIMITED", "Please wait a moment before billing again.");
   const result = await billRetainer({ retainerId: id, workspaceId, trigger: "manual", actorUserId: userId });
   if (!result.ok) {

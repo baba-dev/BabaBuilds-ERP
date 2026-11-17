@@ -55,7 +55,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const limited = checkRateLimit(clientKey(req), 30, 60_000);
+    const limited = await checkRateLimit(clientKey(req), 30, 60_000);
     if (!limited.ok) {
       return NextResponse.json(
         { error: "Too many attempts. Try again shortly.", retryAfterMs: limited.retryAfterMs },
