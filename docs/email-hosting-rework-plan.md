@@ -1,6 +1,6 @@
 # Email Hosting (Mail-in-a-Box) rework: plan
 
-Status: decisions 2 (credential model) and plan availability are confirmed; Phase 0 is implemented in this PR, later phases are not started. Replaces the read-only `MIAB_BILLING` ("Email Billing") module described in `docs/email-billing.md`.
+Status: decisions 2 (credential model) and plan availability are confirmed; Phase 0 is merged and Phase 1 (billing core) is implemented; Phases 2 to 4 are not started. Replaces the read-only `MIAB_BILLING` ("Email Billing") module described in `docs/email-billing.md`.
 
 ## 1. Goal
 
@@ -79,6 +79,8 @@ Key principle: **the ERP database is the commercial source of truth; MiaB is the
 - Trials: subscription starts `TRIALING`; conversion creates/activates the retainer on `trialEndsAt` (cron, idempotent).
 - Money handling follows `lib/money.ts` (Decimal, no floats) and `lib/financial-idempotency.ts`; add regression tests next to `lib/money-regression.test.ts` patterns.
 
+**As built in Phase 1:** proration rides on the retainer engine's existing pending-usage lines (no parallel invoicing); only increases are prorated and decreases apply from the next invoice with no credit (a negative invoice line is not supported by the invoice engine); invoice linkage is read-side (invoice -> retainer -> usage snapshots/changes) rather than a new foreign key; MRR is taken from the active retainers so it matches the Retainers page. The mailbox *add-ons* item is deferred to a later phase.
+
 ### 4.4 Dunning and suspension (integration with AR)
 
 - Hook into existing overdue-invoice detection (`lib/ar`, `lib/retainers/reminders.ts`): an overdue retainer invoice for a mail subscription moves it `ACTIVE -> PAST_DUE`, sends `BILLING_FAILED`-style notifications, then after `suspendAfterDays` queues `SUSPEND` operations.
@@ -131,7 +133,7 @@ Each phase is a separate PR that passes `npm run ci:fast`, is behind the existin
 | Phase | Scope | Exit criteria |
 |---|---|---|
 | 0. Hardening (done in this PR) | Split client into `miab/`; refactor one-liner routes into readable handlers with zod; add `email_hosting.*` permissions (keep `invoices.*` as a fallback); add missing `logActivity`; transactional sync; docs fix. | Existing tests green plus tests for each route's auth/validation; no behaviour change. |
-| 1. Billing core | `MailUsageSnapshot`, trials, statuses, auto/approved quantity updates, proration, invoice linkage, MRR/churn reports, dashboard cards. | Money regression tests; cron idempotent; retainer remains the only invoice generator. |
+| 1. Billing core (done) | `MailUsageSnapshot`, trials, statuses, auto/approved quantity updates, proration, invoice linkage, MRR/churn reports, dashboard cards. | Money regression tests; cron idempotent; retainer remains the only invoice generator. |
 | 2. Managed operations | `MANAGED_API` mode, `MailOperation` queue, mailbox/alias/quota/password operations, one-time credential links, operations UI, verify-after-write, drift review items. | Integration test against a mocked MiaB; manual run on a disposable MiaB box. |
 | 3. Dunning and lifecycle | PAST_DUE/suspend/resume driven by AR and payments; soft-delete retention; notifications. | End-to-end test: overdue -> suspend -> pay -> resume; no data deletion path without human confirmation. |
 | 4. Health and portal | `/system/status`, SSL/backup/health checks with alerts; client-facing portal page for usage and invoices; proposals/POS/shop line type; AI propose-only tools. | Alerts verified; AI cannot execute writes (test). |

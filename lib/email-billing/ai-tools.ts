@@ -1,10 +1,10 @@
 import 'server-only';
 
 import { prisma } from '@/lib/prisma';
-import { calculateMailBilling } from '@/lib/email-billing/billing-calculator';
+import { computeEmailHostingMetrics } from '@/lib/email-billing/metrics';
 
 export async function getEmailBillingSummaryForAi(workspaceId: string) {
-  const [servers, domains, mailboxes, subscriptions, openReviewItems] = await Promise.all([
+  const [servers, domains, mailboxes, subscriptions, openReviewItems, metrics] = await Promise.all([
     prisma.mailBillingServer.count({ where: { workspaceId } }),
     prisma.mailBillingDomain.count({ where: { workspaceId } }),
     prisma.mailBillingMailbox.count({ where: { workspaceId, status: 'ACTIVE' } }),
@@ -14,25 +14,8 @@ export async function getEmailBillingSummaryForAi(workspaceId: string) {
       take: 200,
     }),
     prisma.mailBillingReviewItem.count({ where: { workspaceId, status: 'OPEN' } }),
+    computeEmailHostingMetrics(workspaceId),
   ]);
-
-  const estimatedMrr = subscriptions
-    .filter((subscription) => subscription.billingStatus === 'ACTIVE')
-    .reduce((total, subscription) => {
-      const calculation = calculateMailBilling({
-        plan: subscription.plan ?? {
-          billingMode: subscription.billingModeSnapshot,
-          currency: subscription.currencySnapshot,
-          basePrice: subscription.basePriceSnapshot,
-          includedMailboxes: subscription.includedMailboxesSnapshot,
-          extraMailboxPrice: subscription.extraMailboxPriceSnapshot,
-        },
-        subscription,
-        syncedMailboxCount: subscription.lastSyncedMailboxCount,
-        domain: subscription.domain?.domain,
-      });
-      return total + calculation.totalRecurringAmount;
-    }, 0);
 
   return JSON.stringify({
     totalServers: servers,
@@ -41,8 +24,12 @@ export async function getEmailBillingSummaryForAi(workspaceId: string) {
     activeSubscriptions: subscriptions.filter((sub) => sub.billingStatus === 'ACTIVE').length,
     reviewRequiredSubscriptions: subscriptions.filter((sub) => sub.billingStatus === 'REVIEW_REQUIRED').length,
     openReviewItems,
-    estimatedMonthlyRecurringRevenue: estimatedMrr,
-    currency: subscriptions[0]?.currencySnapshot ?? 'USD',
+    monthlyRecurringRevenue: metrics.mrr,
+    pendingMonthlyRevenueFromTrialsAndUnbilled: metrics.pipelineMrr,
+    currency: metrics.baseCurrency,
+    trialingSubscriptions: metrics.subscriptions.trialing,
+    churnPercentLast30Days: metrics.churn.ratePercent,
+    mailboxChangeLast30Days: metrics.mailboxes.change,
     note: 'Read-only summary. Mail-in-a-Box operational actions are not available from the AI assistant.',
   });
 }

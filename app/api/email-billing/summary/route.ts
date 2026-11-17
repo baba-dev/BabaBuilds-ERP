@@ -2,18 +2,20 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireEmailBilling } from '../_lib/auth';
 import { calculateMailBilling } from '@/lib/email-billing/billing-calculator';
+import { computeEmailHostingMetrics } from '@/lib/email-billing/metrics';
 
 export async function GET() {
   const auth = await requireEmailBilling('view');
   if ('response' in auth) return auth.response;
   const workspaceId = auth.workspaceId;
-  const [servers, domains, mailboxes, subscriptions, openReview, syncRuns] = await Promise.all([
+  const [servers, domains, mailboxes, subscriptions, openReview, syncRuns, metrics] = await Promise.all([
     prisma.mailBillingServer.findMany({ where: { workspaceId } }),
     prisma.mailBillingDomain.findMany({ where: { workspaceId } }),
     prisma.mailBillingMailbox.count({ where: { workspaceId, status: 'ACTIVE' } }),
     prisma.mailBillingSubscription.findMany({ where: { workspaceId }, include: { plan: true, domain: true } }),
     prisma.mailBillingReviewItem.count({ where: { workspaceId, status: 'OPEN' } }),
     prisma.mailBillingSyncRun.findMany({ where: { workspaceId }, orderBy: { startedAt: 'desc' }, take: 5 }),
+    computeEmailHostingMetrics(workspaceId),
   ]);
 
   const activeSubscriptions = subscriptions.filter((s) => s.billingStatus === 'ACTIVE');
@@ -38,6 +40,7 @@ export async function GET() {
     linkedRetainers: subscriptions.filter((s) => s.retainerId).length,
     domainsMissingBilling: domains.filter((d) => !subscriptions.some((s) => s.domainId === d.id)).length,
     estimatedEmailMrr,
+    metrics,
     openReviewItems: openReview,
     lastSyncAt: lastServer?.lastSyncAt?.toISOString() ?? null,
     lastSyncStatus: lastServer?.lastSyncStatus ?? null,

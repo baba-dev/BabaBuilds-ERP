@@ -25,17 +25,19 @@ export async function POST(req: NextRequest) {
     const plan = body.planId ? await prisma.mailBillingPlan.findFirst({ where: { id: body.planId, workspaceId: auth.workspaceId } }) : null;
     if (body.planId && !plan) return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
     const calc = calculateMailBilling({ plan, subscription: null, syncedMailboxCount: domain.mailboxCount, domain: domain.domain });
+    const trialDays = body.trialDays ?? 0;
+    const trialEndsAt = trialDays > 0 ? new Date(Date.now() + trialDays * 86_400_000) : null;
     const sub = await prisma.$transaction(async (tx) => {
       const subscription = await tx.mailBillingSubscription.upsert({
         where: { workspaceId_domainId: { workspaceId: auth.workspaceId, domainId: domain.id } },
-        create: { workspaceId: auth.workspaceId, domainId: domain.id, clientId: client.id, planId: plan?.id, billingStatus: 'REVIEW_REQUIRED', billingModeSnapshot: calc.billingMode, currencySnapshot: calc.currency, basePriceSnapshot: calc.baseAmount, includedMailboxesSnapshot: calc.includedMailboxes, extraMailboxPriceSnapshot: plan?.extraMailboxPrice ?? 0, billableMailboxCount: calc.billableMailboxCount, lastSyncedMailboxCount: domain.mailboxCount, notes: body.notes ?? null },
+        create: { workspaceId: auth.workspaceId, domainId: domain.id, clientId: client.id, planId: plan?.id, billingStatus: trialEndsAt ? 'TRIALING' : 'REVIEW_REQUIRED', trialEndsAt, billingModeSnapshot: calc.billingMode, currencySnapshot: calc.currency, basePriceSnapshot: calc.baseAmount, includedMailboxesSnapshot: calc.includedMailboxes, extraMailboxPriceSnapshot: plan?.extraMailboxPrice ?? 0, billableMailboxCount: calc.billableMailboxCount, lastSyncedMailboxCount: domain.mailboxCount, notes: body.notes ?? null },
         update: { clientId: client.id, planId: plan?.id, billingModeSnapshot: calc.billingMode, currencySnapshot: calc.currency, basePriceSnapshot: calc.baseAmount, includedMailboxesSnapshot: calc.includedMailboxes, extraMailboxPriceSnapshot: plan?.extraMailboxPrice ?? 0, billableMailboxCount: calc.billableMailboxCount, lastSyncedMailboxCount: domain.mailboxCount, notes: body.notes ?? null },
       });
       await tx.mailBillingDomain.update({ where: { id: domain.id }, data: { clientId: client.id } });
       return subscription;
     });
     await resolveMailBillingReviewItems(auth.workspaceId, { domainId: domain.id, types: ['DOMAIN_MISSING_CLIENT', 'DOMAIN_MISSING_SUBSCRIPTION'] }, auth.userId);
-    auditEmailBilling(auth, 'subscription_created', { type: 'mail_billing_subscription', id: sub.id }, { domainId: domain.id, clientId: client.id, planId: plan?.id ?? null }, req);
+    auditEmailBilling(auth, 'subscription_created', { type: 'mail_billing_subscription', id: sub.id }, { domainId: domain.id, clientId: client.id, planId: plan?.id ?? null, trialDays }, req);
     return NextResponse.json({ subscription: sub }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Invalid subscription' }, { status: 400 });

@@ -715,6 +715,8 @@ model Workspace {
   mailBillingSubscriptions        MailBillingSubscription[]
   mailBillingReviewItems          MailBillingReviewItem[]
   mailBillingSettings             MailBillingSettings?
+  mailUsageSnapshots              MailUsageSnapshot[]
+  mailBillingChanges              MailBillingChange[]
 
   // IMS Relations
   products           Product[]
@@ -3902,7 +3904,15 @@ model MailBillingSubscription {
   nextReviewAt DateTime?
   notes String?
 
+  /// When the subscription began; with cancelledAt this drives churn reporting.
+  startedAt DateTime @default(now())
+  /// Set while billingStatus is TRIALING; the daily job converts the trial to a billed subscription on this date.
+  trialEndsAt DateTime?
+  cancelledAt DateTime?
+
   reviewItems MailBillingReviewItem[]
+  usageSnapshots MailUsageSnapshot[]
+  changes MailBillingChange[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3911,6 +3921,7 @@ model MailBillingSubscription {
   @@index([workspaceId, planId])
   @@index([workspaceId, retainerId])
   @@index([workspaceId, billingStatus])
+  @@index([workspaceId, trialEndsAt])
 }
 
 model MailBillingReviewItem {
@@ -3960,10 +3971,62 @@ model MailBillingSettings {
   alertRecipientsJson Json?
   treatRemovedDomainsAsReviewRequired Boolean @default(true)
   ignoreAdminMailboxesFromBilling Boolean @default(false)
+  /// LATEST: bill the latest snapshot count. HIGH_WATER_MARK: bill the highest count seen in the current billing cycle.
+  usageBillingPolicy String @default("LATEST")
+  /// Charge a prorated one-off line on the next invoice when the billable quantity goes up mid-cycle.
+  prorateIncreases Boolean @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([workspaceId, defaultPlanId])
+}
+
+/// One audited usage reading per subscription per day. It is the input to quantity changes, MRR and growth reports.
+model MailUsageSnapshot {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscriptionId String
+  subscription   MailBillingSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  /// UTC calendar day of the reading; one row per subscription per day keeps the daily job idempotent.
+  capturedOn DateTime
+  mailboxCount Int @default(0)
+  adminMailboxCount Int @default(0)
+  aliasCount Int @default(0)
+  totalQuotaMb Int @default(0)
+  /// Mailboxes that count toward billing after settings (e.g. admins excluded) were applied.
+  billableMailboxCount Int @default(0)
+  source String @default("CRON")
+  createdAt DateTime @default(now())
+
+  @@unique([subscriptionId, capturedOn])
+  @@index([workspaceId, capturedOn])
+}
+
+/// Ledger of every change to a subscription's billable quantity, whether automatic, approved or manual.
+model MailBillingChange {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  subscriptionId String
+  subscription   MailBillingSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  type String @default("QUANTITY_CHANGE")
+  /// AUTO (policy), APPROVED (a person approved a review item), MANUAL (explicit API call)
+  source String
+  fromCount Int
+  toCount Int
+  currency String @default("INR")
+  /// Prorated one-off charge queued for the next invoice (zero when none).
+  prorationAmount Decimal @default(0)
+  /// The pending MeteredUsage line that carries the proration; it is billed on the retainer's next invoice.
+  meteredUsageId String?
+  actorUserId String?
+  createdAt DateTime @default(now())
+
+  @@index([workspaceId, createdAt])
+  @@index([subscriptionId, createdAt])
 }
 
 // ==========================================

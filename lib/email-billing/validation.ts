@@ -4,7 +4,7 @@ export const mailBillingAccessModeSchema = z.enum(['READ_ONLY_ADAPTER', 'DIRECT_
 export const mailBillingServerStatusSchema = z.enum(['ACTIVE', 'DISABLED', 'ERROR']);
 export const mailBillingBillingModeSchema = z.enum(['FIXED', 'PER_MAILBOX', 'BUNDLE_PLUS_EXTRA', 'MANUAL']);
 export const mailBillingFrequencySchema = z.enum(['MONTHLY', 'QUARTERLY', 'ANNUALLY']);
-export const mailBillingReviewApplyActionSchema = z.enum(['IGNORE_DOMAIN', 'PAUSE_SUBSCRIPTION']);
+export const mailBillingReviewApplyActionSchema = z.enum(['IGNORE_DOMAIN', 'PAUSE_SUBSCRIPTION', 'APPLY_MAILBOX_COUNT']);
 
 const optionalTrimmedString = z
   .string()
@@ -62,9 +62,11 @@ export const mailBillingSubscriptionCreateSchema = z.object({
   clientId: idSchema.optional(),
   planId: idSchema.optional(),
   notes: optionalTrimmedString,
+  /** Free trial length. Billing starts when it ends; 0 or omitted starts the subscription without a trial. */
+  trialDays: z.coerce.number().int().min(0).max(365).optional(),
 });
 
-export const mailBillingSubscriptionStatusSchema = z.enum(['ACTIVE', 'REVIEW_REQUIRED', 'PAUSED', 'CANCELLED']);
+export const mailBillingSubscriptionStatusSchema = z.enum(['ACTIVE', 'REVIEW_REQUIRED', 'PAUSED', 'CANCELLED', 'TRIALING']);
 export const mailBillingDomainStatusSchema = z.enum(['ACTIVE', 'REMOVED', 'IGNORED']);
 
 export const mailBillingSubscriptionPatchSchema = z
@@ -116,6 +118,14 @@ export const mailBillingSettingsPatchSchema = z.object({
   alertRecipientsJson: z.unknown().optional(),
   treatRemovedDomainsAsReviewRequired: z.coerce.boolean().default(true),
   ignoreAdminMailboxesFromBilling: z.coerce.boolean().default(false),
+  // Optional so a client that does not send them leaves the saved values unchanged.
+  usageBillingPolicy: z.enum(['LATEST', 'HIGH_WATER_MARK']).optional(),
+  prorateIncreases: z.boolean().optional(),
+});
+
+export const mailBillingApplyQuantitySchema = z.object({
+  /** Defaults to the pending count awaiting approval. */
+  toCount: nonNegativeIntSchema.max(100_000).optional(),
 });
 
 export function parseJsonBody<T>(schema: z.ZodSchema<T>, body: unknown) {
