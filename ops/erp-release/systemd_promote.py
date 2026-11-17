@@ -196,8 +196,7 @@ def preview(runtime):
     output = runtime.parent / "preview.log"
     env = {
         "PATH": "/usr/sbin:/usr/bin:/sbin:/bin",
-        "HOME": "/root", "NODE_ENV": "production",
-        "ERP_STAGING_MODE": "1", "PORT": "3199",
+        "HOME": "/root", "NODE_ENV": "production", "PORT": "3199",
         "HOSTNAME": "127.0.0.1",
         "PRIVATE_UPLOADS_DIR": str(APP / "private_uploads"),
     }
@@ -207,7 +206,7 @@ def preview(runtime):
             "--env-file=" + str(PG_ENV), str(runtime / "server.js")],
             cwd=runtime, env=env, stdout=log, stderr=log, start_new_session=True)
         try:
-            health(3199, staging=True)
+            health(3199)
         finally:
             process.terminate()
             try:

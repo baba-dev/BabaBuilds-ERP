@@ -100,3 +100,21 @@ the system, PM2 CLI runtime and MenuMinute/ClubKeep, are not modified.
 - The release workflow rechecks latest `main` immediately before restart;
   rapid successive commits can legitimately skip an obsolete candidate.
 - Never enable legacy `erp-release-watchdog.timer` alongside the systemd ERP.
+
+### 2026-11-17 first automatic deployment preview correction
+
+Automatic release run `44039249994` passed green-main provenance, native ARM64
+artifact build, root-owned operator verification and exact PostgreSQL 17
+migration history. It refused to activate production because its loopback
+preview unintentionally set `ERP_STAGING_MODE=1`, which makes the ERP
+`/login` and `/api/auth/session` endpoints return HTTP 403 by design.
+
+A separate **read-only** SSH diagnostic run `44040331203` confirmed that the
+same artifact starts and serves HTTP 200 for both endpoints in the normal
+production runtime mode on `127.0.0.1:3199`; it returned 403 only under
+`ERP_STAGING_MODE=1`. No production process or database was changed.
+
+The preview therefore uses the same production-mode environment as the existing
+systemd ERP, while retaining the **private loopback port 3199** and verifying
+login, session and service worker. Regression tests ensure the staging flag
+cannot reappear in this preview configuration.
