@@ -33,7 +33,7 @@ describe('dashboard cache invalidation coverage', () => {
     }
   });
 
-  it('mutate entity -> fetch dashboard triggers KPI refresh path for each configured entity', () => {
+  it('mutate entity -> fetch dashboard triggers KPI refresh path for each configured entity', async () => {
     for (const entry of parsedConfig.entities) {
       const workspaceId = `ws-kpi-${entry.entity}`;
       const cacheKey = buildDashboardCacheKey({ workspaceId, fy: '2025-26' });
@@ -41,7 +41,7 @@ describe('dashboard cache invalidation coverage', () => {
       setDashboardCacheEntry(cacheKey, { kpiEntity: entry.entity, value: 100 });
       expect(getDashboardCacheEntry(cacheKey)?.payload).toEqual({ kpiEntity: entry.entity, value: 100 });
 
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
       expect(getDashboardCacheEntry(cacheKey)).toBeNull();
 
       setDashboardCacheEntry(cacheKey, { kpiEntity: entry.entity, value: 200 });

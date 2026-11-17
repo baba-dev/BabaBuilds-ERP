@@ -162,7 +162,7 @@ export async function createExpenseWithSideEffects(input: CreateExpenseWithSideE
   });
 
   try {
-    invalidateDashboardCacheForWorkspace(input.workspaceId);
+    await invalidateDashboardCacheForWorkspace(input.workspaceId);
   } catch {
     noteDashboardCacheIncident("invalidationFailures", { workspaceId: input.workspaceId, entity: "expense", action: "create" });
   }

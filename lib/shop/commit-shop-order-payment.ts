@@ -135,7 +135,7 @@ export async function commitShopOrderPayment(input: CommitShopOrderPaymentInput)
         return { orderId: paid.id, linkedInvoiceId: paid.linkedInvoiceId };
       }, { timeout: 30_000 });
 
-      try { invalidateDashboardCacheForWorkspace(order.workspaceId); } catch { /* a stale cache is harmless */ }
+      try { await invalidateDashboardCacheForWorkspace(order.workspaceId); } catch { /* a stale cache is harmless */ }
       void emailBuyer(order.id, "PAID");
       return { ok: true, orderId: result.orderId, alreadyPaid: false, linkedInvoiceId: result.linkedInvoiceId ?? null };
     } catch (error) {

@@ -16,6 +16,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const result = await changeRetainerStatus({ workspaceId, retainerId: id, to: parsed.data.status, actorUserId: userId, reason: parsed.data.reason });
   if (!result.ok) return retainerError(result.status, result.code, result.message);
   logActivity({ action: "retainer_status_updated", status: "SUCCESS", workspaceId, actor: { userId, email }, entity: { type: "retainer", id }, request, metadata: { to: result.status } });
-  afterRetainerChange(workspaceId, "status");
+  await afterRetainerChange(workspaceId, "status");
   return NextResponse.json({ success: true, status: result.status, rolledForward: result.rolledForward });
 }

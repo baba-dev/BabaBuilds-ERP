@@ -8,9 +8,9 @@ import { statusChangeSchema } from "@/lib/proposals/validation";
 
 import { logActivity } from "@/lib/security/activity-log";
 
-function refreshDashboard(workspaceId: string, action: string) {
+async function refreshDashboard(workspaceId: string, action: string) {
   try {
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    await invalidateDashboardCacheForWorkspace(workspaceId);
   } catch (error) {
     noteDashboardCacheIncident("invalidationFailures", { workspaceId, entity: "proposal", action, error: String(error) });
   }
@@ -55,6 +55,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     metadata: { from: row.status, to: next, by: "owner" },
   });
   logActivity({ action: "proposal_status_updated", status: "SUCCESS", workspaceId, actor: { userId, email }, entity: { type: "proposal", id }, request, metadata: { from: row.status, to: next } });
-  refreshDashboard(workspaceId, "status_update");
+  await refreshDashboard(workspaceId, "status_update");
   return NextResponse.json({ success: true, status: next });
 }

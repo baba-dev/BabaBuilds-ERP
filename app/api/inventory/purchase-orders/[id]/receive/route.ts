@@ -18,7 +18,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const input = receiveSchema.parse((await readJson(req)) ?? {});
     const out = await receivePurchaseOrder({ workspaceId, userId, poId: id, input });
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_receipt', action: 'write', error: String(error) });
     }

@@ -2,8 +2,8 @@
  * Redis foundation configuration. Pure and side-effect free: importing this file
  * never creates a connection or enables Redis for existing ERP workflows.
  */
-export type RedisPurpose = 'cache' | 'queue';
-export type RedisFeature = 'cache' | 'rateLimits' | 'jobs';
+export type RedisPurpose = 'cache' | 'queue' | 'dataCache';
+export type RedisFeature = 'cache' | 'rateLimits' | 'jobs' | 'dashboardCache' | 'reportCache';
 
 export type RedisConfig = {
   enabled: boolean;
@@ -14,7 +14,7 @@ export type RedisConfig = {
   commandTimeoutMs: number;
 };
 
-const PURPOSES = ['cache', 'queue'] as const;
+const PURPOSES = ['cache', 'queue', 'dataCache'] as const;
 
 function flag(env: NodeJS.ProcessEnv, key: string): boolean {
   const raw = env[key]?.trim().toLowerCase();
@@ -59,6 +59,8 @@ export function loadRedisConfig(env: NodeJS.ProcessEnv = process.env): RedisConf
     cache: flag(env, 'ERP_REDIS_CACHE_ENABLED'),
     rateLimits: flag(env, 'ERP_REDIS_RATE_LIMIT_ENABLED'),
     jobs: flag(env, 'ERP_REDIS_JOBS_ENABLED'),
+    dashboardCache: flag(env, 'ERP_REDIS_DASHBOARD_CACHE_ENABLED'),
+    reportCache: flag(env, 'ERP_REDIS_REPORT_CACHE_ENABLED'),
   };
 
   if (!enabled && Object.values(requested).some(Boolean)) {
@@ -74,13 +76,20 @@ export function loadRedisConfig(env: NodeJS.ProcessEnv = process.env): RedisConf
   const urls = enabled ? {
     cache: endpoint(env, 'ERP_REDIS_CACHE_URL'),
     queue: endpoint(env, 'ERP_REDIS_QUEUE_URL'),
-  } : { cache: null, queue: null };
+    dataCache: endpoint(env, 'ERP_REDIS_DATA_CACHE_URL'),
+  } : { cache: null, queue: null, dataCache: null };
 
   if (enabled && PURPOSES.every((purpose) => !urls[purpose])) {
     throw new Error('At least one ERP Redis endpoint is required when enabled');
   }
-  if (requested.cache || requested.rateLimits) {
-    if (!urls.cache) throw new Error('ERP_REDIS_CACHE_URL is required for caching and rate limits');
+  if (requested.rateLimits && !urls.cache) {
+    throw new Error('ERP_REDIS_CACHE_URL is required for rate limits');
+  }
+  if (requested.cache && !urls.dataCache) {
+    throw new Error('ERP_REDIS_DATA_CACHE_URL is required for data caching');
+  }
+  if ((requested.dashboardCache || requested.reportCache) && !requested.cache) {
+    throw new Error('ERP_REDIS_CACHE_ENABLED must be true before dashboard or report caching');
   }
   if (requested.rateLimits && !urls.queue) {
     throw new Error('ERP_REDIS_QUEUE_URL is required for authentication rate limits');

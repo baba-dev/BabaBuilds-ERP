@@ -19,6 +19,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (r._count.priceChanges >= 12) return retainerError(409, "TOO_MANY", "Remove a pending price change before adding another.");
   const change = await prisma.retainerPriceChange.create({ data: { workspaceId, retainerId: id, effectiveDate: new Date(parsed.data.effectiveDate), percent: parsed.data.percent, note: parsed.data.note } });
   await addRetainerEvent(prisma, { workspaceId, retainerId: id, type: "PRICE_SCHEDULED", message: `${parsed.data.percent > 0 ? "+" : ""}${parsed.data.percent}% from ${parsed.data.effectiveDate.slice(0, 10)}`, actorUserId: userId });
-  afterRetainerChange(workspaceId, "price-change");
+  await afterRetainerChange(workspaceId, "price-change");
   return NextResponse.json({ success: true, priceChange: { id: change.id } });
 }

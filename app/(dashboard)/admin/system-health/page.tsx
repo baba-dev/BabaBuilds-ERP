@@ -57,7 +57,7 @@ export default async function SystemHealthPage() {
               <Server className="h-5 w-5" /> Redis infrastructure
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Optional cache and queue connections. Core ERP uses PostgreSQL independently.
+              Optional rate-limit, queue and data-cache connections. Core ERP uses PostgreSQL independently.
             </p>
           </div>
           <span className="rounded-full border px-3 py-1 text-sm font-medium capitalize">
@@ -65,9 +65,9 @@ export default async function SystemHealthPage() {
           </span>
         </div>
         <div className="grid gap-3 p-6 sm:grid-cols-2">
-          {(['cache', 'queue'] as const).map((purpose) => (
+          {(['cache', 'queue', 'dataCache'] as const).map((purpose) => (
             <div key={purpose} className="rounded-lg border bg-muted/20 p-4">
-              <p className="text-sm font-medium">{purpose === 'cache' ? 'Cache and rate limits' : 'Background queues'}</p>
+              <p className="text-sm font-medium">{purpose === 'cache' ? 'Rate limits' : purpose === 'queue' ? 'Background queues' : 'Dashboard and report data cache'}</p>
               <p className="mt-2 text-sm capitalize text-muted-foreground">
                 {redis.connections[purpose].status.replace('-', ' ')}
                 {redis.connections[purpose].latencyMs !== undefined
@@ -78,7 +78,7 @@ export default async function SystemHealthPage() {
           ))}
         </div>
         <p className="px-6 pb-5 text-xs text-muted-foreground">
-          Namespace: {redis.namespace ?? 'Not configured'} · Redis features remain opt-in.
+          Namespace: {redis.namespace ?? 'Not configured'} · Dashboard cache: {redis.features.dashboardCache ? 'enabled' : 'disabled'} · Report cache: {redis.features.reportCache ? 'enabled' : 'disabled'}.
         </p>
       </section>
 

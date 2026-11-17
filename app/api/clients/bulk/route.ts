@@ -46,7 +46,7 @@ export async function POST(request: Request) {
       if (next !== r.tags) { await prisma.client.update({ where: { id: r.id }, data: { tags: next } }); changed += 1; }
     }
   }
-  try { invalidateDashboardCacheForWorkspace(workspaceId); } catch { /* best effort */ }
+  try { await invalidateDashboardCacheForWorkspace(workspaceId); } catch { /* best effort */ }
   void logActivity({ action: `client_bulk_${action.toLowerCase()}`, status: "SUCCESS", workspaceId, actor: { userId: auth.ctx.userId ?? undefined, email: auth.ctx.email ?? undefined }, entity: { type: "client", id: null }, metadata: { requested: ids.length, changed, value: value ?? null } }).catch(() => null);
   return NextResponse.json({ success: true, requested: ids.length, changed });
 }

@@ -89,7 +89,7 @@ export async function PUT(req: Request, ctx: Ctx) {
     const updated = await prisma.product.update({ where: { id }, data });
     if (newImage) await removeProductImage(workspaceId, existing.imageUrl);
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_product', action: 'write', error: String(error) });
     }
@@ -130,7 +130,7 @@ export async function DELETE(req: Request, ctx: Ctx) {
     }
     if (archived) await prisma.product.update({ where: { id }, data: { archivedAt: new Date(), showInShop: false } });
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_product', action: 'write', error: String(error) });
     }

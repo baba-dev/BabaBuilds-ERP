@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       results.push(r.ok ? { id, ok: true } : { id, ok: false, message: r.message });
     }
   }
-  afterRetainerChange(workspaceId, `bulk-${action}`);
+  await afterRetainerChange(workspaceId, `bulk-${action}`);
   const succeeded = results.filter((r) => r.ok).length;
   return NextResponse.json({ success: true, succeeded, failed: results.length - succeeded, results });
 }

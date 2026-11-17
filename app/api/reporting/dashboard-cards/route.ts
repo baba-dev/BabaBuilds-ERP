@@ -11,7 +11,7 @@ export async function GET() {
     const cards = (await Promise.all(views.map(async (v) => {
       const def = getReport(v.reportId);
       if (!def || !(await reportAllowed(def, userId, workspaceId))) return null;
-      const r = await runReport(workspaceId, userId, { reportId: v.reportId, ...sanitizeParams(v.paramsJson) }).catch(() => null);
+      const r = await runReport(workspaceId, userId, { reportId: v.reportId, ...sanitizeParams(v.paramsJson) }, new Date(), { interactiveCache: true }).catch(() => null);
       return r ? { id: v.id, name: v.name, reportId: v.reportId, currency: r.currency, kpis: r.kpis.slice(0, 3), insights: r.insights.slice(0, 1) } : null;
     }))).filter(Boolean);
     return Response.json({ cards }, { headers: { 'Cache-Control': 'no-store' } });

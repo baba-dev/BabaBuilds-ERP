@@ -10,6 +10,8 @@ import { qualityFor } from '@/lib/reporting/quality';
 import { buildInsights, sparkFor } from '@/lib/reporting/insights';
 import { runCustomReport, CUSTOM_REPORT_META } from '@/lib/reporting/builder';
 import type { Ctx, ReportBody, ReportDef, ReportResult } from '@/lib/reporting/types';
+import { cachedDataSnapshot, isRedisDataCacheEnabled } from '@/lib/redis/data-cache';
+import { resolveLiveCacheAuthorization } from '@/lib/redis/cache-authorization';
 
 export type { Col, Cell, Format, Kpi, Row, ReportResult, ReportDef, ChartSpec, QualityIssue, Insight } from '@/lib/reporting/types';
 
@@ -33,30 +35,103 @@ export type RunInput = { reportId: string; period?: PeriodKey; from?: string | n
 const cache = new Map<string, { at: number; value: ReportResult }>();
 const CACHE_MAX = 200;
 
-export async function runReport(workspaceId: string, userId: string, input: RunInput, now = new Date()): Promise<ReportResult | null> {
+/**
+ * Only these built-in interactive reports are eligible for shared Redis caching.
+ * PDF/CSV exports, scheduled emails and immutable external-share snapshots never
+ * opt in, and continue to compute directly from PostgreSQL while Redis mode is on.
+ */
+const REDIS_INTERACTIVE_REPORTS = new Set([
+  'cash_forecast', 'ar_aging', 'ap_aging', 'financial_position', 'mrr',
+]);
+
+export async function runReport(
+  workspaceId: string,
+  userId: string,
+  input: RunInput,
+  now = new Date(),
+  options: { interactiveCache?: boolean } = {},
+): Promise<ReportResult | null> {
   const def = getReport(input.reportId);
   if (!def) return null;
-  const compareMode: CompareMode | null = def.comparable && input.compare ? (input.compare === 'yoy' ? 'yoy' : 'previous') : null;
+  const compareMode: CompareMode | null = def.comparable && input.compare
+    ? (input.compare === 'yoy' ? 'yoy' : 'previous') : null;
 
-  const cacheKey = def.cacheSeconds && input.reportId !== 'custom' ? `${workspaceId}|${userId}|${input.reportId}|${input.period}|${input.from}|${input.to}|${compareMode}` : null;
-  if (cacheKey) { const hit = cache.get(cacheKey); if (hit && now.getTime() - hit.at < (def.cacheSeconds ?? 0) * 1000) return hit.value; }
+  let redisReportMode = false;
+  try {
+    redisReportMode = isRedisDataCacheEnabled('report');
+  } catch {
+    // Configuration errors must not prevent authoritative reporting queries.
+    redisReportMode = true; // bypass legacy per-process cache when requested.
+  }
+  const legacyKey = !redisReportMode && def.cacheSeconds && input.reportId !== 'custom'
+    ? [workspaceId, userId, input.reportId, input.period, input.from, input.to, compareMode].join('|')
+    : null;
+  if (legacyKey) {
+    const hit = cache.get(legacyKey);
+    if (hit && now.getTime() - hit.at < (def.cacheSeconds ?? 0) * 1000) return hit.value;
+  }
 
-  const ws = await prisma.workspace.findUnique({ where: { id: workspaceId }, select: { baseCurrency: true, countryCode: true } });
-  const countryCode = ws?.countryCode ?? 'IN';
-  const range: PeriodRange = def.period === 'range' ? resolvePeriod(input.period ?? 'this_fy', countryCode, now, { from: input.from, to: input.to }) : resolvePeriod('all', countryCode, now);
-  const ctx: Ctx = { workspaceId, userId, range, now, currency: ws?.baseCurrency ?? 'INR', countryCode };
-  const other = compareMode === 'yoy' ? yearAgoRange(range) : compareMode === 'previous' ? previousRange(range) : null;
-
-  const run = (c: Ctx): Promise<ReportBody> => (def.id === 'custom' ? runCustomReport(c, input.spec) : def.build(c));
-  const [body, before, quality] = await Promise.all([run(ctx), other ? run({ ...ctx, range: other }) : Promise.resolve(null), qualityFor(def.id, ctx).catch(() => [])]);
-
-  const kpis = body.kpis.map((k) => ({ ...k, spark: sparkFor(k.key, body) }));
-  const result: ReportResult = {
-    ...body, kpis, quality, insights: buildInsights(body, before?.kpis), currency: ctx.currency, generatedAt: now.toISOString(),
-    range: def.period === 'range' ? { key: range.key, from: range.from?.toISOString() ?? null, to: range.to?.toISOString() ?? null } : null,
-    ...(before ? { previous: before.kpis, compareMode: compareMode ?? undefined } : {}),
+  const calculate = async (): Promise<ReportResult> => {
+    const ws = await prisma.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { baseCurrency: true, countryCode: true },
+    });
+    const countryCode = ws?.countryCode ?? 'IN';
+    const range: PeriodRange = def.period === 'range'
+      ? resolvePeriod(input.period ?? 'this_fy', countryCode, now, { from: input.from, to: input.to })
+      : resolvePeriod('all', countryCode, now);
+    const ctx: Ctx = {
+      workspaceId, userId, range, now,
+      currency: ws?.baseCurrency ?? 'INR', countryCode,
+    };
+    const other = compareMode === 'yoy' ? yearAgoRange(range)
+      : compareMode === 'previous' ? previousRange(range) : null;
+    const run = (c: Ctx): Promise<ReportBody> => def.id === 'custom'
+      ? runCustomReport(c, input.spec) : def.build(c);
+    const [body, before, quality] = await Promise.all([
+      run(ctx),
+      other ? run({ ...ctx, range: other }) : Promise.resolve(null),
+      qualityFor(def.id, ctx).catch(() => []),
+    ]);
+    const kpis = body.kpis.map((k) => ({ ...k, spark: sparkFor(k.key, body) }));
+    return {
+      ...body, kpis, quality,
+      insights: buildInsights(body, before?.kpis),
+      currency: ctx.currency,
+      generatedAt: now.toISOString(),
+      range: def.period === 'range'
+        ? { key: range.key, from: range.from?.toISOString() ?? null, to: range.to?.toISOString() ?? null }
+        : null,
+      ...(before ? { previous: before.kpis, compareMode: compareMode ?? undefined } : {}),
+    };
   };
-  if (cacheKey) { if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string); cache.set(cacheKey, { at: now.getTime(), value: result }); }
+
+  if (redisReportMode && options.interactiveCache &&
+      REDIS_INTERACTIVE_REPORTS.has(def.id) && def.cacheSeconds &&
+      input.reportId !== 'custom') {
+    // Always inspect the user's current workspace role, report permission
+    // and enabled modules BEFORE a potential Redis hit.
+    const access = await resolveLiveCacheAuthorization(
+      userId, workspaceId, 'reporting_center.view',
+    );
+    if (access && await reportAllowed(def, userId, workspaceId)) {
+      const snapshot = await cachedDataSnapshot('report', {
+        workspaceId, userId,
+        authorizationFingerprint: access.fingerprint,
+        variant: JSON.stringify([
+          input.reportId, input.period ?? null, input.from ?? null,
+          input.to ?? null, compareMode,
+        ]),
+      }, def.cacheSeconds, calculate);
+      return snapshot.value;
+    }
+  }
+
+  const result = await calculate();
+  if (legacyKey) {
+    if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string);
+    cache.set(legacyKey, { at: now.getTime(), value: result });
+  }
   return result;
 }
 

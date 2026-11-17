@@ -77,7 +77,7 @@ export async function POST(req: Request) {
       return tx.product.findFirstOrThrow({ where: { id: created.id } });
     });
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'inventory_product', action: 'write', error: String(error) });
     }

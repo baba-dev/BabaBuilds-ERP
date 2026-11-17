@@ -25,8 +25,8 @@ export type ServiceResult<T> = ({ ok: true } & T) | { ok: false; status: number;
 const fail = (status: number, code: string, message: string, extra?: Record<string, unknown>) => ({ ok: false as const, status, code, message, extra });
 export const serviceError = (e: { status: number; code: string; message: string; extra?: Record<string, unknown> }) => expenseError(e.status, e.code, e.message, e.extra);
 
-function bust(workspaceId: string, action: string) {
-  try { invalidateDashboardCacheForWorkspace(workspaceId); } catch (error) { noteDashboardCacheIncident("invalidationFailures", { workspaceId, entity: "expense", action, error: String(error) }); }
+async function bust(workspaceId: string, action: string) {
+  try { await invalidateDashboardCacheForWorkspace(workspaceId); } catch (error) { noteDashboardCacheIncident("invalidationFailures", { workspaceId, entity: "expense", action, error: String(error) }); }
 }
 
 /** Type, size, real content and malware checks, then a private file. */
@@ -171,7 +171,7 @@ export async function updateExpense(ctx: ExpenseCtx, id: string, core: Partial<E
   });
   if (opts.replaceReceipt && existing.receiptUrl && existing.receiptUrl !== expense.receiptUrl) await removeReceiptFile(existing.receiptUrl);
   void logActivity({ action: "expense_updated", status: "SUCCESS", workspaceId: ctx.workspaceId, actor: { userId: ctx.userId, email: ctx.email ?? undefined }, entity: { type: "expense", id }, metadata: { changed, from: { amount: Number(existing.amount), vendor: existing.vendor, category: existing.category }, to: { amount: Number(expense.amount), vendor: expense.vendor, category: expense.category } } });
-  bust(ctx.workspaceId, "update");
+  await bust(ctx.workspaceId, "update");
   return { ok: true, expense, changed };
 }
 
@@ -185,7 +185,7 @@ export async function deleteExpenses(ctx: ExpenseCtx, ids: string[]): Promise<Se
   ]);
   for (const r of rows) await removeReceiptFile(r.receiptUrl);
   void logActivity({ action: "expense_deleted", status: "SUCCESS", workspaceId: ctx.workspaceId, actor: { userId: ctx.userId, email: ctx.email ?? undefined }, entity: { type: "expense", id: found[0] }, metadata: { count: rows.length, items: rows.slice(0, 20).map((r) => ({ id: r.id, vendor: r.vendor, amount: Number(r.amount), category: r.category })) } });
-  bust(ctx.workspaceId, "delete");
+  await bust(ctx.workspaceId, "delete");
   return { ok: true, deleted: rows.length };
 }
 
@@ -194,14 +194,14 @@ export async function markPaid(ctx: ExpenseCtx, ids: string[], paidAt: Date): Pr
   const res = await prisma.expense.updateMany({ where: { id: { in: ids }, workspaceId: ctx.workspaceId, paymentStatus: "UNPAID" }, data: { paymentStatus: "PAID", paidAt } });
   if (res.count === 0) return fail(404, "NOTHING_TO_PAY", "None of these bills are waiting for payment.");
   void logActivity({ action: "expense_marked_paid", status: "SUCCESS", workspaceId: ctx.workspaceId, actor: { userId: ctx.userId, email: ctx.email ?? undefined }, entity: { type: "expense", id: ids[0] }, metadata: { count: res.count, paidAt: paidAt.toISOString() } });
-  bust(ctx.workspaceId, "pay");
+  await bust(ctx.workspaceId, "pay");
   return { ok: true, updated: res.count };
 }
 
 export async function recategorize(ctx: ExpenseCtx, ids: string[], category: string): Promise<ServiceResult<{ updated: number }>> {
   const res = await prisma.expense.updateMany({ where: { id: { in: ids }, workspaceId: ctx.workspaceId }, data: { category } });
   void logActivity({ action: "expense_recategorized", status: "SUCCESS", workspaceId: ctx.workspaceId, actor: { userId: ctx.userId, email: ctx.email ?? undefined }, entity: { type: "expense", id: ids[0] }, metadata: { count: res.count, category } });
-  bust(ctx.workspaceId, "recategorize");
+  await bust(ctx.workspaceId, "recategorize");
   return { ok: true, updated: res.count };
 }
 
@@ -225,6 +225,6 @@ export async function reviewExpenses(ctx: ExpenseCtx, ids: string[], decision: "
     }
   });
   void logActivity({ action: decision === "APPROVE" ? "expense_approved" : "expense_rejected", status: "SUCCESS", workspaceId: ctx.workspaceId, actor: { userId: ctx.userId, email: ctx.email ?? undefined }, entity: { type: "expense", id: rows[0].id }, metadata: { count: rows.length, reason: reason ?? null } });
-  bust(ctx.workspaceId, decision.toLowerCase());
+  await bust(ctx.workspaceId, decision.toLowerCase());
   return { ok: true, updated: rows.length, skipped };
 }

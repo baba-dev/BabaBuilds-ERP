@@ -212,7 +212,7 @@ async function markInvoicePaid(invoiceId: string, workspaceId: string, amount: n
   // Invalidate the in-process dashboard cache so the workspace sees the updated
   // revenue / outstanding totals immediately without waiting for TTL expiry.
   try {
-    invalidateDashboardCacheForWorkspace(workspaceId);
+    await invalidateDashboardCacheForWorkspace(workspaceId);
   } catch (err) {
     noteDashboardCacheIncident("invalidationFailures", {
       workspaceId,

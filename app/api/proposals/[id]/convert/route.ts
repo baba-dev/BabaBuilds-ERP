@@ -25,9 +25,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       createRetainer: parsed.data.createRetainer,
     });
     if (!result.ok) return proposalError(result.status, result.code, result.message);
-    afterProposalChange(workspaceId, "convert");
+    await afterProposalChange(workspaceId, "convert");
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch {
       /* best effort */
     }

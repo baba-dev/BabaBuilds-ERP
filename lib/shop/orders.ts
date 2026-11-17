@@ -17,8 +17,8 @@ async function load(workspaceId: string, id: string) {
   return o;
 }
 
-function announce(o: { id: string; workspaceId: string; buyerName: string; buyerEmail: string; currency: string; amount: { toString(): string } }, from: string, to: ShopStatus) {
-  try { invalidateDashboardCacheForWorkspace(o.workspaceId); } catch { /* stale cache is harmless */ }
+async function announce(o: { id: string; workspaceId: string; buyerName: string; buyerEmail: string; currency: string; amount: { toString(): string } }, from: string, to: ShopStatus) {
+  try { await invalidateDashboardCacheForWorkspace(o.workspaceId); } catch { /* stale cache is harmless */ }
   void dispatchNotification({ event: 'SHOP_ORDER_STATUS_CHANGED', workspaceId: o.workspaceId, data: { orderId: o.id, buyerName: o.buyerName, buyerEmail: o.buyerEmail, oldStatus: from, newStatus: to, amount: `${o.currency} ${o.amount.toString()}` } }).catch(() => null);
 }
 
@@ -27,7 +27,7 @@ export async function shipOrder(workspaceId: string, id: string, input: { courie
   const o = await load(workspaceId, id);
   if (!canMove(o.status, 'SHIPPED')) throw new ShopOrderError('INVALID_MOVE', `An order that is ${o.status.toLowerCase().replace('_', ' ')} cannot be marked as shipped.`);
   const u = await prisma.shopOrder.update({ where: { id }, data: { status: 'SHIPPED', shippedAt: new Date(), courier: input.courier || null, trackingRef: input.trackingRef || null } });
-  announce(u, o.status, 'SHIPPED');
+  await announce(u, o.status, 'SHIPPED');
   const emailed = await emailBuyer(id, 'SHIPPED');
   return { status: 'SHIPPED' as const, emailed };
 }
@@ -36,7 +36,7 @@ export async function deliverOrder(workspaceId: string, id: string) {
   const o = await load(workspaceId, id);
   if (!canMove(o.status, 'FULFILLED')) throw new ShopOrderError('INVALID_MOVE', `An order that is ${o.status.toLowerCase().replace('_', ' ')} cannot be marked as delivered.`);
   const u = await prisma.shopOrder.update({ where: { id }, data: { status: 'FULFILLED', fulfilledAt: new Date(), ...(o.shippedAt ? {} : { shippedAt: new Date() }) } });
-  announce(u, o.status, 'FULFILLED');
+  await announce(u, o.status, 'FULFILLED');
   return { status: 'FULFILLED' as const };
 }
 
@@ -61,7 +61,7 @@ export async function refundOrder(workspaceId: string, userId: string, id: strin
     }
   }
   const u = await prisma.shopOrder.update({ where: { id }, data: { status: 'REFUNDED', refundedAt: new Date(), internalNote: [o.internalNote, `Refunded: ${reason}`].filter(Boolean).join('\n') } });
-  announce(u, o.status, 'REFUNDED');
+  await announce(u, o.status, 'REFUNDED');
   const emailed = await emailBuyer(id, 'REFUNDED');
   return { status: 'REFUNDED' as const, creditNote, emailed, gateway: o.gateway };
 }

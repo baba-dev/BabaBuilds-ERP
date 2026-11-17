@@ -52,6 +52,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ to
     userAgent: request.headers.get("user-agent") || null,
     metadata: { newStatus: status, note: clientNote },
   }).catch(() => null);
-  afterProposalChange(proposal.workspaceId, "client_feedback");
+  await afterProposalChange(proposal.workspaceId, "client_feedback");
   return NextResponse.json({ success: true, status });
 }

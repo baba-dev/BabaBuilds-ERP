@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     });
 
     try {
-      invalidateDashboardCacheForWorkspace(workspaceId);
+      await invalidateDashboardCacheForWorkspace(workspaceId);
     } catch (error) {
       noteDashboardCacheIncident('invalidationFailures', { workspaceId, entity: 'investment', action: 'create', error: String(error) });
     }

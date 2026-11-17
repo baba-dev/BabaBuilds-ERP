@@ -99,7 +99,7 @@ export async function DELETE(request: Request, { params }: Ctx) {
         console.error("Failed to delete invoice PDF file");
       }
     }
-    invalidateInvoiceCaches(workspaceId, "delete");
+    await invalidateInvoiceCaches(workspaceId, "delete");
     logActivity({
       action: "invoice_deleted",
       status: "SUCCESS",

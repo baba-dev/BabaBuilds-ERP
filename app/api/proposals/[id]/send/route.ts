@@ -77,6 +77,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     actorUserId: userId,
   });
   logActivity({ action: "proposal_sent", status: "SUCCESS", workspaceId, actor: { userId, email }, entity: { type: "proposal", id }, request, metadata: { kind } });
-  afterProposalChange(workspaceId, "send");
+  await afterProposalChange(workspaceId, "send");
   return NextResponse.json({ success: true, status: proposal.status === "DRAFT" ? "SENT" : proposal.status, sentTo: to, kind });
 }

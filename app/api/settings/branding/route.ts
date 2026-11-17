@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     url = stored.url;
     await prisma.businessProfile.update({ where: { workspaceId }, data: { [column]: url } });
   }
-  try { invalidateDashboardCacheForWorkspace(workspaceId); } catch { /* cache is best effort */ }
+  try { await invalidateDashboardCacheForWorkspace(workspaceId); } catch { /* cache is best effort */ }
   logActivity({ action: url ? "settings_branding_updated" : "settings_branding_removed", status: "SUCCESS", workspaceId, actor: { userId, email }, entity: { type: "workspace_settings", id: workspaceId }, metadata: { kind }, request });
   return NextResponse.json({ success: true, kind, url });
 }

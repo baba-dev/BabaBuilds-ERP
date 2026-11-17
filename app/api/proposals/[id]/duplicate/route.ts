@@ -58,7 +58,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
         await addProposalEvent(tx, { workspaceId, proposalId: created.id, type: "CREATED", message: `Duplicated from ${src.proposalNo}`, actorUserId: userId });
         return created;
       });
-      afterProposalChange(workspaceId, "duplicate");
+      await afterProposalChange(workspaceId, "duplicate");
       return NextResponse.json({ success: true, proposal: { id: copy.id, proposalNo: copy.proposalNo } });
     } catch (error) {
       if (attempt < 5 && isUniqueConstraintError(error)) continue;
