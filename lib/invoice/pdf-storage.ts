@@ -18,8 +18,15 @@ export const getInvoicePdfStoragePath = ({
   if (fromPdfPath.length >= 3 && fromPdfPath[0] === "invoices") {
     // Expected persisted shape: /invoices/<workspaceId>/<filename>.pdf
     const [, persistedWorkspaceId, ...rest] = fromPdfPath;
-    if (persistedWorkspaceId && rest.length > 0) {
-      return buildPrivatePath("invoices", [persistedWorkspaceId, ...rest]);
+    // The DB row belongs to workspaceId; never let its stored path cross tenants.
+    // Accept existing nested invoice paths, but not unsafe or empty segments.
+    if (
+      persistedWorkspaceId === workspaceId &&
+      rest.length > 0 &&
+      rest.every((segment) => segment !== "." && !segment.includes("..") &&
+        !segment.includes("\\") && !/[\u0000-\u001f\u007f]/.test(segment))
+    ) {
+      return buildPrivatePath("invoices", [workspaceId, ...rest]);
     }
   }
 

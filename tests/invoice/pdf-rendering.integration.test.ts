@@ -212,4 +212,24 @@ describe("pdf rendering integration", () => {
 
     expect(fullPath).toEqual(path.join("/tmp/private-root", "invoices", "ws_123", "INV_26-27_001.pdf"));
   });
+
+  it("does not use a persisted PDF path from another workspace", () => {
+    process.env.PRIVATE_UPLOADS_DIR = "/tmp/private-root";
+    const got = getInvoicePdfStoragePath({
+      workspaceId: "ws_a", invoiceNumber: "INV/26-27/002",
+      pdfPath: "/invoices/ws_b/other-company.pdf",
+    });
+    expect(got).toBe(path.join("/tmp/private-root", "invoices", "ws_a", "INV_26-27_002.pdf"));
+  });
+
+  it.each([
+    "/invoices/ws_a/../../secrets.pdf",
+    "/invoices/ws_a/./untrusted.pdf",
+    "/invoices/ws_a/a\\\\b.pdf",
+  ])("ignores an unsafe persisted PDF path (%s)", (pdfPath) => {
+    process.env.PRIVATE_UPLOADS_DIR = "/tmp/private-root";
+    expect(getInvoicePdfStoragePath({
+      workspaceId: "ws_a", invoiceNumber: "INV/26-27/003", pdfPath,
+    })).toBe(path.join("/tmp/private-root", "invoices", "ws_a", "INV_26-27_003.pdf"));
+  });
 });
