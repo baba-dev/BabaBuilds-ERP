@@ -40,3 +40,23 @@ Never start the worker in a Next.js request or automatically activate a systemd 
 5. Rollback via producer and worker flags, stop ERP worker alone, preserve PostgreSQL pending outbox records. Drain before returning pilot notifications to the legacy path to avoid duplicates.
 
 Financial postings, external webhooks, auth, payment settlements, payroll and critical business cron mutations are explicit non-goals.
+## Operator runbook — no automatic activation
+
+**Merge gate:** apply the additive Prisma outbox migration to a fresh restored PostgreSQL rehearsal first and test checksum parity. The existing ERP release promoter does **not** run live production migrations; before merging, arrange a reviewed migration window so the auto-deployer does not pick up a schema-incompatible release. Do not run financial imports or destructive maintenance with this rollout.
+
+1. Collect read-only capacity and safety evidence: `free -m`, `ss -H -lnt`, `systemctl is-active` for ERP/MenuMinute/ClubKeep and all existing Redis services. Require >=512 MiB MemAvailable above baseline, port 6387 free, healthy Redis 6385 security counters, and PostgreSQL max connections spare.
+2. Pin the reviewed PR merge SHA when approved. Copy `scripts/operations/erp-redis-phase4-provision.sh` and `ops/systemd/bababuilds-erp-worker.service` from that exact commit. `bash -n` the operator, then run as root with the worker unit path. **This is a separate manual operator action; the GitHub Actions web deploy never executes it.**
+3. The operator creates only ERP Redis `127.0.0.1:6387` with isolated ACL, 128MB noeviction AOF everysec, and installs the **disabled** worker unit. It appends protected `ERP_REDIS_JOB_URL`, `ERP_REDIS_JOB_WORKER_ENABLED=false`, `ERP_REDIS_INAPP_DEADLINE_ENABLED=false` to the root-only ERP env. Run the authenticated Phase 4 preflight script; never output passwords.
+4. With the PostgreSQL schema migrated and matching the release, explicitly set `ERP_REDIS_JOBS_ENABLED=true` and `ERP_REDIS_JOB_WORKER_ENABLED=true`. Restart **ERP web only** for new producer config, then `systemctl start bababuilds-erp-worker.service` manually (do not enable at boot until soak succeeds). Confirm `/api/admin/jobs/health` shows jobs Redis ready and worker flag on. Pilot remains OFF.
+5. Choose an internal workspace with a future task; flip `ERP_REDIS_INAPP_DEADLINE_ENABLED=true`, restart only ERP web. Trigger its authorized existing alert cron once. Confirm one outbox row, eventual DONE, one in-app notification per intended active recipient and no duplicate on repeated cron. Existing email/push channels remain separate; do not send test messages to real customers.
+6. Watch pending age, failed jobs, PostgreSQL connections, Redis AOF memory and login throttling for a full operational cycle. Revoke test membership and re-run to check no new notification. Do not alter 6384/6385/6386 or MenuMinute/ClubKeep services.
+7. Rollback the pilot independently by setting `ERP_REDIS_INAPP_DEADLINE_ENABLED=false` and restarting ERP web, **then drain the worker before stopping it**. If pending events exist, decide whether to drain or park them; returning to the immediate legacy path before draining can duplicate notices. Never delete outbox records or use Redis FLUSH commands. For full jobs rollback turn off the worker, stop only `bababuilds-erp-worker.service`, and finally disable the jobs master; retain AOF and PostgreSQL outbox.
+8. To retry a FAILED occurrence, use the admin Security jobs card. It removes only that specific failed BullMQ job ID and atomically returns the corresponding PostgreSQL outbox row to PENDING; the worker's reconciler republishes it. Never bulk retry unknown external side effects.
+
+### Hard acceptance criteria
+- Outbox created first; Redis contains only `{outboxId}`, never financial details, emails or credentials.
+- Worker is a separate Node26 process with bounded DB pool, concurrency, SIGTERM drain and replay after crash.
+- DB outbox row lock + in-app inserts + DONE marker commit together, making the pilot idempotent across duplicate job attempts.
+- No notifications to deactivated users, no stale task notifications after task completion/suspension; read live preferences at execution.
+- CI PostgreSQL/Redis replay test and immutable ARM64 package pass. All Phase 2/3 feature toggles unchanged.
+- No production activation, migrations, VPS service installation or cross-app restart from opening/merging the PR.

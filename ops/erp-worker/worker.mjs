@@ -81,7 +81,7 @@ async function deliverDeadline(outboxId) {
     await conn.query('BEGIN');
     inTransaction = true;
     const event = await conn.query(
-      'SELECT "id", "workspaceId", "kind", "payloadJson", "status" FROM "ErpJobOutbox" WHERE "id"=$1 FOR UPDATE',
+      'SELECT "id", "workspaceId", "kind", "dedupeKey", "payloadJson", "status" FROM "ErpJobOutbox" WHERE "id"=$1 FOR UPDATE',
       [outboxId],
     );
     const row = event.rows[0];
@@ -109,6 +109,7 @@ async function deliverDeadline(outboxId) {
     const eligible = ws.rows[0]?.subscriptionStatus !== 'SUSPENDED' &&
       Boolean(ws.rows[0]) && entry && entry.status !== 'DONE' &&
       due && Number.isFinite(due.getTime()) &&
+      row.dedupeKey.endsWith('-due-' + due.toISOString().slice(0, 10)) &&
       due.getTime() > Date.now() - 86400_000;
 
     if (eligible) {
