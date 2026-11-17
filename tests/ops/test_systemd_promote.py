@@ -91,6 +91,14 @@ class SystemdPromoteTests(unittest.TestCase):
                              (app / "public/partner-kit").resolve())
             self.assertFalse((app / "public/partner-kit/asset.svg").exists())
 
+    def test_private_production_preview_never_enables_auth_blocking_staging_mode(self):
+        script = (ROOT / "ops/erp-release/systemd_promote.py").read_text()
+        preview = script.split("def preview(runtime):", 1)[1].split("def switch(", 1)[0]
+        self.assertNotIn('ERP_STAGING_MODE', preview)
+        self.assertIn('PORT": "3199"', preview)
+        self.assertIn("health(3199)", preview)
+        self.assertNotIn("health(3199, staging=True)", preview)
+
     def test_switch_updates_only_symlink_and_restores_on_failed_health(self):
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
