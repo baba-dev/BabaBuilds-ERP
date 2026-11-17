@@ -77,5 +77,9 @@ inspected and an authenticated live diagnostic has been verified.
 - Invalid flags, URLs, timeouts and namespaces rejected without secret leakage.
 - Admin-only health report exercises both endpoints independently.
 - No Redis credentials in the API payload or application logs.
-- No code path switches billing, caches or rate limiting to Redis yet.
+- Phase 1 does not switch business or security workflows. Phase 2 adds opt-in distributed limiters; see [Redis Phase 2](./redis-rate-limits-phase2.md).
 - No interference with MenuMinute or ClubKeep Redis keys, ports or processes.
+
+## Phase 2 follow-up
+
+The distributed rate-limit consumer remains disabled until explicitly activated on the VPS with `ERP_REDIS_RATE_LIMIT_ENABLED=true`. This flag additionally requires the ERP queue endpoint so authentication counters can use the persistent non-evicting pool. See [Phase 2 guide](./redis-rate-limits-phase2.md).
