@@ -7,7 +7,6 @@
   "node26": "/opt/bababuilds-erp/node26/bin/node",
   "legacy_node": "/opt/bababuilds-erp/node22/bin/node",
   "legacy_release": "/opt/bababuilds-erp-cutover/cut1611b/app/.next/standalone",
-  "production_env": "/etc/bababuilds-erp/production-app.env",
   "canary_env": "/etc/bababuilds-erp/canary.env",
   "media_map": {
     "private_uploads": "/var/www/bababuilds-erp/private_uploads",
@@ -20,5 +19,9 @@
     "public/partner-kit": "/var/www/bababuilds-erp/public/partner-kit",
     "tmp/share-target": "/var/www/bababuilds-erp/tmp/share-target",
     "backups": "/var/www/bababuilds-erp/backups"
-  }
+  },
+  "production_env_files": [
+    "/var/www/bababuilds-erp/.env",
+    "/etc/bababuilds-erp/production-database.env"
+  ]
 }

@@ -141,7 +141,15 @@ def check_config():
         fail("Node 26 interpreter version mismatch")
     if not run([cfg["legacy_node"], "--version"]).startswith("v22."):
         fail("Retained Node 22 rollback interpreter missing")
-    production = read_env(cfg["production_env"])
+    reviewed = [
+        "/var/www/bababuilds-erp/.env",
+        "/etc/bababuilds-erp/production-database.env",
+    ]
+    if cfg.get("production_env_files") != reviewed:
+        fail("Production must reuse the verified cutover environment files in order")
+    production = {}
+    for protected in reviewed:
+        production.update(read_env(protected))
     candidate = read_env(cfg["canary_env"])
     if not production.get("NEXTAUTH_SECRET") or not production.get("DATABASE_URL"):
         fail("Incomplete protected production environment")
@@ -157,9 +165,7 @@ def check_config():
     }.items():
         if key in candidate and candidate[key] != desired:
             fail("Canary environment must not override isolated runtime: " + key)
-    if cfg["production_env"] != "/etc/bababuilds-erp/production-app.env":
-        fail("Production env path differs from approved operator contract")
-    if cfg["canary_env"] != "/etc/bababuilds-erp/canary.env":
+     if cfg["canary_env"] != "/etc/bababuilds-erp/canary.env":
         fail("Canary env path differs from isolated systemd unit")
     return cfg
 
@@ -230,7 +236,7 @@ def locked():
         fcntl.flock(fd, fcntl.LOCK_UN)
         os.close(fd)
 
-def health(port, *, retries=5):
+def health(port, *, retries=5, check_sw=True):
     for attempt in range(retries):
         try:
             started = time.monotonic()
@@ -240,9 +246,10 @@ def health(port, *, retries=5):
             with urlopen(f"http://127.0.0.1:{port}/api/auth/session", timeout=8) as response:
                 if response.status != 200 or "json" not in response.headers.get("Content-Type", ""):
                     raise RuntimeError("Session unhealthy")
-            with urlopen(f"http://127.0.0.1:{port}/sw.js", timeout=8) as response:
-                if response.status != 200 or "javascript" not in response.headers.get("Content-Type", ""):
-                    raise RuntimeError("Service worker unhealthy")
+            if check_sw:
+                with urlopen(f"http://127.0.0.1:{port}/sw.js", timeout=8) as response:
+                    if response.status != 200 or "javascript" not in response.headers.get("Content-Type", ""):
+                        raise RuntimeError("Service worker unhealthy")
             duration = round((time.monotonic() - started) * 1000)
             if duration > 8000:
                 raise RuntimeError("Health latency exceeded")
@@ -254,21 +261,19 @@ def health(port, *, retries=5):
 
 def pm2_start(cfg, spec, *, env=None):
     # Never use shell=True or a PR-provided command. Only the ERP PM2 app is managed.
-    inherited = {**os.environ, **spec.get("env", {})}
-    if env:
-        inherited.update(env)
     if spec["exec"] == cfg["node26"]:
-        # Node --env-file never overrides an already exported variable.
-        # An old PM2/root shell must not take precedence over the reviewed
-        # Node26 production-app.env (especially PostgreSQL/auth settings).
-        for name in (
-            "DATABASE_URL", "RESTORE_DATABASE_URL", "ERP_STAGING_MODE",
-            "NEXTAUTH_URL", "NEXTAUTH_SECRET", "GOOGLE_CLIENT_ID",
-            "GOOGLE_CLIENT_SECRET", "AUTH_GOOGLE_ENABLED",
-            "AUTH_EMAIL_ENABLED", "EMAIL_SERVER_HOST", "EMAIL_SERVER_PASSWORD"
-        ):
-            inherited.pop(name, None)
-    inherited.update({"HOME": "/root", "PM2_HOME": "/root/.pm2"})
+        # Clean env is mandatory: inherited root/PM2 secrets override Node's
+        # --env-file semantics. Load the existing protected cutover files only.
+        inherited = {
+            "HOME": "/root", "PM2_HOME": "/root/.pm2",
+            "PATH": "/opt/bababuilds-erp/node26/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            **spec.get("env", {})
+        }
+    else:
+        inherited = {**os.environ, **spec.get("env", {})}
+        if env:
+            inherited.update(env)
+        inherited.update({"HOME": "/root", "PM2_HOME": "/root/.pm2"})
     args = [
         cfg["pm2_node"], cfg["pm2_cli"], "start", spec["exec"],
         "--name", PM2_NAME, "--interpreter", "none", "--cwd", spec["cwd"],
@@ -362,7 +367,8 @@ def canary(cfg, sha):
     # identity, loopback-only egress, isolated PostgreSQL 17, port 3101.
     try:
         run(["/usr/bin/systemctl", "start", name], timeout=60)
-        health(cfg["canary_port"], retries=12)
+        # ERP_STAGING_MODE disables SW; only validate it on real production.
+        health(cfg["canary_port"], retries=12, check_sw=False)
         if run(["/usr/bin/systemctl", "is-active", name]) != "active":
             fail("Isolated canary unit not active")
     finally:
@@ -407,7 +413,7 @@ def promote(cfg, *, archive, manifest, sha):
     atomic_json(STATE / "rollback.json", previous)
     # The initial Node 22 cutover release and interpreter are preserved.
     args = [
-        "--env-file=" + cfg["production_env"],
+        *["--env-file=" + value for value in cfg["production_env_files"]],
         str(dest / "server.js"),
     ]
     next_spec = {"exec": cfg["node26"], "cwd": str(dest), "args": args, "env": {
