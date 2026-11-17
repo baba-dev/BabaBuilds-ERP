@@ -45,6 +45,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: npm run typecheck
 
+      - name: Security dependency boundaries
+        if: ${{ !cancelled() }}
+        run: npm run check:security-boundaries
+
       - name: Demo template coverage
         if: ${{ !cancelled() }}
         run: npm run validate:demos

@@ -43,7 +43,8 @@
     "brochure:prepare": "npm run brochure:shell && npm run brochure:api-appendix && npm run brochure:stitch",
     "brochure:capture": "playwright test tests/brochure/capture-brochure.spec.ts --project=chromium",
     "brochure:pdf": "node scripts/brochure-render-pdf.mjs",
-    "brochure:dist": "npm run brochure:prepare && npm run brochure:capture && npm run brochure:pdf"
+    "brochure:dist": "npm run brochure:prepare && npm run brochure:capture && npm run brochure:pdf",
+    "check:security-boundaries": "node scripts/security/check-dependency-boundaries.mjs"
   },
   "dependencies": {
     "@marsidev/react-turnstile": "^1.6.3",
@@ -77,7 +78,7 @@
     "framer-motion": "^12.38.0",
     "groq-sdk": "^1.6.0",
     "html5-qrcode": "^2.3.8",
-    "js-yaml": "^4.3.0",
+    "js-yaml": "^4.3.2",
     "jszip": "^3.10.2",
     "lucide-react": "^0.577.0",
     "next": "16.4.5",
@@ -137,21 +138,37 @@
     "vitest": "^5.1.0"
   },
   "overrides": {
-    "axios": "^1.15.2",
-    "follow-redirects": "^1.16.0",
+    "axios": "^1.21.1",
+    "follow-redirects": "^1.16.3",
     "picomatch": "^4.0.4",
     "path-to-regexp": "^8.4.2",
     "defu": "^6.1.7",
     "effect": "^3.21.1",
     "hono": "^4.12.18",
     "@hono/node-server": "^1.19.14",
-    "brace-expansion@^1": "1.1.14",
-    "brace-expansion@^4": "^5.0.5",
+    "brace-expansion@^1": "1.1.22",
+    "brace-expansion@^4": "^5.0.13",
     "next-auth": {
       "nodemailer": "$nodemailer"
     },
-    "postcss": "^8.5.10",
-    "uuid": "^14.0.0"
+    "postcss": "^8.5.33",
+    "uuid": "^14.0.0",
+    "brace-expansion@^2": "2.1.8",
+    "@humanfs/node": "^0.16.8",
+    "nanoid": "^3.3.20",
+    "source-map-js": "^1.2.2",
+    "@tailwindcss/typography": {
+      "postcss-selector-parser": "6.1.5"
+    },
+    "@serwist/build": {
+      "zod": "4.6.7"
+    },
+    "@serwist/next": {
+      "zod": "4.6.7"
+    },
+    "@serwist/webpack-plugin": {
+      "zod": "4.6.7"
+    }
   },
   "packageManager": "npm@11.20.0"
 }
