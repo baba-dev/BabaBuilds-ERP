@@ -116,7 +116,8 @@
     "web-push": "^3.6.7",
     "zod": "^4.6.7",
     "@prisma/adapter-pg": "7.10.1",
-    "dotenv": "^17.2.3"
+    "dotenv": "^17.2.3",
+    "ioredis": "^6.0.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.0",
