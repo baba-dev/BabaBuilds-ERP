@@ -17,6 +17,7 @@ database, backup, media, or existing runtime is changed.
 - Artifact: `node-v26.13.1-linux-arm64.tar.xz` from version-pinned official HTTPS distribution path.
 - Official published signed SHA-256: `89e1853138db51e8b82d3e98ba9c0d3f2956a28e5e55ea1b7e12d25aae92d5dd`.
 - GPG key: Antoine du Hamel, fingerprint `5BE8A3F6C8A5C01D106C0AD820B1A390B168D356`, copied from [nodejs/release-keys](https://github.com/nodejs/release-keys/tree/481637f813e912c4aa3622d7964ab426c97b8e8d/keys).
+- A secret-free pull-request job verifies the exact same real distribution first.
 - In the trusted-main GitHub Actions job, check the key fingerprint, verify the detached GPG signature on `SHASUMS256.txt` with `gpgv`, require the exact reviewed digest in the signed manifest, and verify the downloaded archive against that digest.
 - Upon delivery, the VPS re-verifies the SHA and the root-owned installer file against its pinned Git blob SHA. The installer itself separately verifies the archive SHA and safe extraction paths.
 
@@ -30,7 +31,8 @@ It requires existing ERP, PostgreSQL 17, MenuMinute web/worker, ClubKeep web,
 and ClubKeep Redis units to be active. It snapshots each unit's `ExecStart`
 before/after the installation and refuses changing or already-switched services.
 
-The Python 3.12+ installer uses a nonblocking root lock, checks real
+The Python 3.12+ installer uses a nonblocking root-only no-follow lock,
+requires that the passed archive has first been copied into a root-owned\n0700 staging directory and independently rechecks its digest, checks real
 root-owned directory ancestry, validates every archive entry and symlink,
 uses `tarfile.extractall(filter="data")`, and atomically renames from a
 private staging directory on the target filesystem. It records a reviewed
