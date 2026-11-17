@@ -87,3 +87,80 @@ fall back to authoritative PostgreSQL, not uncontrolled per-worker cached data.
    `ERP_REDIS_CACHE_ENABLED=false`, restart only ERP. No flush required.
 
 See tracked plan #661. There is deliberately **no automatic enabling in this PR**.
+
+## Review and live operator protocol
+
+The following scripts are committed and reviewed as part of the Phase 3 PR:
+- \`scripts/operations/erp-redis-phase3-provision.sh\`
+- \`scripts/operations/erp-redis-phase3-preflight.sh\`
+
+Before using them, verify the checked-out Git commit is the reviewed merged
+\`main\` SHA and run \`bash -n\` over both scripts. Never execute an unpinned
+download as root. The provisioning script requires ERP, Redis 6384/6385 and
+Phase 2 rate limiting to be running and expects an unoccupied 6386. It refuses
+existing data-cache configuration, ACL files, and target systemd units.
+
+The provisioner creates only the ERP data-cache instance, tests authenticated
+Redis commands and foreign-key ACL denial, appends \`ERP_REDIS_DATA_CACHE_URL\`
+and the **two disabled individual feature flags** to the existing root-owned
+ERP env file. It does not restart ERP. Existing \`ERP_REDIS_CACHE_ENABLED=false\`
+is intentionally preserved. The operator must explicitly enable the master
+flag only after checking the resulting instance with the authenticated
+preflight.
+
+### Recommended staged sequence
+
+1. Merge after all PR checks pass; verify the exact immutable ERP deployment
+   and baseline login, invoices and Admin Security diagnostics.
+2. On the VPS with the exact reviewed scripts, run the provisioning script
+   with root access. Confirm its final status
+   \`ERP_REDIS_PHASE3_PROVISIONED cache=6386 flags=OFF\`.
+3. Run the Phase 3 preflight; require
+   \`ERP_REDIS_PHASE3_PREFLIGHT_PASS cache=6386\`.
+4. Change only \`ERP_REDIS_CACHE_ENABLED=true\` and
+   \`ERP_REDIS_DASHBOARD_CACHE_ENABLED=true\`. Keep
+   \`ERP_REDIS_REPORT_CACHE_ENABLED=false\`. Restart **only ERP**.
+5. Confirm superadmin diagnostics: all three Redis connections ready,
+   Phase 2 rate limits still enabled, dashboard cache enabled, reporting
+   cache disabled. Exercise logged-in dashboard with multiple workspaces,
+   roles and fiscal years, and verify \`X-Dashboard-Cache\` MISS then HIT.
+6. Observe KPI mutations (invoice paid, expense recorded, proposal accepted,
+   inventory changed). Verify a fresh dashboard read after the commit reflects
+   the mutation; compare with PostgreSQL, and monitor \`bypass/error\`.
+7. Only after the dashboard canary is successful, set
+   \`ERP_REDIS_REPORT_CACHE_ENABLED=true\`, then restart ERP. Check five
+   eligible interactive reports; verify export/email/share creation still
+   recompute from PostgreSQL. Compare permitted vs non-permitted users.
+8. To roll back reporting only, set its flag false and restart. To roll back
+   dashboard only, set its flag false and restart. To disable all distributed
+   cache consumers, set \`ERP_REDIS_CACHE_ENABLED=false\` and both feature flags
+   false. **Do not alter** \`ERP_REDIS_RATE_LIMIT_ENABLED=true\`.
+
+### Environment and scope
+
+| Variable | Baseline | Usage |
+| --- | --- | --- |
+| ERP_REDIS_ENABLED | true | Phase 1 parent |
+| ERP_REDIS_RATE_LIMIT_ENABLED | true | Keep Phase 2 active |
+| ERP_REDIS_CACHE_ENABLED | false | Data-cache master |
+| ERP_REDIS_DASHBOARD_CACHE_ENABLED | false | Dashboard independent switch |
+| ERP_REDIS_REPORT_CACHE_ENABLED | false | Reporting independent switch |
+| ERP_REDIS_DATA_CACHE_URL | absent before provisioning | Separate protected Redis 6386 |
+| DASHBOARD_CACHE_ENABLED | existing independent value | Legacy in-process cache when Redis dashboard is off |
+
+The cache TTL is currently clamped to 30 seconds, with a 384 KiB serialized
+payload limit. Header values distinguish HIT/MISS/BYPASS. Admin Security
+shows process-local hit/miss/bypass/error counters, not cluster totals.
+The third Redis instance has a 256 MB \`allkeys-lru\` cap and no AOF.
+It must never contain sessions, rate-limit security counters or payment state.
+
+### Operational gaps deliberately excluded
+
+- No public claim of a measured p95 improvement until actual canary data.
+- No transactional cross-service cache invalidation guarantee for
+  out-of-band database writes or missed invalidations: display data can be
+  at most TTL-stale in these cases. For strictly current financial values
+  always perform the PostgreSQL query.
+- No global cache \`FLUSHDB\`/\`FLUSHALL\` or \`KEYS *\` on any instance.
+- Dashboard and report caches are separate from Next.js HTTP caching; pages
+  remain client-specific and private, with no public CDN response caching.

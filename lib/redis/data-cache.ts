@@ -130,13 +130,14 @@ export async function cachedDataSnapshot<T>(
   ttlSeconds: number,
   compute: () => Promise<T>,
 ): Promise<DataCacheResult<T>> {
-  let config: RedisConfig;
+  let config: RedisConfig | null = null;
   try {
     config = loadRedisConfig();
-    if (!configured(kind, config) || unsafeScope(scope)) return bypass(kind, await compute());
   } catch {
-    // Invalid Redis configuration is an availability issue, never a reason to
-    // fail user-visible dashboard/report reads.
+    // An invalid Redis configuration must not fail a legitimate DB read.
+  }
+  if (!config || !configured(kind, config) || unsafeScope(scope) ||
+      !Number.isFinite(ttlSeconds)) {
     return bypass(kind, await compute());
   }
 

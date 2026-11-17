@@ -90,6 +90,7 @@ jobs:
         env:
           CI_POSTGRES_FINANCE_TESTS: "1"
           CI_REDIS_RATE_LIMIT_TESTS: "1"
+          CI_REDIS_DATA_CACHE_TESTS: "1"
         run: npm test
 
   prisma:
@@ -125,6 +126,7 @@ jobs:
           python3 -m py_compile scripts/operations/retire_erp_sqlite.py
           python3 -m py_compile ops/erp-release/{package,promote,commission,systemd_promote}.py
           bash -n scripts/operations/deploy-erp-standalone.sh ops/erp-release/install.sh
+          bash -n scripts/operations/erp-redis-phase3-provision.sh scripts/operations/erp-redis-phase3-preflight.sh
           python3 -m unittest discover -s tests/ops -p 'test_*.py' -v
 
   build:

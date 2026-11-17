@@ -14,6 +14,7 @@ type Status = {
     status: "disabled" | "ready" | "unavailable" | "misconfigured";
     namespace: string | null;
     features: { rateLimits: boolean; cache: boolean; jobs: boolean; dashboardCache: boolean; reportCache: boolean };
+    cacheMetrics: { dashboard: { hit: number; miss: number; bypass: number; error: number; oversized: number }; report: { hit: number; miss: number; bypass: number; error: number; oversized: number } };
     connections: { cache: { status: string; latencyMs?: number }; queue: { status: string; latencyMs?: number }; dataCache: { status: string; latencyMs?: number } };
   };
 };
@@ -83,6 +84,22 @@ export function SecurityClient() {
           Namespace: {data.redis.namespace ?? "not configured"} ·
           Distributed rate limiting: {data.redis.features.rateLimits ? "enabled" : "disabled"} · Dashboard cache: {data.redis.features.dashboardCache ? "enabled" : "disabled"} · Report cache: {data.redis.features.reportCache ? "enabled" : "disabled"}
         </p>
+      </Card>
+
+      <Card title="Data-cache activity" hint="Per-process counters since the current ERP release started. They are not cluster-wide totals.">
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(["dashboard", "report"] as const).map((kind) => (
+            <div key={kind} className="rounded-lg border p-3">
+              <p className="text-sm font-medium capitalize">{kind}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Hits: {data.redis.cacheMetrics[kind].hit} ·
+                Misses: {data.redis.cacheMetrics[kind].miss} ·
+                Bypass: {data.redis.cacheMetrics[kind].bypass} ·
+                Errors: {data.redis.cacheMetrics[kind].error}
+              </p>
+            </div>
+          ))}
+        </div>
       </Card>
 
       <Card title="Tax audit chain" hint="Each tax-rate override is hash-linked to the one before it, so any edit or deletion shows.">
