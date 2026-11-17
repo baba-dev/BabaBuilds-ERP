@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     if (!def) throw new Error('REPORT_NOT_FOUND');
     if (!(await reportAllowed(def, userId, workspaceId))) throw new Error('FORBIDDEN');
     const started = Date.now();
-    const result = await runReport(workspaceId, userId, { ...parsed.data, period: parsed.data.period as never });
+    const result = await runReport(workspaceId, userId, { ...parsed.data, period: parsed.data.period as never }, new Date(), { interactiveCache: true });
     if (!result) throw new Error('REPORT_NOT_FOUND');
     void prisma.appActivityLog.create({ data: { workspaceId, actorUserId: userId, action: 'REPORTING_RUN', entityType: 'REPORT', entityId: parsed.data.reportId, status: 'SUCCESS', metadata: { reportId: parsed.data.reportId, durationMs: Date.now() - started, rowCount: result.rows.length } } }).catch(() => null);
     return Response.json(result, { headers: { 'Cache-Control': 'no-store' } });
