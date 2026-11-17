@@ -1,0 +1,125 @@
+name: Bootstrap reviewed ClubKeep Node26 root operators (no service cutover)
+
+# Trusted VPS host credentials belong to the platform/ERP production environment.
+# The restricted ClubKeep deploy user is intentionally NOT granted sudo install.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/clubkeep-node26-operator-bootstrap.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-immutable-production
+  cancel-in-progress: false
+
+jobs:
+  install:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-24.04
+    environment: erp-production
+    timeout-minutes: 15
+    steps:
+      - name: Verify exact reviewed ClubKeep PR head has passing CI
+        env:
+          CLUBKEEP_SHA: 44273c54f1a5671aab0ef253bf9fd9305027e2e8
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          pr="$(curl -fsSL --retry 3 --proto '=https' --tlsv1.2 \
+            https://api.github.com/repos/baba-dev/ClubKeep/pulls/34)"
+          jq -e --arg sha "$CLUBKEEP_SHA" '
+            .state == "open" and .head.sha == $sha and
+            .head.repo.full_name == "baba-dev/ClubKeep" and
+            .base.ref == "main"
+          ' <<< "$pr" >/dev/null || {
+            echo "CLUBKEEP_OPERATOR_BOOTSTRAP_BLOCKED: PR #34 changed"; exit 1;
+          }
+          runs="$(curl -fsSL --retry 3 --proto '=https' --tlsv1.2 \
+            "https://api.github.com/repos/baba-dev/ClubKeep/actions/runs?head_sha=$CLUBKEEP_SHA&event=pull_request&per_page=60")"
+          jq -e --arg sha "$CLUBKEEP_SHA" '
+            any(.workflow_runs[]?;
+              .name == "CI" and .head_sha == $sha and
+              .status == "completed" and .conclusion == "success")
+          ' <<< "$runs" >/dev/null || {
+            echo "CLUBKEEP_OPERATOR_BOOTSTRAP_BLOCKED: exact PR SHA not green"; exit 1;
+          }
+          echo "CLUBKEEP_OPERATOR_SOURCE_VERIFIED sha=$CLUBKEEP_SHA"
+      - name: Fetch only three reviewed ClubKeep operators and verify Git object hashes
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          base="https://raw.githubusercontent.com/baba-dev/ClubKeep/44273c54f1a5671aab0ef253bf9fd9305027e2e8/infra/deploy"
+          mkdir -p clubkeep-ops
+          for f in clubkeep-release.sh clubkeep-cleanup.sh clubkeep-node24-rollback.sh; do
+            curl -fsSL --retry 3 --proto '=https' --tlsv1.2 \
+              "$base/$f" -o "clubkeep-ops/$f"
+            test -f "clubkeep-ops/$f" && test ! -L "clubkeep-ops/$f"
+            bash -n "clubkeep-ops/$f"
+          done
+          test "$(git hash-object clubkeep-ops/clubkeep-release.sh)" = "d7670dc21d09e02bb09c39e551b5575f7d61f43a"
+          test "$(git hash-object clubkeep-ops/clubkeep-cleanup.sh)" = "208e313a323b3b7a7a3fad778b5a64dfeabc6346"
+          test "$(git hash-object clubkeep-ops/clubkeep-node24-rollback.sh)" = "de203dc61e64126219e28f741387783d101b5815"
+          grep -Fxq "  echo 'clubkeep-release-formats: 1,2,3'" clubkeep-ops/clubkeep-release.sh
+          echo "CLUBKEEP_OPERATOR_THREE_HASHES_MATCH"
+      - name: Upload reviewed operators to isolated VPS staging directory
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: clubkeep-ops
+          target: /tmp/clubkeep-node26-bootstrap-${{ github.sha }}
+      - name: Install only root-owned operator files, verify active services unchanged
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script_stop: true
+          command_timeout: 8m
+          script: |
+            set -Eeuo pipefail
+            incoming="/tmp/clubkeep-node26-bootstrap-${{ github.sha }}/clubkeep-ops"
+            protected=/var/lib/bababuilds-platform/clubkeep-operator-stage
+            sudo -n install -d -o root -g root -m 0700 "$protected"
+            sudo -n test ! -L /var/lib/bababuilds-platform
+            sudo -n test ! -L "$protected"
+            for item in clubkeep-release.sh clubkeep-cleanup.sh clubkeep-node24-rollback.sh; do
+              test -f "$incoming/$item" && test ! -L "$incoming/$item"
+              sudo -n install -o root -g root -m 0600 "$incoming/$item" "$protected/$item"
+              sudo -n bash -n "$protected/$item"
+            done
+            test "$(sudo -n git hash-object "$protected/clubkeep-release.sh")" = "d7670dc21d09e02bb09c39e551b5575f7d61f43a"
+            test "$(sudo -n git hash-object "$protected/clubkeep-cleanup.sh")" = "208e313a323b3b7a7a3fad778b5a64dfeabc6346"
+            test "$(sudo -n git hash-object "$protected/clubkeep-node24-rollback.sh")" = "de203dc61e64126219e28f741387783d101b5815"
+            for unit in bababuilds-erp postgresql@17-main menuminute-web menuminute-worker clubkeep-web clubkeep-redis; do
+              sudo -n systemctl is-active --quiet "$unit"
+            done
+            old_exec="$(sudo -n systemctl show clubkeep-web --value --property=ExecStart | sha256sum | cut -d' ' -f1)"
+            sudo -n systemctl show clubkeep-web --value --property=ExecStart |
+              grep -Fq /opt/menuminute/node24/bin/node
+            sudo -n test ! -L /usr/local/sbin/clubkeep-release
+            sudo -n test ! -L /usr/local/sbin/clubkeep-cleanup
+            sudo -n test ! -L /usr/local/sbin/clubkeep-node24-rollback
+            if ! sudo -n test -f /usr/local/sbin/clubkeep-release.pre-node26; then
+              sudo -n cp -a /usr/local/sbin/clubkeep-release /usr/local/sbin/clubkeep-release.pre-node26
+            fi
+            sudo -n install -o root -g root -m 0750 "$protected/clubkeep-release.sh" /usr/local/sbin/clubkeep-release
+            sudo -n install -o root -g root -m 0750 "$protected/clubkeep-cleanup.sh" /usr/local/sbin/clubkeep-cleanup
+            sudo -n install -o root -g root -m 0750 "$protected/clubkeep-node24-rollback.sh" /usr/local/sbin/clubkeep-node24-rollback
+            test "$(sudo -n git hash-object /usr/local/sbin/clubkeep-release)" = "d7670dc21d09e02bb09c39e551b5575f7d61f43a"
+            test "$(sudo -n git hash-object /usr/local/sbin/clubkeep-cleanup)" = "208e313a323b3b7a7a3fad778b5a64dfeabc6346"
+            test "$(sudo -n git hash-object /usr/local/sbin/clubkeep-node24-rollback)" = "de203dc61e64126219e28f741387783d101b5815"
+            test "$(sudo -n /usr/local/sbin/clubkeep-release --capabilities)" = 'clubkeep-release-formats: 1,2,3'
+            test "$(sudo -n /usr/local/sbin/clubkeep-release --node26-ready)" = 'CLUBKEEP_NODE26_READY shared_runtime_verified all_sibling_services_active'
+            test "$(sudo -n systemctl show clubkeep-web --value --property=ExecStart | sha256sum | cut -d' ' -f1)" = "$old_exec"
+            for unit in bababuilds-erp postgresql@17-main menuminute-web menuminute-worker clubkeep-web clubkeep-redis; do
+              sudo -n systemctl is-active --quiet "$unit"
+            done
+            sudo -n rm -f -- "$protected/clubkeep-release.sh" "$protected/clubkeep-cleanup.sh" "$protected/clubkeep-node24-rollback.sh"
+            rm -f -- "$incoming/clubkeep-release.sh" "$incoming/clubkeep-cleanup.sh" "$incoming/clubkeep-node24-rollback.sh"
+            rmdir "/tmp/clubkeep-node26-bootstrap-${{ github.sha }}/clubkeep-ops" "/tmp/clubkeep-node26-bootstrap-${{ github.sha }}" 2>/dev/null || true
+            echo 'CLUBKEEP_NODE26_OPERATOR_BOOTSTRAP_PASS no_services_or_runtime_switched'
