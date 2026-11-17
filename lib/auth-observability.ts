@@ -138,9 +138,13 @@ export function validateAuthEnvOrThrow() {
   }
 
   try {
-    new URL(getRequiredEnvValue("NEXTAUTH_URL"));
+    const authUrl = new URL(getRequiredEnvValue("NEXTAUTH_URL"));
+    if (!["http:", "https:"].includes(authUrl.protocol) || authUrl.username || authUrl.password) {
+      throw new Error("Invalid auth origin");
+    }
   } catch {
-    const message = `[AuthConfig] NEXTAUTH_URL must be a valid absolute URL. Current value: "${process.env.NEXTAUTH_URL}".`;
+    // Configuration errors must never echo potentially credential-bearing URL strings.
+    const message = "[AuthConfig] NEXTAUTH_URL must be a credential-free HTTP(S) absolute URL (value redacted).";
     console.error(message);
     throw new Error(message);
   }
@@ -152,15 +156,14 @@ export function validateAuthEnvOrThrow() {
 
   const emailServerPort = Number(getRequiredEnvValue("EMAIL_SERVER_PORT"));
   if (!Number.isInteger(emailServerPort) || emailServerPort < MIN_PORT || emailServerPort > MAX_PORT) {
-    const rawPortValue = process.env.EMAIL_SERVER_PORT;
-    const message = `[AuthConfig] Invalid environment variable EMAIL_SERVER_PORT: expected an integer between ${MIN_PORT} and ${MAX_PORT}, received "${rawPortValue}".`;
+    const message = `[AuthConfig] Invalid environment variable EMAIL_SERVER_PORT: expected an integer between ${MIN_PORT} and ${MAX_PORT} (value redacted).`;
     console.error(message);
     throw new Error(message);
   }
 
   const emailFrom = getRequiredEnvValue("EMAIL_FROM");
   if (!isValidEmailAddress(emailFrom)) {
-    const message = `[AuthConfig] Invalid environment variable EMAIL_FROM: expected an email address like "no-reply@example.com" or "App Name <no-reply@example.com>", received "${process.env.EMAIL_FROM}".`;
+    const message = '[AuthConfig] Invalid environment variable EMAIL_FROM: expected a valid sender email address (value redacted).';
     console.error(message);
     throw new Error(message);
   }
