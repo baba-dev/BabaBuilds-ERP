@@ -7,7 +7,7 @@ import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 import { requireEmailBilling } from '../../../_lib/auth';
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireEmailBilling('workspace.manage_settings');
+  const auth = await requireEmailBilling('admin');
   if ('response' in auth) return auth.response;
   const limit = await enforceRouteRateLimit({ request: req, route: '/api/email-billing/servers/test', scope: auth.workspaceId, max: 20, windowMs: 10 * 60_000 });
   if (!limit.ok) return limit.response;

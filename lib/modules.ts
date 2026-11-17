@@ -195,9 +195,13 @@ export class ModuleDisabledError extends Error {
   }
 }
 
-/** SHOP has a deliberately limited Free-tier experience; all other optional modules are paid. */
+/**
+ * SHOP has a deliberately limited Free-tier experience and MIAB_BILLING (Email Hosting) is available on every plan;
+ * all other optional modules are paid.
+ */
+const PLAN_UNRESTRICTED_MODULE_KEYS: ReadonlySet<ModuleKey> = new Set<ModuleKey>(['SHOP', 'MIAB_BILLING']);
 export const PAID_ONLY_MODULE_KEYS: ReadonlySet<ModuleKey> = new Set(
-  MODULE_KEYS.filter((key) => key !== 'SHOP'),
+  MODULE_KEYS.filter((key) => !PLAN_UNRESTRICTED_MODULE_KEYS.has(key)),
 );
 
 export class PaidPlanRequiredError extends Error {

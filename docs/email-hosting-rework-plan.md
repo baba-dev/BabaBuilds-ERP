@@ -1,6 +1,6 @@
 # Email Hosting (Mail-in-a-Box) rework: plan
 
-Status: proposal, nothing implemented yet. Replaces the read-only `MIAB_BILLING` ("Email Billing") module described in `docs/email-billing.md`.
+Status: decisions 2 (credential model) and plan availability are confirmed; Phase 0 is implemented in this PR, later phases are not started. Replaces the read-only `MIAB_BILLING` ("Email Billing") module described in `docs/email-billing.md`.
 
 ## 1. Goal
 
@@ -23,7 +23,9 @@ Turn the ERP into the control plane for a hosted-email business built on Mail-in
 | UI | server list, domains, plans, review, settings | No mailbox management, no operations log, no per-client view, no usage/MRR dashboard. |
 | Docs/tests | explicit "ERP does not administer mailboxes" boundary; 144-line test file | The boundary is intentionally reversed by this rework; docs and tests must be rewritten together. |
 
-## 3. Decisions to confirm before building
+## 3. Decisions
+
+Confirmed: the credential model in item 2 (encrypted, dedicated MiaB admin account, never returned to the browser, adapter option kept) and that Email Hosting is available on all plans, free and paid. Still open: items 1, 3 and 4 (needed before Phase 2).
 
 1. **Scope reversal.** The current docs and guardrails say the ERP must never write to MiaB. This plan adds write operations behind an opt-in "Manage" access mode. Confirm this is wanted.
 2. **Credential model.** MiaB has no scoped tokens: an admin API credential can do anything on the box. Recommendation: store it encrypted (existing `lib/encryption.ts`, AES-256-GCM), use a dedicated MiaB admin account for the ERP, never return it to the browser, and keep the adapter option for operators who want a narrower proxy.
@@ -128,7 +130,7 @@ Each phase is a separate PR that passes `npm run ci:fast`, is behind the existin
 
 | Phase | Scope | Exit criteria |
 |---|---|---|
-| 0. Hardening | Split client into `miab/`; refactor one-liner routes into readable handlers with zod; add `email_hosting.*` permissions (keep `invoices.*` as a fallback); add missing `logActivity`; transactional sync; docs fix. | Existing tests green plus tests for each route's auth/validation; no behaviour change. |
+| 0. Hardening (done in this PR) | Split client into `miab/`; refactor one-liner routes into readable handlers with zod; add `email_hosting.*` permissions (keep `invoices.*` as a fallback); add missing `logActivity`; transactional sync; docs fix. | Existing tests green plus tests for each route's auth/validation; no behaviour change. |
 | 1. Billing core | `MailUsageSnapshot`, trials, statuses, auto/approved quantity updates, proration, invoice linkage, MRR/churn reports, dashboard cards. | Money regression tests; cron idempotent; retainer remains the only invoice generator. |
 | 2. Managed operations | `MANAGED_API` mode, `MailOperation` queue, mailbox/alias/quota/password operations, one-time credential links, operations UI, verify-after-write, drift review items. | Integration test against a mocked MiaB; manual run on a disposable MiaB box. |
 | 3. Dunning and lifecycle | PAST_DUE/suspend/resume driven by AR and payments; soft-delete retention; notifications. | End-to-end test: overdue -> suspend -> pay -> resume; no data deletion path without human confirmation. |
@@ -153,4 +155,5 @@ Each phase is a separate PR that passes `npm run ci:fast`, is behind the existin
 
 - Opt-in per workspace (existing module flag); `READ_ONLY_ADAPTER` and `DIRECT_MIAB_API` keep working unchanged.
 - Migrations are additive; no rewrite of the applied baseline.
+- Email Hosting is available on all plans, free and paid (it is removed from the paid-only module list in `lib/modules.ts`); the per-workspace opt-in stays.
 - Production releases follow the Node 26 Stage 2 deployment safeguards in `AGENTS.md`; nothing here touches PM2 or the live interpreter.

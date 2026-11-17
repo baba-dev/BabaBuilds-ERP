@@ -64,6 +64,30 @@ export const mailBillingSubscriptionCreateSchema = z.object({
   notes: optionalTrimmedString,
 });
 
+export const mailBillingSubscriptionStatusSchema = z.enum(['ACTIVE', 'REVIEW_REQUIRED', 'PAUSED', 'CANCELLED']);
+export const mailBillingDomainStatusSchema = z.enum(['ACTIVE', 'REMOVED', 'IGNORED']);
+
+export const mailBillingSubscriptionPatchSchema = z
+  .object({
+    billingStatus: mailBillingSubscriptionStatusSchema.optional(),
+    billableMailboxCount: nonNegativeIntSchema.optional(),
+    autoUpdateQuantity: z.boolean().optional(),
+    nextReviewAt: z
+      .string()
+      .trim()
+      .refine((value) => !Number.isNaN(Date.parse(value)), 'Date must be valid')
+      .nullish(),
+    notes: z.string().trim().max(5000).nullish(),
+  })
+  .refine((value) => Object.keys(value).length > 0, 'At least one field is required');
+
+export const mailBillingDomainPatchSchema = z
+  .object({
+    status: mailBillingDomainStatusSchema.optional(),
+    billingNotes: z.string().trim().max(5000).nullish(),
+  })
+  .refine((value) => Object.keys(value).length > 0, 'At least one field is required');
+
 export const mailBillingMapClientSchema = z.object({
   clientId: idSchema.nullish(),
   billingNotes: optionalTrimmedString,

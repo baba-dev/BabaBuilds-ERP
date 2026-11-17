@@ -142,3 +142,26 @@ describe('Email Billing route and assistant safety', () => {
     expect(sources.every((source) => source.includes('prisma.$transaction'))).toBe(true);
   });
 });
+
+describe('Email Billing patch schemas', () => {
+  it('only accepts known subscription and domain statuses and non-empty patches', async () => {
+    const { mailBillingSubscriptionPatchSchema, mailBillingDomainPatchSchema } = await import('@/lib/email-billing/validation');
+    expect(mailBillingSubscriptionPatchSchema.safeParse({ billingStatus: 'PAUSED', billableMailboxCount: 3 }).success).toBe(true);
+    expect(mailBillingSubscriptionPatchSchema.safeParse({ billingStatus: 'WHATEVER' }).success).toBe(false);
+    expect(mailBillingSubscriptionPatchSchema.safeParse({ billableMailboxCount: -1 }).success).toBe(false);
+    expect(mailBillingSubscriptionPatchSchema.safeParse({ nextReviewAt: 'not a date' }).success).toBe(false);
+    expect(mailBillingSubscriptionPatchSchema.safeParse({}).success).toBe(false);
+    expect(mailBillingDomainPatchSchema.safeParse({ status: 'IGNORED' }).success).toBe(true);
+    expect(mailBillingDomainPatchSchema.safeParse({ status: 'DELETED' }).success).toBe(false);
+    expect(mailBillingDomainPatchSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('miab-client module split', () => {
+  it('keeps the public surface of the original module', async () => {
+    const mod = await import('@/lib/email-billing/miab-client');
+    for (const name of ['fetchMailBillingInventory', 'getDirectMiabReadEndpoints', 'isPrivateOrReservedAddress', 'validateMailBillingUrl', 'validateMailBillingUrlForFetch']) {
+      expect(typeof (mod as Record<string, unknown>)[name]).toBe('function');
+    }
+  });
+});

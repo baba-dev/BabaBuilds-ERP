@@ -2,6 +2,9 @@ import 'server-only';
 import { prisma } from '@/lib/prisma';
 import type { Prisma } from "@prisma/client";
 
+/** The shared client or an interactive-transaction client, so callers can keep review writes atomic with their own. */
+export type MailBillingDb = Prisma.TransactionClient | typeof prisma;
+
 export type MailBillingReviewType =
   | 'NEW_DOMAIN_DISCOVERED' | 'DOMAIN_MISSING_CLIENT' | 'DOMAIN_MISSING_SUBSCRIPTION' | 'DOMAIN_MISSING_RETAINER'
   | 'MAILBOX_COUNT_CHANGED' | 'MAILBOX_ADDED' | 'MAILBOX_REMOVED' | 'DOMAIN_REMOVED_FROM_MIAB'
@@ -11,13 +14,13 @@ export async function createMailBillingReviewItem(input: {
   workspaceId: string; domainId?: string | null; subscriptionId?: string | null; serverId?: string | null;
   type: MailBillingReviewType; severity?: 'INFO' | 'WARNING' | 'CRITICAL'; title: string; description: string; suggestedAction?: string;
   oldValueJson?: unknown; newValueJson?: unknown; metadataJson?: unknown;
-}) {
-  const existing = await prisma.mailBillingReviewItem.findFirst({
+}, db: MailBillingDb = prisma) {
+  const existing = await db.mailBillingReviewItem.findFirst({
     where: { workspaceId: input.workspaceId, domainId: input.domainId ?? null, subscriptionId: input.subscriptionId ?? null, serverId: input.serverId ?? null, type: input.type, status: 'OPEN' },
     select: { id: true },
   });
   if (existing) return { item: existing, created: false };
-  const item = await prisma.mailBillingReviewItem.create({ data: {
+  const item = await db.mailBillingReviewItem.create({ data: {
     workspaceId: input.workspaceId, domainId: input.domainId ?? null, subscriptionId: input.subscriptionId ?? null, serverId: input.serverId ?? null,
     type: input.type, severity: input.severity ?? 'INFO', title: input.title, description: input.description, suggestedAction: input.suggestedAction,
     oldValueJson: input.oldValueJson as Prisma.InputJsonValue, newValueJson: input.newValueJson as Prisma.InputJsonValue, metadataJson: input.metadataJson as Prisma.InputJsonValue,

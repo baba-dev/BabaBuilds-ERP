@@ -39,7 +39,7 @@ const sanitizeServer = (server: ServerWithRelations) => ({
 });
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireEmailBilling('invoices.view');
+  const auth = await requireEmailBilling('view');
   if ('response' in auth) return auth.response;
 
   const { id } = await params;
@@ -62,7 +62,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireEmailBilling('workspace.manage_settings');
+  const auth = await requireEmailBilling('admin');
   if ('response' in auth) return auth.response;
 
   const { id } = await params;
