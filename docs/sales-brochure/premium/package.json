@@ -1,0 +1,7 @@
+{
+  "name": "bababuilds-premium-brochure-preview",
+  "private": true,
+  "scripts": {
+    "dev": "node preview-server.mjs"
+  }
+}

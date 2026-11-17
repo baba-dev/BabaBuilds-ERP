@@ -45,6 +45,7 @@
     "product-images:capture": "playwright test tests/brochure/capture-brochure.spec.ts --project=chromium",
     "product-images:manifest": "npx tsx scripts/build-product-image-manifest.ts",
     "brochure:pdf": "node scripts/brochure-render-pdf.mjs",
+    "brochure:premium": "node scripts/render-premium-brochure.mjs",
     "brochure:dist": "npm run brochure:prepare && npm run brochure:capture && npm run brochure:pdf",
     "check:security-boundaries": "node scripts/security/check-dependency-boundaries.mjs"
   },

@@ -14,6 +14,8 @@ Distribution-ready **HTML + PDF** product overview with on-brand styling ([`broc
 | Canonical light/dark masters | [`../product-images/`](../product-images/) |
 | Sales PDF (screenshots + narrative) | [`dist/bababuilds-erp-brochure.pdf`](dist/bababuilds-erp-brochure.pdf) |
 | Full PDF with API appendix | `BROCHURE_PDF_HTML=dist npm run brochure:pdf` |
+| Premium sales brochure source | [`premium/`](premium/) |
+| Premium sales PDF | [`premium/dist/bababuilds-erp-command-after-dark.pdf`](premium/dist/bababuilds-erp-command-after-dark.pdf) |
 
 ## One-shot build
 
@@ -35,6 +37,7 @@ This runs: shell HTML generation → grouped API appendix → stitch → Playwri
 - `npm run brochure:stitch` — inject appendix into `index.dist.html`.
 - `npm run brochure:capture` — demo login (`software_company` template), capture every reviewed route in light and dark mode, reject blank/loading-state images, write the canonical product manifest, and refresh the brochure's light compatibility copies.
 - `npm run brochure:pdf` — Chromium print to `dist/bababuilds-erp-brochure.pdf` (uses `index.html`; set `BROCHURE_PDF_HTML=dist` to include the API appendix).
+- `npm run brochure:premium` — validate and render the curated ten-page “Command After Dark” sales brochure.
 
 ## Demo data notes
 
