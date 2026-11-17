@@ -1,0 +1,61 @@
+name: ERP VPS lean cleanup (reviewed, one-time)
+
+# Executes only when the reviewed cleanup code or workflow reaches main.
+# Uses the same deployment concurrency as ERP systemd promotion.
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/erp-vps-lean-cleanup.yml
+      - ops/erp-release/cleanup_vps.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erp-immutable-production
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    name: Remove confirmed stale ERP builds without touching co-hosts
+    runs-on: ubuntu-24.04
+    environment: erp-production
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Stage reviewed ERP-only cleanup operator
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: ops/erp-release/cleanup_vps.py
+          target: /tmp/erp-cleanup-${{ github.sha }}
+          strip_components: 2
+      - name: Run guarded dry-run and ERP-only stale file cleanup
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script_stop: true
+          command_timeout: 19m
+          script: |
+            set -euo pipefail
+            uploaded="/tmp/erp-cleanup-${{ github.sha }}/cleanup_vps.py"
+            operator="/usr/local/lib/bababuilds-erp-release/cleanup_vps.py"
+            test -f "$uploaded" && test ! -L "$uploaded"
+            sudo -n install -d -o root -g root -m 0755 /usr/local/lib/bababuilds-erp-release
+            sudo -n install -o root -g root -m 0644 "$uploaded" "$operator"
+            test "$(sudo -n git hash-object "$operator")" = "6404058f42bfbe68c0aadf7871129b669f360c31" || {
+              echo 'ERP_CLEANUP_REVIEWED_SOURCE_MISMATCH'; exit 1;
+            }
+            sudo -n /usr/bin/python3 "$operator" --plan
+            sudo -n /usr/bin/python3 "$operator" --apply --confirm-erp-only
+            sudo -n /usr/bin/python3 /usr/local/lib/bababuilds-erp-release/audit_vps.py
+            rm -f -- "$uploaded"
+            rmdir "/tmp/erp-cleanup-${{ github.sha }}" 2>/dev/null || true
