@@ -51,7 +51,7 @@ jobs:
             test -f "$uploaded" && test ! -L "$uploaded"
             sudo -n install -d -o root -g root -m 0755 /usr/local/lib/bababuilds-erp-release
             sudo -n install -o root -g root -m 0644 "$uploaded" "$reviewed"
-            test "$(sudo -n git hash-object "$reviewed")" = "082e5fe0b5520af3e4b7fc249933125ad875a0fe" || {
+            test "$(sudo -n git hash-object "$reviewed")" = "6d42f31ecaf0d434c1691977ab5c2ab017b45f4b" || {
               echo "ERP runtime audit: reviewed source mismatch"; exit 1;
             }
             sudo -n /usr/bin/python3 "$reviewed"
