@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { redisRateLimit, clearRedisRateLimit, rateLimitIdentity, validateLimit } from '@/lib/redis/rate-limit';
+import { redisRateLimit, rateLimitIdentity, validateLimit } from '@/lib/redis/rate-limit';
 import { disconnectRedisClients } from '@/lib/redis/client';
 import { checkPasswordAuthRateLimit, recordPasswordAuthFailure, clearPasswordAuthRateLimit } from '@/lib/auth/rate-limit';
 import { checkRateLimit } from '@/lib/rate-limit-memory';
