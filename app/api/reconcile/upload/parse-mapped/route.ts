@@ -21,7 +21,7 @@ import { enforceRouteRateLimit } from "@/lib/route-rate-limit";
 const MAX_UPLOAD_BYTES = 12 * 1024 * 1024;
 
 export async function POST(request: Request) {
-  const rate = enforceRouteRateLimit({ request, route: "/api/reconcile/upload/parse-mapped", scope: "bank-import", max: 20, windowMs: 10 * 60 * 1000 });
+  const rate = await enforceRouteRateLimit({ request, route: "/api/reconcile/upload/parse-mapped", scope: "bank-import", max: 20, windowMs: 10 * 60 * 1000 });
   if (!rate.ok) return rate.response;
   try {
     const session = await getServerSession(authOptions);

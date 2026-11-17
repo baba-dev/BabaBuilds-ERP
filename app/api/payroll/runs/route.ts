@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const gate = await requirePayrollModuleAndAction('prepare');
     if ('response' in gate) return gate.response;
     const { workspaceId, userId, email } = gate.access;
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/payroll/runs', scope: 'generate', max: 20, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/payroll/runs', scope: 'generate', max: 20, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
     const d = generateSchema.parse(await readJson(req));
     const out = await generateRun({ workspaceId, userId, userEmail: email, year: d.year, month: d.month, notes: d.notes });
