@@ -53,7 +53,7 @@ def active_services():
 
 def erp_pm2():
     if not (PM2_RUNNER.is_file() and PM2_CLI.is_file()):
-        return {"count": 0, "state": "cli-missing"}
+        return {"count": -1, "state": "cli-missing"}
     rc, data = run(str(PM2_RUNNER), str(PM2_CLI), "jlist", timeout=35,
                    env={**os.environ, "HOME": "/root", "PM2_HOME": "/root/.pm2"})
     if rc != 0:
@@ -86,14 +86,33 @@ def systemd_process():
 def lingering_node22_units():
     # Check *configured* boot/service references, not historical docs.
     found = []
-    root = Path("/etc/systemd/system")
-    for p in root.rglob("*"):
-        if p.is_file() and p.suffix in (".service", ".timer") and not p.is_symlink():
-            try:
-                if "/opt/bababuilds-erp/node22/" in p.read_text(errors="replace"):
-                    found.append(p.name)
-            except (OSError, PermissionError):
-                found.append("unreadable-unit")
+    for root in (Path("/etc/systemd/system"), Path("/usr/lib/systemd/system"),
+                 Path("/lib/systemd/system")):
+        if not root.is_dir():
+            continue
+        for p in root.rglob("*"):
+            if p.is_file() and p.suffix in (".service", ".timer") and not p.is_symlink():
+                try:
+                    if "/opt/bababuilds-erp/node22/" in p.read_text(errors="replace"):
+                        found.append(p.name)
+                except (OSError, PermissionError):
+                    found.append("unreadable-unit")
+    dump = Path("/root/.pm2/dump.pm2")
+    if dump.is_file():
+        try:
+            if "/opt/bababuilds-erp/node22/" in dump.read_text(errors="replace"):
+                found.append("pm2-saved-process-dump")
+        except OSError:
+            found.append("unreadable-pm2-dump")
+    for root in (Path("/etc/cron.d"), Path("/var/spool/cron/crontabs")):
+        if root.is_dir():
+            for entry in root.iterdir():
+                if entry.is_file():
+                    try:
+                        if "/opt/bababuilds-erp/node22/" in entry.read_text(errors="replace"):
+                            found.append("cron:" + entry.name)
+                    except OSError:
+                        found.append("unreadable-cron")
     return sorted(set(found))
 
 def safe_to_retire(services, pm2, systemd, old_processes, legacy_units, node26_version):
