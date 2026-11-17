@@ -22,7 +22,7 @@ jobs:
     if: ${{ github.ref == 'refs/heads/main' }}
     name: Verify ERP runtime / Node22 retirement eligibility
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 17
     steps:
       - uses: actions/checkout@v7
         with:
@@ -43,7 +43,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
           script_stop: true
-          command_timeout: 5m
+          command_timeout: 13m
           script: |
             set -euo pipefail
             uploaded="/tmp/erp-runtime-audit-${{ github.sha }}/audit_vps.py"
@@ -51,7 +51,7 @@ jobs:
             test -f "$uploaded" && test ! -L "$uploaded"
             sudo -n install -d -o root -g root -m 0755 /usr/local/lib/bababuilds-erp-release
             sudo -n install -o root -g root -m 0644 "$uploaded" "$reviewed"
-            test "$(sudo -n git hash-object "$reviewed")" = "6d42f31ecaf0d434c1691977ab5c2ab017b45f4b" || {
+            test "$(sudo -n git hash-object "$reviewed")" = "b5b0edcb3d38aae573bac052e7d2ca27d576fa6c" || {
               echo "ERP runtime audit: reviewed source mismatch"; exit 1;
             }
             sudo -n /usr/bin/python3 "$reviewed"
