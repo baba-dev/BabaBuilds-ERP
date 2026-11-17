@@ -44,8 +44,23 @@ export const getInvoicePdfRelativePath = ({
 
 export const getInvoicePdfFilename = (invoiceNumber: string) => `${invoiceNumber.replace(/\//g, "_")}.pdf`;
 
-export const getInvoicePublicFallbackPath = (relativePath: string) =>
-  path.join(process.cwd(), "public", relativePath.startsWith("/") ? relativePath.slice(1) : relativePath);
+/**
+ * Legacy invoice PDFs may still be under public/invoices. Never resolve a
+ * persisted path outside that directory or into a different workspace.
+ * Single-level legacy filenames remain supported for backwards compatibility.
+ */
+export const getInvoicePublicFallbackPath = (relativePath: string, workspaceId?: string): string | null => {
+  const parts = (relativePath.startsWith("/") ? relativePath.slice(1) : relativePath).split("/");
+  if (
+    parts.length < 2 || parts[0] !== "invoices" ||
+    parts.some((part) => !part || part === "." || part.includes("..") ||
+      part.includes("\\") || /[\u0000-\u001f\u007f]/.test(part)) ||
+    (workspaceId && parts.length >= 3 && parts[1] !== workspaceId)
+  ) return null;
+  const root = path.resolve(process.cwd(), "public", "invoices");
+  const candidate = path.resolve(root, ...parts.slice(1));
+  return candidate.startsWith(root + path.sep) ? candidate : null;
+};
 
 export const resolveInvoicePdfStoragePath = (invoice: {
   workspaceId: string;

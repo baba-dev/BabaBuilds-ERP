@@ -44,8 +44,10 @@ export async function sendInvoiceEmail(input: {
   }
 
   const privatePath = resolveInvoicePdfStoragePath(invoice);
-  const absolutePdfPath = privatePath && fs.existsSync(privatePath) ? privatePath : getInvoicePublicFallbackPath(invoice.pdfPath);
-  if (!fs.existsSync(absolutePdfPath)) {
+  const absolutePdfPath = fs.existsSync(privatePath)
+    ? privatePath
+    : getInvoicePublicFallbackPath(invoice.pdfPath, input.workspaceId);
+  if (!absolutePdfPath || !fs.existsSync(absolutePdfPath)) {
     return { ok: false, status: 404, code: "PDF_NOT_FOUND", message: "The invoice PDF could not be found on the server." };
   }
 
