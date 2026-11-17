@@ -20,6 +20,9 @@ export function loadErpJobsConfig(env: NodeJS.ProcessEnv = process.env): ErpJobs
   const redis = loadRedisConfig(env);
   const workerEnabled = enabledFlag(env, 'ERP_REDIS_JOB_WORKER_ENABLED');
   const inAppDeadlineEnabled = enabledFlag(env, 'ERP_REDIS_INAPP_DEADLINE_ENABLED');
+  if (inAppDeadlineEnabled && !workerEnabled) {
+    throw new Error('ERP_REDIS_JOB_WORKER_ENABLED required for deadline pilot');
+  }
   if ((workerEnabled || inAppDeadlineEnabled) && !redis.features.jobs) {
     throw new Error('ERP_REDIS_JOBS_ENABLED required before worker or pilot');
   }
