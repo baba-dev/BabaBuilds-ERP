@@ -80,7 +80,8 @@ class SharedNode26Contract(unittest.TestCase):
         self.assertIn("source.rename(DEST)", content)
         self.assertIn("fcntl.flock", content)
         self.assertIn("os.O_NOFOLLOW", content)
-        self.assertIn("metadata.st_uid != 0", content)
+        self.assertIn("require_root_owned and (metadata.st_uid != 0", content)
+        self.assertIn("require_root_owned=False", (ROOT / "ops/shared-runtime/verify_distribution.sh").read_text())
         self.assertIn("sha256(archive) != ARCHIVE_SHA256", content)
         self.assertIn('"clubkeep-redis.service"', content)
         for forbidden in ("systemctl restart", "systemctl stop", "systemctl enable",
@@ -101,7 +102,7 @@ class SharedNode26Contract(unittest.TestCase):
         self.assertIn("--inventory", workflow)
         self.assertIn("--install --archive", workflow)
         self.assertIn('sudo -n install -o root -g root -m 0600 "$archive" "$root_archive"', workflow)
-        self.assertIn("a8c87b019939abb3f74c0bdf834ea1931200ec55", workflow)
+        self.assertIn("66236d2b9e5ab1a6ea6ebb7c8bacbdb5be04b239", workflow)
         for forbidden in ("systemctl restart", "systemctl stop", "systemctl disable"):
             self.assertNotIn(forbidden, workflow)
 
