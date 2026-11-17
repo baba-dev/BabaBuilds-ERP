@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     if ('response' in gate) return gate.response;
     const { workspaceId, userId, email } = gate.access;
     workspaceForCleanup = workspaceId;
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/inventory/products', scope: workspaceId, max: 120, windowMs: 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/inventory/products', scope: workspaceId, max: 120, windowMs: 60_000 });
     if (!limit.ok) return limit.response;
 
     const fd = await req.formData();

@@ -13,7 +13,7 @@ export async function POST(req: Request) {
     const gate = await requireInventory('edit');
     if ('response' in gate) return gate.response;
     const { workspaceId, userId, email } = gate.access;
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/inventory/adjust', scope: workspaceId, max: 120, windowMs: 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/inventory/adjust', scope: workspaceId, max: 120, windowMs: 60_000 });
     if (!limit.ok) return limit.response;
 
     const raw = (await readJson(req)) as Record<string, unknown> | null;

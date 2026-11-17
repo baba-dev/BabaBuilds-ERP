@@ -29,7 +29,7 @@ function idempotencyFromRequest(req: Request, runId: string, mode: ImportExecuti
 export async function POST(req: Request) {
   try {
     const context = await requireImportContext();
-    const limit = enforceRouteRateLimit({ request: req, route: '/api/imports/execute', scope: `${context.workspaceId}:${context.userId}`, max: 20, windowMs: 10 * 60_000 });
+    const limit = await enforceRouteRateLimit({ request: req, route: '/api/imports/execute', scope: `${context.workspaceId}:${context.userId}`, max: 20, windowMs: 10 * 60_000 });
     if (!limit.ok) return limit.response;
     const body = Body.parse(await req.json());
 

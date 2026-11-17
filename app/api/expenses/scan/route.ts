@@ -8,7 +8,7 @@ import { sniffAllowedContent } from "@/lib/uploads/private-storage";
 
 /** Reads a bill (photo or PDF) and returns suggested fields. Nothing is saved; the person confirms in the form. */
 export async function POST(request: Request) {
-  const limit = enforceRouteRateLimit({ request, route: "/api/expenses/scan", scope: "expense-scan", max: 20, windowMs: 10 * 60 * 1000 });
+  const limit = await enforceRouteRateLimit({ request, route: "/api/expenses/scan", scope: "expense-scan", max: 20, windowMs: 10 * 60 * 1000 });
   if (!limit.ok) return limit.response;
   const auth = await requireExpenseAccess("expenses.create");
   if (!auth.ok) return auth.response;
