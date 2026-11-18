@@ -6,6 +6,12 @@ import { Card, Chip, ErrorNote, useAdminJson } from './admin-kit';
 type Jobs = {
   producerEnabled: boolean; workerEnabled: boolean; pilotEnabled: boolean;
   redisStatus: string; postgresStatus: string;
+  workerHeartbeat: 'disabled' | 'ready' | 'degraded' | 'stale' | 'unavailable';
+  workerHeartbeatAgeSeconds: number | null;
+  jobsRedis: {
+    memoryUsedBytes: number | null; memoryLimitBytes: number | null;
+    maxmemoryPolicy: string | null; aofEnabled: boolean | null; evictedKeys: number | null;
+  };
   pending: number; done: number; failed: number; oldestPendingSeconds: number | null;
   failedJobs: Array<{ id: string; kind: string; attempts: number; createdAt: string }>;
 };
@@ -42,6 +48,7 @@ export function JobsHealthCard() {
             <Chip tone={data.redisStatus === 'ready' ? 'green' : 'amber'}>Redis 6387: {data.redisStatus}</Chip>
             <Chip tone={data.postgresStatus === 'ready' ? 'green' : 'amber'}>Outbox: {data.postgresStatus}</Chip>
             <Chip tone={data.workerEnabled ? 'green' : 'amber'}>Worker flag: {data.workerEnabled ? 'on' : 'off'}</Chip>
+            <Chip tone={data.workerHeartbeat === 'ready' ? 'green' : 'amber'}>Live heartbeat: {data.workerHeartbeat}</Chip>
             <Chip tone={data.pilotEnabled ? 'green' : 'amber'}>Pilot: {data.pilotEnabled ? 'on' : 'off'}</Chip>
           </div>
           <div className="grid grid-cols-3 gap-2">
@@ -53,6 +60,13 @@ export function JobsHealthCard() {
             ))}
           </div>
           <p className="text-xs text-muted-foreground">Oldest pending: {data.oldestPendingSeconds === null ? 'none' : data.oldestPendingSeconds + ' sec'} · Producer flag: {data.producerEnabled ? 'on' : 'off'}</p>
+          <p className="text-xs text-muted-foreground">
+            Heartbeat age: {data.workerHeartbeatAgeSeconds === null ? 'unavailable' : data.workerHeartbeatAgeSeconds + ' sec'}
+            {' · '}Redis memory: {data.jobsRedis.memoryUsedBytes === null ? 'unknown' : (data.jobsRedis.memoryUsedBytes / 1048576).toFixed(1) + ' MiB'}
+            {data.jobsRedis.memoryLimitBytes === null ? '' : ' / ' + (data.jobsRedis.memoryLimitBytes / 1048576).toFixed(0) + ' MiB'}
+            {' · '}AOF: {data.jobsRedis.aofEnabled === null ? 'unknown' : data.jobsRedis.aofEnabled ? 'on' : 'off'}
+            {' · '}Evicted keys: {data.jobsRedis.evictedKeys ?? 'unknown'}
+          </p>
           {notice ? <p role="status" className="text-xs">{notice}</p> : null}
           {data.failedJobs.length ? (
             <div className="divide-y rounded-lg border">
