@@ -141,7 +141,30 @@ async function smtpSend(smtp, delivery, recipient, payload) {
   return ack.messageId || delivery.id;
 }
 
+async function validatePublicPushEndpoint(endpoint) {
+  if (typeof endpoint !== 'string' || endpoint.length > 2048) throw new Error('PUSH_INVALID_ENDPOINT');
+  let url;
+  try { url = new URL(endpoint); } catch { throw new Error('PUSH_INVALID_ENDPOINT'); }
+  const host = url.hostname.toLowerCase();
+  if (url.protocol !== 'https:' || url.username || url.password || url.hash ||
+      !host.includes('.') || net.isIP(host) || host.endsWith('.local') ||
+      host.endsWith('.internal') || host === 'localhost' ||
+      (url.port && url.port !== '443')) {
+    throw new Error('PUSH_UNSAFE_ENDPOINT');
+  }
+  const records = await lookup(host, { all: true });
+  if (!records.length || records.some((r) =>
+    net.isIP(r.address) === 4 ? !publicIPv4(r.address) :
+      net.isIP(r.address) !== 6 ||
+      /^(::1$|::$|fe[89ab]|f[cd]|::ffff:)/i.test(r.address))) {
+    throw new Error('PUSH_UNSAFE_DNS');
+  }
+}
+
 async function pushSend(recipient, payload) {
+  // Historical subscriptions predate validation at registration. Revalidate
+  // the actual endpoint before the web-push transport makes a network call.
+  await validatePublicPushEndpoint(recipient.endpoint);
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     throw new Error('PUSH_VAPID_MISSING');
   }
