@@ -136,6 +136,16 @@ export async function runDueSchedules(now = new Date()): Promise<RunDueResult> {
     } catch (error) {
       failed += 1;
       const code = (error instanceof Error ? error.message : String(error)).slice(0, 200);
+      if (reportQueueEnabled(v.workspaceId)) {
+        // A producer failure must NEVER advance the due clock. The outbox
+        // transaction either committed atomically or rolled back; another
+        // authorized cron pass may safely attempt the same occurrence.
+        await prisma.reportView.updateMany({
+          where: { id: v.id, workspaceId: v.workspaceId, scheduleNextAt: v.scheduleNextAt },
+          data: { scheduleLastError: 'REPORT_QUEUE_WRITE_FAILED' },
+        }).catch(() => null);
+        continue;
+      }
       await prisma.reportView.update({ where: { id: v.id }, data: { scheduleNextAt: next, scheduleLastError: code } }).catch(() => null);
       if (code !== v.scheduleLastError) {
         void dispatchNotification({ event: 'GST_REMINDER', workspaceId: v.workspaceId, data: { title: 'A scheduled report could not be sent', body: `"${v.name}" failed (${code}). Open it in Reporting Center to fix the schedule.`, actionUrl: `/reporting/${v.reportId}` } }).catch(() => null);
