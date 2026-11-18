@@ -1827,7 +1827,12 @@
     "optionalModules": {
       "title": "Extend with Optional Modules",
       "subtitle": "Tailor BabaBuilds to your exact needs by enabling powerful, specialized modules.",
+      "browseModules": "Explorar todos los módulos opcionales",
       "modules": {
+        "pos": {
+          "title": "Punto de venta",
+          "description": "Registra ventas en mostrador, actualiza el inventario y revisa el efectivo al cierre del turno."
+        },
         "taxAdvanced": {
           "title": "Advanced Tax & Compliance",
           "description": "Automated calculations, multi-region compliance, and audit-ready reporting."

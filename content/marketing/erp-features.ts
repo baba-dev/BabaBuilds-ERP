@@ -1,8 +1,8 @@
-export const FEATURES_PATH = "/features";
+import { optionalErpFeatures } from "./optional-erp-features";
 
 type TitledText = { title: string; text: string };
 
-type ErpFeature = {
+export type ErpFeature = {
   slug: string;
   name: string;
   title: string;
@@ -16,10 +16,11 @@ type ErpFeature = {
   faqs: TitledText[];
   image: { file: string; alt: string };
   guide: string;
+  guideLabel?: string;
   related: string[];
 };
 
-export const erpFeatures: readonly ErpFeature[] = [
+export const coreErpFeatures: readonly ErpFeature[] = [
   {
     slug: "gst-invoicing",
     name: "GST invoicing",
@@ -220,4 +221,4 @@ export const erpFeatures: readonly ErpFeature[] = [
   },
 ];
 
-export const featureHref = (slug: string) => `${FEATURES_PATH}/${slug}`;
+export const erpFeatures = [...coreErpFeatures, ...optionalErpFeatures];

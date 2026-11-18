@@ -1814,7 +1814,12 @@
     "optionalModules": {
       "title": "Extend with Optional Modules",
       "subtitle": "Tailor BabaBuilds to your exact needs by enabling powerful, specialized modules.",
+      "browseModules": "सभी वैकल्पिक मॉड्यूल देखें",
       "modules": {
+        "pos": {
+          "title": "पॉइंट ऑफ़ सेल",
+          "description": "काउंटर बिक्री दर्ज करें, स्टॉक अपडेट करें और शिफ्ट के अंत में नकदी मिलाएँ।"
+        },
         "taxAdvanced": {
           "title": "Advanced Tax & Compliance",
           "description": "Automated calculations, multi-region compliance, and audit-ready reporting."

@@ -1822,7 +1822,12 @@
     "optionalModules": {
       "title": "Extend with Optional Modules",
       "subtitle": "Tailor BabaBuilds to your exact needs by enabling powerful, specialized modules.",
+      "browseModules": "تصفح جميع الوحدات الاختيارية",
       "modules": {
+        "pos": {
+          "title": "نقطة البيع",
+          "description": "سجّل مبيعات المتجر وحدّث المخزون وراجع النقد عند إغلاق الوردية."
+        },
         "taxAdvanced": {
           "title": "Advanced Tax & Compliance",
           "description": "Automated calculations, multi-region compliance, and audit-ready reporting."

@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
-import { FEATURES_PATH } from "@/content/marketing/erp-features";
+import { FEATURES_PATH } from "@/content/marketing/feature-paths";
 
 export default function LandingNavbar({ sectionPath = "" }: { sectionPath?: string }) {
   const t = useTranslations("LandingNavbar");

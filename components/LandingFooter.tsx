@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Box, Mail, MapPin, ShieldCheck, FileText, LifeBuoy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
-import { FEATURES_PATH } from "@/content/marketing/erp-features";
+import { FEATURES_PATH } from "@/content/marketing/feature-paths";
 
 export default function LandingFooter({ sectionPath = "" }: { sectionPath?: string }) {
   const t = useTranslations("LandingFooter");

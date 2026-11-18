@@ -3,7 +3,11 @@
 import { useRef, useState, useEffect } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
+import { featureHref, OPTIONAL_MODULES_PATH, optionalFeatureSlugs } from "@/content/marketing/feature-paths";
 import {
+  ArrowRight,
+  ScanBarcode,
   ShieldCheck,
   Users2,
   Wallet,
@@ -15,18 +19,18 @@ import {
   ChevronRight
 } from "lucide-react";
 
-// Mapping module keys to icons
-const moduleIcons = {
-  taxAdvanced: ShieldCheck,
-  workforce: Users2,
-  payroll: Wallet,
-  shop: Store,
-  revenuePipeline: Target,
-  arCollections: Siren,
-  documents: FileText,
+const moduleCards = {
+  pos: { icon: ScanBarcode, slug: optionalFeatureSlugs.POS },
+  shop: { icon: Store, slug: optionalFeatureSlugs.SHOP },
+  taxAdvanced: { icon: ShieldCheck, slug: optionalFeatureSlugs.TAX_ADVANCED },
+  workforce: { icon: Users2, slug: optionalFeatureSlugs.WORKFORCE },
+  payroll: { icon: Wallet, slug: optionalFeatureSlugs.PAYROLL },
+  revenuePipeline: { icon: Target, slug: optionalFeatureSlugs.REVENUE_PIPELINE },
+  arCollections: { icon: Siren, slug: optionalFeatureSlugs.AR_COLLECTIONS },
+  documents: { icon: FileText, slug: optionalFeatureSlugs.DOCUMENTS },
 } as const;
 
-type ModuleKey = keyof typeof moduleIcons;
+type ModuleKey = keyof typeof moduleCards;
 
 export default function OptionalModulesSlider() {
   const t = useTranslations("LandingPhase1.optionalModules");
@@ -36,7 +40,7 @@ export default function OptionalModulesSlider() {
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
 
-  const modules = Object.keys(moduleIcons) as ModuleKey[];
+  const modules = Object.keys(moduleCards) as ModuleKey[];
 
   const handleScroll = () => {
     if (!scrollContainerRef.current) return;
@@ -71,6 +75,12 @@ export default function OptionalModulesSlider() {
             <p className="max-w-2xl text-lg text-muted-body">
               {t("subtitle")}
             </p>
+            <Link
+              href={OPTIONAL_MODULES_PATH}
+              className="inline-flex min-h-11 items-center gap-2 font-semibold text-orange-800 underline underline-offset-4 dark:text-orange-300"
+            >
+              {t("browseModules")} <ArrowRight aria-hidden="true" className="size-4 rtl:rotate-180" />
+            </Link>
           </div>
           
           <div className="hidden items-center gap-3 md:flex">
@@ -101,7 +111,7 @@ export default function OptionalModulesSlider() {
             className="flex snap-x snap-mandatory gap-6 overflow-x-auto pb-8 pt-4 sm:snap-none [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
           >
             {modules.map((key, idx) => {
-              const Icon = moduleIcons[key];
+              const { icon: Icon, slug } = moduleCards[key];
               return (
                 <motion.article
                   key={key}
@@ -119,7 +129,9 @@ export default function OptionalModulesSlider() {
                   
                   <div className="relative z-10 space-y-3">
                     <h3 className="text-xl font-bold tracking-tight text-foreground">
-                      {t(`modules.${key}.title`)}
+                      <Link href={featureHref(slug)} className="underline-offset-4 hover:underline focus-visible:underline">
+                        {t(`modules.${key}.title`)}
+                      </Link>
                     </h3>
                     <p className="text-sm leading-relaxed text-muted-body">
                       {t(`modules.${key}.description`)}

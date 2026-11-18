@@ -4,7 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { erpFeatures, featureHref, FEATURES_PATH } from "@/content/marketing/erp-features";
+import { erpFeatures } from "@/content/marketing/erp-features";
+import { featureHref, FEATURES_PATH } from "@/content/marketing/feature-paths";
 
 const SITE_URL = "https://erp.bababuilds.com";
 const textLink = "inline-flex min-h-11 items-center gap-2 font-semibold text-orange-800 underline underline-offset-4 hover:no-underline dark:text-orange-300";
@@ -143,7 +144,7 @@ export default async function FeaturePage({ params }: FeaturePageProps) {
             <p className="mt-2 max-w-3xl leading-relaxed text-muted-body">{feature.example.text}</p>
           </div>
           <Link href={`/help/${feature.guide}`} className={`${textLink} mt-3`}>
-            Read the {feature.name.toLowerCase()} guide <ArrowRight aria-hidden="true" className="size-4" />
+            {feature.guideLabel ?? `Read the ${feature.name.toLowerCase()} guide`} <ArrowRight aria-hidden="true" className="size-4" />
           </Link>
         </section>
 

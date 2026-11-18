@@ -3,7 +3,8 @@ import path from 'node:path';
 import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 import { getAllDocs, groupDocsByCategory } from '@/lib/docs';
-import { erpFeatures, featureHref, FEATURES_PATH } from '@/content/marketing/erp-features';
+import { erpFeatures } from '@/content/marketing/erp-features';
+import { featureHref, FEATURES_PATH } from '@/content/marketing/feature-paths';
 
 const BASE_URL = 'https://erp.bababuilds.com';
 
