@@ -12,6 +12,11 @@ export type EffectiveMailBillingSettings = {
   allowMailboxManagement: boolean;
   quotaAlertPercent: number;
   paymentDigest: 'OFF' | 'DAILY' | 'WEEKLY';
+  defaultPlanId: string | null;
+  autoOnboardNewDomains: boolean;
+  autoOnboardSince: Date | null;
+  autoOnboardEmailInvoices: boolean;
+  autoOnboardTrialDays: number;
 };
 
 /** Settings for a workspace, with the documented defaults when it has never saved any. */
@@ -25,6 +30,11 @@ export async function loadMailBillingSettings(workspaceId: string): Promise<Effe
     prorateIncreases: row?.prorateIncreases ?? true,
     allowMailboxManagement: row?.allowMailboxManagement ?? false,
     quotaAlertPercent: row?.quotaAlertPercent ?? 90,
+    defaultPlanId: row?.defaultPlanId ?? null,
+    autoOnboardNewDomains: row?.autoOnboardNewDomains ?? false,
+    autoOnboardSince: row?.autoOnboardSince ?? null,
+    autoOnboardEmailInvoices: row?.autoOnboardEmailInvoices ?? false,
+    autoOnboardTrialDays: row?.autoOnboardTrialDays ?? 0,
     paymentDigest: row?.paymentDigest === 'OFF' || row?.paymentDigest === 'WEEKLY' ? row.paymentDigest : 'DAILY',
   };
 }

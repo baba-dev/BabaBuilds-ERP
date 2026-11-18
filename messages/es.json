@@ -3029,7 +3029,11 @@
       "digestDaily": "Daily, when something is due or overdue",
       "digestWeekly": "Mondays, when something is due or overdue",
       "digestOff": "Off",
-      "quotaAlertPercent": "Warn when a mailbox is this % full (0 = off)"
+      "quotaAlertPercent": "Warn when a mailbox is this % full (0 = off)",
+      "autoOnboardNewDomains": "Automatically set up billing for new domains",
+      "autoOnboardHelp": "When a new domain appears on a mail server, create a customer named after it, a subscription on your default plan and a recurring invoice, dated from the day it appeared. Only domains discovered after you turn this on are affected, and only after the server has completed one sync, so your existing customers are never billed by surprise. Needs a default plan.",
+      "autoOnboardEmailInvoices": "Email these invoices automatically (the customer needs an email address first)",
+      "autoOnboardTrialDays": "Free trial for new domains (days)"
     },
     "ops": {
       "title": "Operations",

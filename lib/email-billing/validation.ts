@@ -127,6 +127,10 @@ export const mailBillingSettingsPatchSchema = z.object({
   allowMailboxManagement: z.boolean().optional(),
   quotaAlertPercent: z.number().int().min(0).max(100).optional(),
   paymentDigest: z.enum(['OFF', 'DAILY', 'WEEKLY']).optional(),
+  /** Set up billing automatically for domains discovered after this is switched on. Needs a default plan. */
+  autoOnboardNewDomains: z.boolean().optional(),
+  autoOnboardEmailInvoices: z.boolean().optional(),
+  autoOnboardTrialDays: z.number().int().min(0).max(365).optional(),
 });
 
 export const mailBillingApplyQuantitySchema = z.object({

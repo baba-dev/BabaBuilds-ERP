@@ -6,6 +6,7 @@ import { evaluateSubscriptionQuantity } from './quantity';
 import { convertEndedTrials, type TrialConversionStats } from './lifecycle';
 import { loadMailBillingSettings } from './settings';
 import { syncQuotaAlerts } from './quota';
+import { autoOnboardNewDomains } from './auto-onboard';
 import { sendPaymentDigest } from './digest';
 
 const HOUR_MS = 3_600_000;
@@ -17,6 +18,7 @@ export type WorkspaceRunStats = {
   serversSynced: number;
   serversFailed: number;
   snapshots: number;
+  domainsOnboarded: number;
   quantityApplied: number;
   quantityQueuedForReview: number;
   trials: TrialConversionStats;
@@ -32,7 +34,7 @@ export type WorkspaceRunStats = {
  */
 export async function runEmailHostingDailyForWorkspace(workspaceId: string, now: Date): Promise<WorkspaceRunStats> {
   const stats: WorkspaceRunStats = {
-    workspaceId, serversSynced: 0, serversFailed: 0, snapshots: 0, quantityApplied: 0, quantityQueuedForReview: 0,
+    workspaceId, serversSynced: 0, serversFailed: 0, snapshots: 0, domainsOnboarded: 0, quantityApplied: 0, quantityQueuedForReview: 0,
     trials: { converted: 0, needsReview: 0, skipped: 0, failed: 0 }, quotaAlerts: 0, digest: 'SKIPPED',
   };
   const settings = await loadMailBillingSettings(workspaceId);
@@ -51,6 +53,9 @@ export async function runEmailHostingDailyForWorkspace(workspaceId: string, now:
       }
     }
   }
+
+  // New customers first, so they are billed from the same day and get today's usage snapshot.
+  stats.domainsOnboarded = (await autoOnboardNewDomains(workspaceId, now).catch((error) => { console.error('Automatic onboarding failed:', workspaceId, error); return { onboarded: 0 }; })).onboarded;
 
   const readings = await captureUsageSnapshots({ workspaceId, now, source: 'CRON' });
   stats.snapshots = readings.length;
@@ -82,7 +87,7 @@ export async function runEmailHostingDaily(now: Date, only?: { workspaceId: stri
     } catch (error) {
       console.error('Email hosting daily run failed for workspace:', workspaceId, error);
       results.push({
-        workspaceId, serversSynced: 0, serversFailed: 0, snapshots: 0, quantityApplied: 0, quantityQueuedForReview: 0,
+        workspaceId, serversSynced: 0, serversFailed: 0, snapshots: 0, domainsOnboarded: 0, quantityApplied: 0, quantityQueuedForReview: 0,
         trials: { converted: 0, needsReview: 0, skipped: 0, failed: 0 }, quotaAlerts: 0, digest: 'SKIPPED', error: 'FAILED',
       });
     }

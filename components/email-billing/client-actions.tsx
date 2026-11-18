@@ -74,6 +74,9 @@ type SettingsShape = {
   allowMailboxManagement?: boolean;
   quotaAlertPercent?: number;
   paymentDigest?: string;
+  autoOnboardNewDomains?: boolean;
+  autoOnboardEmailInvoices?: boolean;
+  autoOnboardTrialDays?: number;
 };
 
 async function postJson(url: string, body?: unknown, method = 'POST') {
@@ -306,6 +309,9 @@ export function SettingsForm({ settings, plans }: { settings: SettingsShape; pla
       allowMailboxManagement: form.get('allowMailboxManagement') === 'on',
       quotaAlertPercent: Math.min(100, Math.max(0, Number(form.get('quotaAlertPercent') ?? 90) || 0)),
       paymentDigest: String(form.get('paymentDigest') || 'DAILY'),
+      autoOnboardNewDomains: form.get('autoOnboardNewDomains') === 'on',
+      autoOnboardEmailInvoices: form.get('autoOnboardEmailInvoices') === 'on',
+      autoOnboardTrialDays: Math.min(365, Math.max(0, Math.trunc(Number(form.get('autoOnboardTrialDays') ?? 0) || 0))),
     };
     try {
       await postJson('/api/email-billing/settings', payload, 'PATCH');
@@ -331,6 +337,12 @@ export function SettingsForm({ settings, plans }: { settings: SettingsShape; pla
       <div className="space-y-3 rounded-lg border border-border/70 p-3">
         <label className="flex items-start gap-2 text-sm font-medium"><Checkbox name="allowMailboxManagement" defaultChecked={settings.allowMailboxManagement === true} className="mt-0.5" />{t('settingsLabels.allowMailboxManagement')}</label>
         <p className="text-xs text-muted-foreground">{t('settingsLabels.allowMailboxManagementHelp')}</p>
+      </div>
+      <div className="space-y-3 rounded-lg border border-border/70 p-3">
+        <label className="flex items-start gap-2 text-sm font-medium"><Checkbox name="autoOnboardNewDomains" defaultChecked={settings.autoOnboardNewDomains === true} className="mt-0.5" />{t('settingsLabels.autoOnboardNewDomains')}</label>
+        <p className="text-xs text-muted-foreground">{t('settingsLabels.autoOnboardHelp')}</p>
+        <label className="flex items-start gap-2 text-sm"><Checkbox name="autoOnboardEmailInvoices" defaultChecked={settings.autoOnboardEmailInvoices === true} className="mt-0.5" />{t('settingsLabels.autoOnboardEmailInvoices')}</label>
+        <Field id="settings-onboard-trial" label={t('settingsLabels.autoOnboardTrialDays')}><Input id="settings-onboard-trial" name="autoOnboardTrialDays" type="number" min={0} max={365} step={1} defaultValue={settings.autoOnboardTrialDays ?? 0} /></Field>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field id="settings-digest" label={t('settingsLabels.paymentDigest')}><Select name="paymentDigest" defaultValue={settings.paymentDigest ?? 'DAILY'}><SelectTrigger id="settings-digest" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="DAILY">{t('settingsLabels.digestDaily')}</SelectItem><SelectItem value="WEEKLY">{t('settingsLabels.digestWeekly')}</SelectItem><SelectItem value="OFF">{t('settingsLabels.digestOff')}</SelectItem></SelectContent></Select></Field>

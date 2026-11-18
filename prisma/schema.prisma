@@ -4002,6 +4002,15 @@ model MailBillingSettings {
   /// OFF | DAILY | WEEKLY: a notification listing payments due soon and overdue invoices, sent only when there is something to collect.
   paymentDigest String @default("DAILY")
   lastDigestOn DateTime?
+  /// Automatically set up billing (customer, subscription, retainer) for domains discovered after this was switched on.
+  /// Needs a default plan. Domains that already existed are never touched; use the previewed bulk setup for those.
+  autoOnboardNewDomains Boolean @default(false)
+  /// When auto-onboarding was last switched on. Only domains first seen after this (and after the server's first
+  /// successful sync) are onboarded, so connecting a server never bills your whole existing base.
+  autoOnboardSince DateTime?
+  /// Email each invoice of an auto-onboarded domain. Off by default: the customer record has no email until you add one.
+  autoOnboardEmailInvoices Boolean @default(false)
+  autoOnboardTrialDays Int @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -33,6 +33,24 @@ Different domains are issued on different days, so each is billed on its own day
 
 Invoices themselves are raised, emailed and chased by the existing recurring-billing job; the calendar and digest are the checklist on top. One known property of that job: it moves a billing date that lands on a weekend back to the Friday and carries on from there, so over a long time a domain's day can drift by a day or two. The calendar always shows the date the job will actually use.
 
+## Automatic onboarding of new domains
+
+Import is automatic: servers are re-synced on the Daily or Weekly setting, and new mailboxes flow into billing through the usage job. **Automatic onboarding** goes one step further for new customers. Switch it on in Settings (it needs a default plan) and, from then on, a domain that appears on a server is brought into the ERP without anyone touching it:
+
+- a customer named after the domain (rename it and add an email address afterwards; a review item reminds you),
+- a subscription on the default plan, dated from the day the domain appeared, with an optional free trial,
+- a recurring retainer, so the invoice job, payments calendar, digest, usage-based quantity changes and quota alerts all apply.
+
+Safeguards, because this creates billing for people outside the ERP:
+
+- Off by default, audited, and needs the server-admin permission. **Only domains first seen after you turn it on are touched**, and only after that server has finished one successful sync, so connecting a server (or turning the setting on) never bills your existing customer base. Existing customers go through *Set up billing for many*, which previews first.
+- Domains you already linked or started billing by hand are left alone.
+- If more than 25 new domains appear in one run it is treated as a re-import: nothing is set up, and a review item asks you to use the previewed bulk setup.
+- Invoices are **not emailed** unless you tick the option (an auto-created customer has no email address until you add one).
+- Anything that cannot be set up (Free-plan client limit, a manual-priced plan, an error) raises a review item and is retried the next day; it never blocks the rest.
+
+Mailboxes are not billed one by one: a domain is billed through its plan, and its mailbox count drives the price (see *Usage-based billing*). A new mailbox on a billed domain is therefore picked up by the next daily run and either applied or queued for approval.
+
 ## Mailboxes, quotas and the directory
 
 `/email-billing/mailboxes` lists every active mailbox with its domain, customer, quota and used space, with search (address or customer) and filters (almost full, suspended, admins, no usage reported), 50 per page. Used space is shown only when the source reports it (`usedMb` from an adapter, or the box size from the mail server); otherwise it reads "Not reported", never zero. A mailbox at or above the alert level (default 90%, 0 turns it off) raises one review item per domain listing the fullest mailboxes, and clears itself when they drop below it.

@@ -72,7 +72,8 @@ export async function previewBulkSetup(input: BulkSetupInput) {
   return { eligible: total, unmappedSkipped, willProcessNow: Math.min(total, BULK_APPLY_LIMIT), sample: rows, emailInvoices: input.emailInvoices === true };
 }
 
-async function ensureClientForDomain(workspaceId: string, domain: Candidate, ws: { countryCode: string | null }): Promise<string> {
+/** The customer record named after a domain: reuses one that exists, otherwise creates a bare one to be completed later. */
+export async function ensureClientForDomain(workspaceId: string, domain: { domain: string }, ws: { countryCode: string | null }): Promise<string> {
   const existing = await prisma.client.findFirst({ where: { workspaceId, name: domain.domain }, select: { id: true } });
   if (existing) return existing.id;
   const created = await prisma.client.create({
