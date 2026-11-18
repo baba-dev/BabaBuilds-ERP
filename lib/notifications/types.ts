@@ -40,6 +40,8 @@ export interface NotificationPayload {
   userIds?: string[];
   /** Per-event data used to populate templates */
   data: Record<string, unknown>;
+  /** Stable source-event occurrence ID, required only for Phase 5 outbound canary. */
+  occurrenceKey?: string;
 }
 
 export interface PushPayload {
