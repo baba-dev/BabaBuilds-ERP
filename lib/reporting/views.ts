@@ -5,6 +5,8 @@ import path from 'node:path';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/mailer';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
+import { reportQueueEnabled } from '@/lib/jobs/report-routing';
+import { enqueueDueScheduledReport } from '@/lib/jobs/report-producer';
 import { getReport, reportToCsv, runReport, type ReportResult } from '@/lib/reporting/engine';
 import { buildReportPdf } from '@/lib/reporting/pdf';
 import { PERIOD_KEYS, type PeriodKey } from '@/lib/expenses/period';
@@ -109,17 +111,25 @@ export async function sendViewEmail(v: ViewRowDb, now: Date, overrideTo?: string
   }
 }
 
-export type RunDueResult = { due: number; sent: number; failed: number };
+export type RunDueResult = { due: number; sent: number; queued: number; failed: number };
 
 /** Email every saved report whose schedule has come due. A failure on one view is recorded on it, the team is told once per new failure, and the rest carry on. */
 export async function runDueSchedules(now = new Date()): Promise<RunDueResult> {
   const due = await prisma.reportView.findMany({ where: { scheduleFrequency: { not: null }, scheduleEnabled: true, scheduleNextAt: { lte: now } }, take: 200 });
-  let sent = 0, failed = 0;
+  let sent = 0, queued = 0, failed = 0;
   for (const v of due) {
     const frequency = (FREQUENCIES as readonly string[]).includes(v.scheduleFrequency ?? '') ? (v.scheduleFrequency as Frequency) : null;
     if (!frequency) continue;
     const next = nextRunAfter(frequency, now, { hour: v.scheduleHour, tz: v.scheduleTz });
     try {
+      if (reportQueueEnabled(v.workspaceId)) {
+        // CAS + source outbox + recipient intents commit together. Never send
+        // via the legacy SMTP path after an ambiguous database outcome.
+        const result = await enqueueDueScheduledReport(v, next);
+        if (result === 'ENQUEUED') queued += 1;
+        if (result === 'INVALID_RECIPIENTS') failed += 1;
+        continue;
+      }
       await sendViewEmail(v, now);
       await prisma.reportView.update({ where: { id: v.id }, data: { scheduleLastAt: now, scheduleNextAt: next, scheduleLastError: null } });
       sent += 1;
@@ -132,5 +142,5 @@ export async function runDueSchedules(now = new Date()): Promise<RunDueResult> {
       }
     }
   }
-  return { due: due.length, sent, failed };
+  return { due: due.length, sent, queued, failed };
 }
