@@ -93,8 +93,13 @@ def package_worker_runtime(root, release):
     if not source.is_file():
         raise RuntimeError("ERP worker source missing")
     shutil.copy2(source, release / "erp-worker.mjs")
-    subprocess.run(["node", "--check", str(release / "erp-worker.mjs")],
-                   check=True, capture_output=True, timeout=15)
+    notify_source = root / "ops" / "erp-worker" / "notification-delivery.mjs"
+    if not notify_source.is_file():
+        raise RuntimeError("Phase 5 outbound worker source missing")
+    shutil.copy2(notify_source, release / "notification-delivery.mjs")
+    for worker_source in ("erp-worker.mjs", "notification-delivery.mjs"):
+        subprocess.run(["node", "--check", str(release / worker_source)],
+                       check=True, capture_output=True, timeout=15)
 
     completed = set()
 
@@ -124,7 +129,7 @@ def package_worker_runtime(root, release):
             except RuntimeError:
                 pass
 
-    for name in ("bullmq", "pg"):
+    for name in ("bullmq", "pg", "nodemailer", "web-push"):
         stage_package(name, root)
 
 
