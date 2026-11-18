@@ -365,8 +365,7 @@ export function DomainRowActions({ domainId }: { domainId: string }) {
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>{t('tables.actions')}</DropdownMenuLabel>
         <DropdownMenuItem asChild><Link href={`/email-billing/domains/${domainId}`}>{t('actions.view')}</Link></DropdownMenuItem>
-        <DropdownMenuItem asChild><Link href={`/email-billing/domains/${domainId}#billing`}>{t('actions.createSubscription')}</Link></DropdownMenuItem>
-        <DropdownMenuItem asChild><Link href={`/email-billing/domains/${domainId}#billing`}>{t('actions.createRetainer')}</Link></DropdownMenuItem>
+        <DropdownMenuItem asChild><Link href={`/email-billing/domains/${domainId}#billing`}>{t('billingSetup.open')}</Link></DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={ignore}>{t('actions.ignoreDomain')}</DropdownMenuItem>
       </DropdownMenuContent>

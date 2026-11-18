@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { enforceRouteRateLimit } from '@/lib/route-rate-limit';
 import { requireEmailBilling } from '../_lib/auth';
 import { OperationError, requestOperation } from '@/lib/email-billing/ops/service';
-import { ADMIN_OPERATIONS, operationRequestSchema } from '@/lib/email-billing/ops/schemas';
+import { operationRequestSchema, requiresAdmin } from '@/lib/email-billing/ops/schemas';
 
 const NO_STORE = { 'Cache-Control': 'no-store' };
 
@@ -36,7 +36,8 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues.map((i) => `${i.path.join('.') || 'body'}: ${i.message}`).join('; ') }, { status: 400, headers: NO_STORE });
   }
-  if (ADMIN_OPERATIONS.has(parsed.data.type)) {
+  // Deleting a mailbox and adding a new domain need the stronger server-admin permission.
+  if (requiresAdmin(parsed.data)) {
     const admin = await requireEmailBilling('admin');
     if ('response' in admin) return admin.response;
   }

@@ -1,14 +1,41 @@
-# Email Billing optional module
+# Email Hosting (Email Billing) optional module
 
-Email Billing (`MIAB_BILLING`) is an opt-in ERP module for hosted Mail-in-a-Box products. It syncs read-only domain and mailbox inventory and maps hosted domains to ERP clients, retainers, and recurring invoice workflows.
+Email Hosting (`MIAB_BILLING`) is the owner console for a hosted-email business on Mail-in-a-Box (for example a mail service sold to many external customers). It is available on every plan and is opt-in per workspace. It is built for four jobs:
+
+1. **See what is being served**: every domain and mailbox, with quota and usage, searchable.
+2. **Never forget a payment**: each domain is billed on the anniversary of the day it was issued, and a payments calendar and digest say what to collect and when.
+3. **Check quotas and run the everyday operations** without sending anyone to the Mail-in-a-Box admin page.
+4. **Keep writes optional**: changing anything on a mail server is a module setting, off by default.
+
+The people who pay are normal ERP **Clients** (customers) of the workspace; they never log in to the ERP.
 
 ## What it does
 
-- Connect one or more Mail-in-a-Box inventory sources.
-- Sync domains, mailboxes, quotas, admin flags, archived/removed status, and alias counts where available.
-- Show unmapped domains, domains without linked retainers, inactive inventory, and billing review notes.
-- Map a hosted domain to a `Client`.
-- Link an existing `Retainer` or create a new recurring retainer with `RetainerItem` rows.
+- Connect one or more Mail-in-a-Box servers (read-only adapter, direct read access, or managed mode).
+- Sync domains, mailboxes, quotas, usage (when the source reports it), admin flags and alias counts.
+- Set up billing for a domain in one step (customer, plan, issue date), one at a time or for many domains at once.
+- Bill through the existing Retainer and Invoice engine, with usage-based quantity changes and proration.
+- Show a payments calendar, unpaid invoices and what is not being billed, and send a payments digest.
+- Optionally run mailboxes from the ERP (see *Managed mode*), including adding new customer domains.
+
+## Mailbox management: a module setting
+
+**Settings -> Allow mailbox management from the ERP** is a switch for the whole module, off by default. While it is off the module only reads inventory and runs billing: the create/reset/quota/suspend/delete controls and the Operations page link are not shown, and the API refuses every write. Turning it on (or off) needs the server-admin permission and is written to the activity log. A write also needs the server itself to be in managed mode with writes enabled (below), so there are two deliberate steps. Operations already scheduled (such as a delayed delete) do not run while the switch is off; they fail with a clear message and the mailbox stops showing as scheduled.
+
+## Billing follows the issue date
+
+Different domains are issued on different days, so each is billed on its own day:
+
+- **Set up billing** (domain page, or *Set up billing for many* on the Domains page). You choose the customer (searched by name or email, or a new one), the plan and the **issue date** (defaults to the day the domain was first seen; change it to the real date for existing customers). The first invoice falls on the next anniversary of the issue date (monthly, quarterly or yearly depending on the plan), counted from the issue date so a domain issued on the 31st is billed on the last day of shorter months and never drifts. A trial in days, or an explicit first invoice date, can be given instead. The current term is assumed already paid; choose the first invoice date yourself to bill it now.
+- **Bulk setup** applies one plan to every domain that is not billed yet. Preview first; nothing changes until you apply. At most 200 domains are handled per run (run it again for the rest). Domains without a customer are skipped unless you ask for a customer named after the domain to be created (customers created this way have no address or email, so review them). **Invoice emails are off by default for bulk setup**, so nobody receives an invoice before you have checked their address.
+- **Payments calendar** (`/email-billing/calendar`): domains by billing date for the next 60 days (including any whose date passed without an invoice), unpaid and overdue invoices from email hosting, and the count of domains that are not billed at all, which are the ones that would otherwise be forgotten.
+- **Payments digest**: a notification (in-app and email) listing billing dates and unpaid invoices from the next 7 days plus anything overdue. It is sent from the daily job only when there is something to collect, once per day (or on Mondays with the weekly setting, or never with Off), and only to people who can see billing.
+
+Invoices themselves are raised, emailed and chased by the existing recurring-billing job; the calendar and digest are the checklist on top. One known property of that job: it moves a billing date that lands on a weekend back to the Friday and carries on from there, so over a long time a domain's day can drift by a day or two. The calendar always shows the date the job will actually use.
+
+## Mailboxes, quotas and the directory
+
+`/email-billing/mailboxes` lists every active mailbox with its domain, customer, quota and used space, with search (address or customer) and filters (almost full, suspended, admins, no usage reported), 50 per page. Used space is shown only when the source reports it (`usedMb` from an adapter, or the box size from the mail server); otherwise it reads "Not reported", never zero. A mailbox at or above the alert level (default 90%, 0 turns it off) raises one review item per domain listing the fullest mailboxes, and clears itself when they drop below it.
 
 ## What it does not do
 
@@ -22,7 +49,7 @@ Direct MiaB API mode is server-side only and restricted to the read endpoints `/
 
 ## Managed mode: running mailboxes from the ERP
 
-A server whose access mode is `MANAGED_API` can be operated from the ERP. Set it up in this order:
+A server whose access mode is `MANAGED_API` can be operated from the ERP once **Allow mailbox management** is on in the module settings. Set it up in this order:
 
 1. Create a **dedicated admin account** in Mail-in-a-Box for the ERP (do not reuse a person's account; Mail-in-a-Box has no scoped tokens, so this credential can do anything on the box). It must not have two-factor authentication enabled.
 2. Add the server with access mode `MANAGED_API`, the box address (the API is reached under `/admin`; a bare host name is fine) and the token `admin-email:password` (or `admin-email:api-key`). The token is stored encrypted and never returned to the browser.
@@ -38,6 +65,7 @@ What can be done (permission **Email Hosting: operate**, owners and admins by de
 | Add / remove alias | On a domain of the server. |
 | Suspend | Locks the login by setting a random password nobody knows. Mail keeps arriving. |
 | Resume | Issues a fresh password, shown once. |
+| Add domain | Creates a customer domain on a server by creating its first mailbox (server-admin permission). DNS and the certificate are then handled on the mail server. |
 | Delete | Needs the address typed back and waits 7 days by default (0 to 30). Cancel any time before it runs. |
 
 Safety rules:
@@ -46,16 +74,17 @@ Safety rules:
 - Every change is recorded as an operation (Operations page, `/api/email-billing/operations`) with who asked, the result and any error. Passwords, tokens and server error text containing them are never stored or logged. Operations that show a password run immediately and are not retried by a job (a failure means request it again); other operations are retried with backoff by `/api/cron/email-hosting-operations`, which also runs scheduled deletes. A repeated request with the same `idempotencyKey` returns the first result instead of repeating the change.
 - After create and delete the ERP re-reads the box and records whether the change was confirmed. A later sync reconciles anything that drifted.
 - Creating or deleting a mailbox changes the billable count; the daily usage job then proposes (or applies) the quantity change as described above.
-- New domains are not created from the ERP yet: add the first mailbox for a new domain in Mail-in-a-Box, then sync.
 - The AI assistant has no access to any of this.
 
 ## Setup workflow
 
-1. Enable the optional **Email Billing** module for the workspace.
-2. Add a server with name, base URL, access mode, and optional token. Existing tokens display as `SET` and are never returned by API responses.
-3. Run **Sync now** to import read-only inventory.
-4. Map each domain to an ERP client.
-5. Link an existing retainer or create a new retainer using fixed domain, per-mailbox, or manual package billing.
+1. Enable the optional **Email Hosting** module for the workspace (any plan).
+2. Add a server (name, base URL, access mode, token). Tokens display as `SET` and are never returned by the API.
+3. Run **Sync now** to import domains and mailboxes. Choose how often the daily job re-syncs under Settings (Manual, Daily or Weekly).
+4. Create your plans (price, mailboxes included, monthly/quarterly/yearly).
+5. Set up billing: per domain from its page, or **Set up billing for many** on the Domains page. Enter the real issue dates for existing customers.
+6. Add the daily job to cron (`docs/cron.md`, before `process-retainers`) so usage, trials, quota alerts and the payments digest run.
+7. Only if you want to run mailboxes from the ERP: turn on **Allow mailbox management** in Settings, put a server in managed mode and enable writes on it.
 
 ## Usage-based billing
 

@@ -10,7 +10,7 @@ const m = vi.hoisted(() => {
     inventory: vi.fn(),
     logActivity: vi.fn(),
     mailbox: { findFirst: vi.fn(), findFirstExisting: vi.fn(), update: vi.fn(), updateMany: vi.fn(), upsert: vi.fn() },
-    domain: { findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
+    domain: { findMany: vi.fn(), findFirst: vi.fn(), update: vi.fn(), updateMany: vi.fn(), upsert: vi.fn() },
     server: { findFirst: vi.fn() },
   };
 });
@@ -129,6 +129,52 @@ describe('module setting: allow mailbox management', () => {
     expect(m.state.ops[0]).toMatchObject({ status: 'FAILED', errorMessage: expect.stringContaining('turned off') });
     expect(m.write).not.toHaveBeenCalled();
     expect(m.mailbox.updateMany).toHaveBeenCalledWith({ where: { id: 'mb1', workspaceId: 'w1' }, data: { deleteScheduledFor: null } });
+  });
+});
+
+describe('adding a new customer domain', () => {
+  const add = { type: 'MAILBOX_CREATE', email: 'admin@newcustomer.com', newDomain: true, serverId: 'sv1' };
+  beforeEach(() => {
+    m.domain.findMany.mockResolvedValue([]);
+    m.mailbox.findFirst.mockResolvedValue(null);
+    m.domain.findFirst.mockResolvedValue(null);
+    m.domain.upsert.mockResolvedValue({ id: 'dnew' });
+    m.inventory.mockResolvedValue({ domains: [{ domain: 'newcustomer.com', mailboxes: [{ email: 'admin@newcustomer.com', status: 'ACTIVE' }] }] });
+  });
+
+  it('creates the domain by its first mailbox and records both locally, linking the operation to the domain', async () => {
+    const { operation, secret } = await req(add);
+    expect(operation.status).toBe('SUCCEEDED');
+    expect(secret?.password).toBeTruthy();
+    expect(m.write.mock.calls[0][0]).toMatchObject({ endpoint: 'userAdd', form: { email: 'admin@newcustomer.com' } });
+    expect(m.domain.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ domain: 'newcustomer.com', serverId: 'sv1', status: 'ACTIVE' }) }));
+    expect(m.mailbox.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ domainId: 'dnew', email: 'admin@newcustomer.com' }) }));
+    expect(m.state.ops[0].domainId).toBe('dnew');
+  });
+
+  it('needs a named server and a real domain name, and the server must be in this workspace', async () => {
+    await expect(req({ ...add, serverId: undefined })).rejects.toMatchObject({ status: 400, message: expect.stringContaining('Choose the server') });
+    for (const email of ['a@localhost', 'a@-bad.com', 'a@x..com', 'a@123', 'a@exa mple.com']) await expect(req({ ...add, email })).rejects.toBeInstanceOf(OperationError);
+    m.server.findFirst.mockResolvedValueOnce(null);
+    await expect(req(add)).rejects.toMatchObject({ status: 404 });
+    expect(m.server.findFirst).toHaveBeenLastCalledWith(expect.objectContaining({ where: { id: 'sv1', workspaceId: 'w1' } }));
+    expect(m.write).not.toHaveBeenCalled();
+  });
+
+  it('is still refused on a server that is not writable, and while the module switch is off', async () => {
+    m.server.findFirst.mockResolvedValueOnce(server({ writesEnabled: false }));
+    await expect(req(add)).rejects.toMatchObject({ status: 409 });
+    m.gate.mockReturnValue(false);
+    await expect(req(add)).rejects.toMatchObject({ status: 409, message: expect.stringContaining('turned off') });
+    expect(m.write).not.toHaveBeenCalled();
+  });
+
+  it('uses the normal path when the domain already exists, so it is never created twice', async () => {
+    m.domain.findMany.mockResolvedValue([{ id: 'd1', domain: 'newcustomer.com', serverId: 'sv1', server: server() }]);
+    m.domain.findFirst.mockResolvedValue({ id: 'd1', domain: 'newcustomer.com' });
+    await req(add);
+    expect(m.domain.upsert).not.toHaveBeenCalled();
+    expect(m.mailbox.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ domainId: 'd1' }) }));
   });
 });
 

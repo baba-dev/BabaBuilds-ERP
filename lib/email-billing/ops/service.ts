@@ -7,7 +7,7 @@ import { fetchMailBillingInventory } from '../miab-client';
 import { MiabApiError, miabWrite } from '../miab/writes';
 import { generateMailboxPassword } from './password';
 import { loadMailBillingSettings } from '../settings';
-import { LOCAL_PART_PATTERN, SECRET_OPERATIONS, type OperationRequest, type OperationType } from './schemas';
+import { DOMAIN_PATTERN, LOCAL_PART_PATTERN, SECRET_OPERATIONS, type OperationRequest, type OperationType } from './schemas';
 
 /** Thrown for a request that cannot be accepted (bad target, writes off, guard hit). `status` is the HTTP status to use. */
 export class OperationError extends Error {
@@ -58,6 +58,17 @@ function credentialEmail(server: Target['server']): string | null {
   }
 }
 
+/** A domain the server does not host yet: it is created by its first mailbox. The server must be named, and the name must be a real domain. */
+async function resolveNewDomain(workspaceId: string, serverId: string | undefined, host: string, email: string): Promise<Target> {
+  if (!serverId) throw new OperationError('Choose the server that should host the new domain.', 400);
+  if (!DOMAIN_PATTERN.test(host)) throw new OperationError(`${host} is not a valid domain name.`, 400);
+  const server = await prisma.mailBillingServer.findFirst({ where: { id: serverId, workspaceId }, select: serverSelect });
+  if (!server) throw new OperationError('Server not found.', 404);
+  const clash = await prisma.mailBillingMailbox.findFirst({ where: { workspaceId, serverId, email, status: { not: 'REMOVED' } } });
+  if (clash) throw new OperationError('That mailbox already exists.', 409);
+  return { server, domain: null, mailbox: null };
+}
+
 async function resolveTarget(workspaceId: string, input: OperationRequest): Promise<Target> {
   if (input.type === 'MAILBOX_CREATE') {
     const [local, host] = input.email.split('@');
@@ -66,7 +77,8 @@ async function resolveTarget(workspaceId: string, input: OperationRequest): Prom
       where: { workspaceId, domain: host, status: 'ACTIVE', ...(input.serverId ? { serverId: input.serverId } : {}) },
       include: { server: { select: serverSelect } },
     });
-    if (domains.length === 0) throw new OperationError(`${host} is not a synced, active domain. Sync the server first.`, 404);
+    if (domains.length === 0 && input.newDomain) return resolveNewDomain(workspaceId, input.serverId, host, input.email);
+    if (domains.length === 0) throw new OperationError(`${host} is not a synced, active domain. Sync the server first, or add it as a new domain.`, 404);
     if (domains.length > 1) throw new OperationError('This domain exists on several servers; pass serverId.', 409);
     const existing = await prisma.mailBillingMailbox.findFirst({ where: { workspaceId, serverId: domains[0].serverId, email: input.email, status: { not: 'REMOVED' } } });
     if (existing) throw new OperationError('That mailbox already exists.', 409);
@@ -174,13 +186,19 @@ async function perform(op: OperationRow, target: Target, token: string): Promise
       return {
         result: { email, verified }, secret: { password },
         local: async (tx) => {
-          const domain = target.domain!;
+          // The first mailbox of a new domain creates the domain here too, so it shows up (and can be billed) straight away.
+          const domainId = target.domain?.id ?? (await tx.mailBillingDomain.upsert({
+            where: { workspaceId_serverId_domain: { workspaceId: op.workspaceId, serverId: op.serverId, domain: email.split('@')[1] } },
+            create: { workspaceId: op.workspaceId, serverId: op.serverId, domain: email.split('@')[1], status: 'ACTIVE', mailboxCount: 0 },
+            update: { status: 'ACTIVE', archivedAt: null, lastSeenAt: new Date() },
+          })).id;
           await tx.mailBillingMailbox.upsert({
             where: { workspaceId_serverId_email: { workspaceId: op.workspaceId, serverId: op.serverId, email } },
-            create: { workspaceId: op.workspaceId, serverId: op.serverId, domainId: domain.id, email, localPart: email.split('@')[0], quotaMb, status: 'ACTIVE', provisionedByOperationId: op.id },
-            update: { domainId: domain.id, quotaMb, status: 'ACTIVE', archivedAt: null, suspendedAt: null, suspendedReason: null, deleteScheduledFor: null, lastSeenAt: new Date() },
+            create: { workspaceId: op.workspaceId, serverId: op.serverId, domainId, email, localPart: email.split('@')[0], quotaMb, status: 'ACTIVE', provisionedByOperationId: op.id },
+            update: { domainId, quotaMb, status: 'ACTIVE', archivedAt: null, suspendedAt: null, suspendedReason: null, deleteScheduledFor: null, lastSeenAt: new Date() },
           });
-          await tx.mailBillingDomain.update({ where: { id: domain.id }, data: { mailboxCount: { increment: 1 } } });
+          await tx.mailBillingDomain.update({ where: { id: domainId }, data: { mailboxCount: { increment: 1 } } });
+          if (!op.domainId) await tx.mailOperation.update({ where: { id: op.id }, data: { domainId } });
         },
       };
     }

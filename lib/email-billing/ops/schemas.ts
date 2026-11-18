@@ -11,7 +11,11 @@ export const OPERATION_TYPES = [
 export type OperationType = (typeof OPERATION_TYPES)[number];
 
 export const operationRequestSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('MAILBOX_CREATE'), ...common, email, quotaMb: quotaMb.optional() }),
+  z.object({
+    type: z.literal('MAILBOX_CREATE'), ...common, email, quotaMb: quotaMb.optional(),
+    /** Adds a domain the server does not host yet by creating its first mailbox. Needs serverId and the server-admin permission. */
+    newDomain: z.boolean().optional(),
+  }),
   z.object({ type: z.literal('PASSWORD_RESET'), ...common, mailboxId: id }),
   z.object({ type: z.literal('QUOTA_SET'), ...common, mailboxId: id, quotaMb }),
   z.object({ type: z.literal('ALIAS_ADD'), ...common, domainId: id, address: email, forwardsTo: z.array(email).min(1).max(20) }),
@@ -33,6 +37,14 @@ export const SECRET_OPERATIONS: ReadonlySet<OperationType> = new Set(['MAILBOX_C
 
 /** Destructive operations need the stronger server-admin permission instead of the day-to-day operate permission. */
 export const ADMIN_OPERATIONS: ReadonlySet<OperationType> = new Set(['MAILBOX_DELETE']);
+
+/** A public domain name: dot-separated labels, a letter-only top level of 2+ characters, 253 characters at most. */
+export const DOMAIN_PATTERN = /^(?=.{4,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+
+/** Operations that must be requested with the server-admin permission, given the request itself. */
+export function requiresAdmin(input: OperationRequest): boolean {
+  return ADMIN_OPERATIONS.has(input.type) || (input.type === 'MAILBOX_CREATE' && input.newDomain === true);
+}
 
 /** Mail-in-a-Box mailbox local part: conservative subset that every mail system accepts. */
 export const LOCAL_PART_PATTERN = /^[a-z0-9]([a-z0-9._+-]{0,62}[a-z0-9])?$/;

@@ -67,6 +67,20 @@ describe('POST /api/email-billing/operations', () => {
     expect(m.request).not.toHaveBeenCalled();
   });
 
+  it('also requires the server-admin permission to add a new domain, but not to add a mailbox to an existing one', async () => {
+    m.guard.mockReset();
+    m.guard.mockResolvedValue(ok);
+    await POST(json({ type: 'MAILBOX_CREATE', email: 'a@x.com' }));
+    expect(m.guard.mock.calls.map((c) => c[0])).toEqual(['operate']);
+    m.guard.mockReset();
+    m.request.mockClear();
+    m.guard.mockResolvedValueOnce(ok).mockResolvedValueOnce(denied());
+    const res = await POST(json({ type: 'MAILBOX_CREATE', email: 'a@new.com', newDomain: true, serverId: 'sv1' }));
+    expect(res.status).toBe(403);
+    expect(m.guard.mock.calls.map((c) => c[0])).toEqual(['operate', 'admin']);
+    expect(m.request).not.toHaveBeenCalled();
+  });
+
   it('returns the one-time password with no-store, and applies the schema default delete window', async () => {
     m.request.mockResolvedValue({ operation: { id: 'op1', status: 'SUCCEEDED' }, secret: { password: 'Pw-once' } });
     const res = await POST(json({ type: 'MAILBOX_CREATE', email: 'New@X.com' }));

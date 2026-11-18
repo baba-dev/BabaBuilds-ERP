@@ -1,6 +1,17 @@
 # Email Hosting (Mail-in-a-Box) rework: plan
 
-Status: decisions 2 (credential model) and plan availability are confirmed; Phases 0 and 1 are merged and Phase 2 (managed operations) is implemented; Phases 3 and 4 are not started. Replaces the read-only `MIAB_BILLING` ("Email Billing") module described in `docs/email-billing.md`.
+Status: decisions 2 (credential model) and plan availability are confirmed; Phases 0 and 1 are merged; Phase 2 (managed operations) and the owner console described under *Product direction* are implemented on the open PR; customer self-service and automatic suspension are not started. Replaces the read-only `MIAB_BILLING` ("Email Billing") module described in `docs/email-billing.md`.
+
+## Product direction (confirmed by the owner)
+
+The ERP is the owner's own product. The company is a hosted-email provider (aiwamail.com) with a large base of **external customers**. Customers are ERP `Client` records of the workspace and do not log in. The owner's goals, in priority order:
+
+1. See which mail ids and domains are being served.
+2. Set up billing, especially **remembering when to collect**, because domains are issued on different dates. Billing is therefore anchored to each domain's issue date, with a payments calendar and a digest.
+3. Check quotas and do the easy operations from the ERP, so staff do not need the Mail-in-a-Box admin page.
+4. Write features are optional: a module-level setting, off by default.
+
+This reorders the original phases: the owner console (setup by issue date, bulk setup, calendar and digest, directory and quota alerts, new-domain onboarding, the write gate) came before automatic suspension. **Automatic suspension for non-payment is deliberately not built**: with a large external customer base a mistaken lock is costly, so it stays an opt-in later step. Customer self-service (a portal) is also later, and only if wanted.
 
 ## 1. Goal
 

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 type Op = { type: string } & Record<string, unknown>;
@@ -110,6 +111,47 @@ export function CreateMailboxDialog({ domain, enabled }: { domain: string; enabl
             </Field>
             <Field id="mailbox-quota" label={t('ops.quota')}><Input id="mailbox-quota" name="quota" type="number" min={0} step={1} inputMode="numeric" /></Field>
             <DialogFooter><Button type="submit" disabled={op.busy}>{op.busy ? t('actions.saving') : t('ops.create')}</Button></DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <SecretDialog secret={op.secret} onClose={op.clearSecret} />
+    </>
+  );
+}
+
+/** Onboards a new customer domain: the mail server adds a domain when its first mailbox is created. */
+export function AddDomainDialog({ servers }: { servers: Array<{ id: string; name: string }> }) {
+  const t = useTranslations('EmailBilling');
+  const [open, setOpen] = useState(false);
+  const [serverId, setServerId] = useState(servers[0]?.id ?? '');
+  const op = useOperation();
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const domain = String(form.get('domain') ?? '').trim().toLowerCase();
+    const email = `${String(form.get('local') ?? '').trim().toLowerCase()}@${domain}`;
+    const quota = String(form.get('quota') ?? '').trim();
+    await op.run({ type: 'MAILBOX_CREATE', newDomain: true, serverId, email, ...(quota ? { quotaMb: Number(quota) } : {}) }, email, () => setOpen(false));
+  }
+  return (
+    <>
+      <Button type="button" size="sm" variant="outline" disabled={servers.length === 0} title={servers.length === 0 ? t('ops.writesOff') : undefined} onClick={() => { op.setError(null); setOpen(true); }}>{t('ops.addDomain')}</Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent aria-describedby="add-domain-description">
+          <DialogHeader><DialogTitle>{t('ops.addDomain')}</DialogTitle><DialogDescription id="add-domain-description">{t('ops.addDomainHelp')}</DialogDescription></DialogHeader>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <ErrorLine error={op.error} />
+            {servers.length > 1 ? (
+              <Field id="new-domain-server" label={t('tables.server')}>
+                <Select value={serverId} onValueChange={setServerId}><SelectTrigger id="new-domain-server" className="w-full"><SelectValue /></SelectTrigger><SelectContent>{servers.map((sv) => <SelectItem key={sv.id} value={sv.id}>{sv.name}</SelectItem>)}</SelectContent></Select>
+              </Field>
+            ) : null}
+            <Field id="new-domain-name" label={t('tables.domain')}><Input id="new-domain-name" name="domain" required maxLength={253} placeholder="example.com" autoComplete="off" /></Field>
+            <Field id="new-domain-local" label={t('ops.firstMailbox')}><Input id="new-domain-local" name="local" required maxLength={64} defaultValue="admin" autoComplete="off" /></Field>
+            <Field id="new-domain-quota" label={t('ops.quota')}><Input id="new-domain-quota" name="quota" type="number" min={0} step={1} inputMode="numeric" /></Field>
+            <p className="text-xs text-muted-foreground">{t('ops.addDomainDns')}</p>
+            <DialogFooter><Button type="submit" disabled={op.busy || !serverId}>{op.busy ? t('actions.saving') : t('ops.create')}</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
