@@ -2,6 +2,7 @@ import 'server-only';
 import { prisma } from '@/lib/prisma';
 import { loadErpJobsConfig } from '@/lib/jobs/config';
 import Redis from 'ioredis';
+import { parseRedisInfo, parseRedisInfoNumber, parseWorkerHeartbeat } from '@/lib/jobs/heartbeat';
 
 export type JobHealth = {
   producerEnabled: boolean;
@@ -66,15 +67,6 @@ export async function getJobHealth(): Promise<JobHealth> {
   } catch {
     // Schema may not yet be migrated. Keep diagnostics available.
   }
-  function infoField(raw: string, key: string): string | null {
-    const value = raw.match(new RegExp('(?:^|\\r?\\n)' + key + ':([^\\r\\n]*)'))?.[1]?.trim();
-    return value || null;
-  }
-  function infoNumber(raw: string, key: string): number | null {
-    const value = infoField(raw, key);
-    const parsed = value && /^[0-9]+$/.test(value) ? Number(value) : NaN;
-    return Number.isSafeInteger(parsed) ? parsed : null;
-  }
   if (config?.enabled && config.endpoint) {
     const client = new Redis(config.endpoint, {
       lazyConnect: true, enableOfflineQueue: false,
@@ -89,14 +81,9 @@ export async function getJobHealth(): Promise<JobHealth> {
         if (config.workerEnabled) {
           try {
             const value = await client.get(config.namespace + ':jobs:worker:heartbeat');
-            const parsed = /^(ok|degraded):([0-9]{13})$/.exec(value || '');
-            const age = parsed ? Math.floor((Date.now() - Number(parsed[2])) / 1000) : NaN;
-            if (Number.isFinite(age) && age >= 0 && age <= 35) {
-              result.workerHeartbeatAgeSeconds = age;
-              result.workerHeartbeat = parsed?.[1] === 'ok' ? 'ready' : 'degraded';
-            } else {
-              result.workerHeartbeat = 'stale';
-            }
+            const pulse = parseWorkerHeartbeat(value);
+            result.workerHeartbeat = pulse.status;
+            result.workerHeartbeatAgeSeconds = pulse.ageSeconds;
           } catch {
             result.workerHeartbeat = 'unavailable';
           }
@@ -108,11 +95,11 @@ export async function getJobHealth(): Promise<JobHealth> {
             client.info('memory'), client.info('persistence'), client.info('stats'),
           ]);
           result.jobsRedis = {
-            memoryUsedBytes: infoNumber(memory, 'used_memory'),
-            memoryLimitBytes: infoNumber(memory, 'maxmemory'),
-            maxmemoryPolicy: infoField(memory, 'maxmemory_policy'),
-            aofEnabled: infoField(persistence, 'aof_enabled') === '1',
-            evictedKeys: infoNumber(stats, 'evicted_keys'),
+            memoryUsedBytes: parseRedisInfoNumber(memory, 'used_memory'),
+            memoryLimitBytes: parseRedisInfoNumber(memory, 'maxmemory'),
+            maxmemoryPolicy: parseRedisInfo(memory, 'maxmemory_policy'),
+            aofEnabled: parseRedisInfo(persistence, 'aof_enabled') === '1',
+            evictedKeys: parseRedisInfoNumber(stats, 'evicted_keys'),
           };
         } catch { /* retain unknown metrics */ }
       }
