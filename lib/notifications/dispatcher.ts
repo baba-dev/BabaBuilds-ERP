@@ -18,6 +18,8 @@ import { sendEmail } from '@/lib/mailer';
 import { buildEmailTemplate } from './email-templates';
 import { broadcastPush } from './web-push';
 import type { NotificationPayload, PushPayload } from './types';
+import { notificationRoute } from '@/lib/jobs/notification-routing';
+import { recordQueuedNotification } from '@/lib/jobs/notification-producer';
 
 /** Returns a human-readable title + body for in-app / push from the event type */
 function buildPushAndInAppContent(
@@ -196,6 +198,18 @@ export async function dispatchNotification(payload: NotificationPayload, options
 
     const { title: pushTitle, body: pushBody, actionUrl } = buildPushAndInAppContent(event, data);
 
+    // Phase 5 C+D: enqueue once per stable occurrence before local fanout.
+    // Never fall back to legacy external sends after an ambiguous PG write.
+    const queued = notificationRoute(workspaceId, event, payload.occurrenceKey);
+    if (queued.email || queued.push) {
+      await recordQueuedNotification({
+        workspaceId, event, occurrenceKey: payload.occurrenceKey!,
+        users: workspaceUsers, route: queued,
+        email: { subject, html: emailHtml, text: emailText },
+        push: { title: pushTitle, body: pushBody, url: actionUrl, tag: event.toLowerCase() },
+      });
+    }
+
     // ── 4. Fan out per user ───────────────────────────────────────────────
     await Promise.allSettled(
       workspaceUsers.map(async ({ user }) => {
@@ -215,7 +229,7 @@ export async function dispatchNotification(payload: NotificationPayload, options
           }
 
           // ── 4b. EMAIL ────────────────────────────────────────────────────
-          if (user.notifyEmail && user.transactionalAlerts && user.email) {
+          if (!queued.email && user.notifyEmail && user.transactionalAlerts && user.email) {
             // Optional modules/reports use workspace-provided SMTP.
             // Global infra SMTP is reserved for auth/login flows elsewhere.
             const route = 'user';
@@ -248,7 +262,7 @@ export async function dispatchNotification(payload: NotificationPayload, options
           }
 
           // ── 4c. PUSH ─────────────────────────────────────────────────────
-          if (user.notifyPush) {
+          if (!queued.push && user.notifyPush) {
             const subs = await prisma.pushSubscription.findMany({
               where: { userId: user.id },
             });
