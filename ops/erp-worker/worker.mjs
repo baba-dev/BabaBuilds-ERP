@@ -66,7 +66,9 @@ const notificationQueue = notificationsActive ? new Queue(notificationQueueName,
   connection, prefix,
   defaultJobOptions: {
     attempts: 1, removeOnComplete: true,
-    removeOnFail: { age: 86400, count: 2000 },
+    // PG status is authoritative. Failed transport jobs can be published
+    // again only if the delivery row is still PENDING.
+    removeOnFail: true,
   },
 }) : null;
 notificationQueue?.on('error', () => console.error('[erp-worker] NOTIFICATION_QUEUE_ERROR'));
