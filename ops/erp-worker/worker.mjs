@@ -13,6 +13,8 @@ const KIND = 'inapp_task_deadline_v1';
 const QUEUE_NAME = 'internal-inapp';
 const MAX_BATCH = 100;
 const POLL_MS = 10_000;
+// Heartbeat is an expiring Redis key, not a permanent flag or process-local guess.
+const HEARTBEAT_TTL_MS = 35_000;
 
 function fail(message) {
   console.error('[erp-worker] ' + message);
@@ -45,6 +47,7 @@ const connection = {
   connectTimeout: 5000,
 };
 const prefix = namespace + ':jobs';
+const heartbeatKey = prefix + ':worker:heartbeat';
 const pool = new pg.Pool({
   connectionString: process.env.DATABASE_URL,
   max: 2,
@@ -171,9 +174,24 @@ worker.on('failed', (job) => {
 
 let publishing = false;
 let stopping = false;
+
+// Publish one short-lived operational marker only after a reconciler pass.
+// 'degraded' means the worker process is alive but reconciliation failed;
+// missing/expired means no recent successful heartbeat. Contains no PII.
+async function heartbeat(reconcilerHealthy) {
+  if (stopping) return;
+  try {
+    const client = await queue.client;
+    await client.set(heartbeatKey, (reconcilerHealthy ? 'ok:' : 'degraded:') + Date.now(), 'PX', HEARTBEAT_TTL_MS);
+  } catch {
+    console.error('[erp-worker] HEARTBEAT_WRITE_FAILED');
+  }
+}
+
 async function publishPending() {
   if (publishing || stopping) return;
   publishing = true;
+  let reconcilerHealthy = true;
   try {
     const rows = await pool.query(
       'SELECT "id" FROM "ErpJobOutbox" WHERE "status"=$1 AND "kind"=$2 AND "nextAttemptAt"<=NOW() ORDER BY "nextAttemptAt" ASC LIMIT $3',
@@ -186,8 +204,10 @@ async function publishPending() {
       await queue.add(KIND, { outboxId: row.id }, { jobId: row.id });
     }
   } catch {
+    reconcilerHealthy = false;
     console.error('[erp-worker] RECONCILE_FAILED');
   } finally {
+    await heartbeat(reconcilerHealthy);
     publishing = false;
   }
 }
