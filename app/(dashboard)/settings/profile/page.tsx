@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react"; 
 import { startRegistration } from "@simplewebauthn/browser";
 import { UserCircle, Globe, Bell, Save, ShieldCheck, Clock, LayoutDashboard } from "lucide-react";
@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
+import { setThemeWithCircularReveal } from "@/lib/theme-transition";
 import { GEOGRAPHY_DB } from "@/lib/geography";
 import { getCurrencySymbol } from "@/lib/currency";
 
@@ -28,6 +29,7 @@ export default function ProfileSettingsPage() {
   const [isPasskeySaving, setIsPasskeySaving] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
+  const themeTriggerRef = useRef<HTMLButtonElement>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -189,10 +191,12 @@ export default function ProfileSettingsPage() {
                     value={formData.theme}
                     onValueChange={(newTheme) => {
                       setFormData({ ...formData, theme: newTheme });
-                      setTheme(newTheme);
+                      if (newTheme === "system" || newTheme === "light" || newTheme === "dark") {
+                        setThemeWithCircularReveal(newTheme, setTheme, themeTriggerRef.current);
+                      }
                     }}
                   >
-                    <SelectTrigger className={selectTriggerClass}>
+                    <SelectTrigger ref={themeTriggerRef} className={selectTriggerClass}>
                       <SelectValue placeholder="Select theme" />
                     </SelectTrigger>
                     <SelectContent>

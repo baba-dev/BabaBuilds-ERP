@@ -664,3 +664,18 @@
     }
   }
 }
+
+/* MenuMinute-style circular theme reveal; scoped to explicit ERP theme changes. */
+html[data-erp-theme-reveal="active"]::view-transition-old(root),
+html[data-erp-theme-reveal="active"]::view-transition-new(root) {
+  animation: none !important;
+  mix-blend-mode: normal;
+}
+
+html[data-erp-theme-reveal="active"]::view-transition-old(root) {
+  z-index: 1;
+}
+
+html[data-erp-theme-reveal="active"]::view-transition-new(root) {
+  z-index: 2;
+}

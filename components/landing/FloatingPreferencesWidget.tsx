@@ -5,6 +5,7 @@ import { useTheme } from "next-themes";
 import { Globe2, MoonStar, Sun, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { setThemeWithCircularReveal } from "@/lib/theme-transition";
 
 export default function FloatingPreferencesWidget() {
   const tl = useTranslations("LandingPhase1");
@@ -69,7 +70,7 @@ export default function FloatingPreferencesWidget() {
         <Button
           type="button"
           variant="outline"
-          onClick={() => setTheme(themeIsDark ? "light" : "dark")}
+          onClick={(event) => setThemeWithCircularReveal(themeIsDark ? "light" : "dark", setTheme, event.currentTarget)}
           className="h-10 w-full justify-center gap-2 rounded-xl border-zinc-200 bg-white font-semibold text-zinc-700 hover:bg-orange-50 hover:text-orange-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:text-orange-300"
         >
           {themeIsDark ? <Sun className="h-4 w-4" /> : <MoonStar className="h-4 w-4" />}
