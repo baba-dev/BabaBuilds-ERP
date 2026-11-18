@@ -103,7 +103,7 @@ async function resolveRecipient(pool, delivery) {
   return result.rows.find((r) => keyOf(r.id, 'PUSH') === recipientKey) || null;
 }
 
-async function prepareSmtp(pool, delivery) {
+export async function prepareSmtp(pool, delivery) {
   const info = await pool.query(
     'SELECT "smtpHost","smtpPort","smtpUser","smtpPassword","smtpFromEmail","companyName" ' +
     'FROM "BusinessProfile" WHERE "workspaceId"=$1', [delivery.workspaceId],
@@ -127,10 +127,11 @@ async function prepareSmtp(pool, delivery) {
   return { transporter, from: '"' + label + '" <' + fromAddress + '>' };
 }
 
-async function smtpSend(smtp, delivery, recipient, payload) {
+export async function smtpSend(smtp, delivery, recipient, payload) {
   const ack = await smtp.transporter.sendMail({
     from: smtp.from,
     to: recipient.email, subject: payload.subject, html: payload.html, text: payload.text,
+    attachments: payload.attachments,
     messageId: '<' + delivery.id + '@erp.bababuilds.com>',
   });
   const accepted = (ack.accepted || []).some((a) =>
