@@ -1,7 +1,7 @@
 import 'server-only';
 import { randomUUID } from 'node:crypto';
 import { prisma } from '@/lib/prisma';
-import { deliveryRecipientKey, recordDeliveryIntent } from '@/lib/jobs/delivery-ledger';
+import { deliveryRecipientKey } from '@/lib/jobs/delivery-ledger';
 import { notificationSourceOccurrence, type NotificationRoute } from '@/lib/jobs/notification-routing';
 import type { NotificationEventType, PushPayload } from '@/lib/notifications/types';
 
@@ -89,20 +89,36 @@ export async function recordQueuedNotification(
     if (route.email) {
       for (const { user } of users) {
         if (!user.notifyEmail || !user.transactionalAlerts || !user.email) continue;
-        await recordDeliveryIntent({
-          workspaceId, kind: 'notification_email_v1',
-          occurrenceKey: occurrence, channel: 'EMAIL',
-          recipientKey: deliveryRecipientKey(user.id, 'EMAIL'),
-        }, tx);
+        const recipientKey = deliveryRecipientKey(user.id, 'EMAIL');
+        await tx.erpJobDelivery.upsert({
+          where: { workspaceId_eventKind_occurrenceKey_channel_recipientKey: {
+            workspaceId, eventKind: 'notification_email_v1',
+            occurrenceKey: occurrence, channel: 'EMAIL', recipientKey,
+          } },
+          update: {},
+          create: {
+            workspaceId, eventKind: 'notification_email_v1',
+            occurrenceKey: occurrence, channel: 'EMAIL', recipientKey,
+          },
+          select: { id: true },
+        });
       }
     }
     if (route.push) {
       for (const sub of subscriptions) {
-        await recordDeliveryIntent({
-          workspaceId, kind: 'notification_push_v1',
-          occurrenceKey: occurrence, channel: 'PUSH',
-          recipientKey: deliveryRecipientKey(sub.id, 'PUSH'),
-        }, tx);
+        const recipientKey = deliveryRecipientKey(sub.id, 'PUSH');
+        await tx.erpJobDelivery.upsert({
+          where: { workspaceId_eventKind_occurrenceKey_channel_recipientKey: {
+            workspaceId, eventKind: 'notification_push_v1',
+            occurrenceKey: occurrence, channel: 'PUSH', recipientKey,
+          } },
+          update: {},
+          create: {
+            workspaceId, eventKind: 'notification_push_v1',
+            occurrenceKey: occurrence, channel: 'PUSH', recipientKey,
+          },
+          select: { id: true },
+        });
       }
     }
     return true;
