@@ -642,6 +642,7 @@ model Workspace {
 
   // RELATIONS
   jobOutbox                       ErpJobOutbox[]
+  jobDeliveries                  ErpJobDelivery[]
   users                           WorkspaceUser[]
   companyGroupLinks               CompanyGroupWorkspace[]
   billingForGroups                CompanyGroup[] @relation("CompanyGroupBillingWorkspace")
@@ -5539,3 +5540,32 @@ model ErpJobOutbox {
   @@index([status, nextAttemptAt])
   @@index([workspaceId, createdAt(sort: Desc)])
 }
+
+/// Phase 5 per-channel/recipient delivery intent. The PostgreSQL ledger is
+/// authoritative; BullMQ transports opaque IDs, never PII or provider secrets.
+/// External effects are at least once; UNCERTAIN is a no-auto-retry hold state.
+model ErpJobDelivery {
+  id                 String   @id @default(cuid())
+  workspaceId        String
+  workspace          Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  eventKind          String
+  occurrenceKey      String
+  recipientKey       String
+  channel            String
+  status             String   @default("PENDING")
+  attempts           Int      @default(0)
+  nextAttemptAt      DateTime @default(now())
+  claimToken         String?
+  leaseExpiresAt     DateTime?
+  externalAttemptedAt DateTime?
+  providerAckHash    String?
+  lastErrorCode      String?
+  acceptedAt         DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([workspaceId, eventKind, occurrenceKey, channel, recipientKey], map: "ErpJobDelivery_occurrence_unique")
+  @@index([status, nextAttemptAt], map: "ErpJobDelivery_pending_idx")
+  @@index([workspaceId, createdAt(sort: Desc)], map: "ErpJobDelivery_ws_created_idx")
+}
+
