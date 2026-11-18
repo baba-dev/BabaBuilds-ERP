@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { EmailBillingEmptyState, EmailBillingStatusBadge, EmailBillingTable, TruncatedText } from '@/components/email-billing/ui';
 import { OperationRowActions } from '@/components/email-billing/mailbox-manager';
 import { requireEmailBillingPage } from '../_data';
+import { formatDateTime } from '@/lib/email-billing/format';
 
 export default async function OperationsPage() {
   const t = await getTranslations('EmailBilling');
@@ -26,12 +27,12 @@ export default async function OperationsPage() {
             const target = op.mailbox?.email ?? (op.payloadJson as { email?: string; address?: string } | null)?.email ?? (op.payloadJson as { address?: string } | null)?.address ?? op.domain?.domain ?? op.server.name;
             return (
               <tr key={op.id} className="border-b hover:bg-muted/50">
-                <td className="p-2 whitespace-nowrap">{op.createdAt.toLocaleString()}</td>
+                <td className="p-2 whitespace-nowrap">{formatDateTime(op.createdAt)}</td>
                 <td className="p-2">{t(`ops.types.${op.type}`)}</td>
                 <td className="p-2"><TruncatedText>{target}</TruncatedText></td>
                 <td className="p-2">
                   <EmailBillingStatusBadge value={op.status} />
-                  {op.status === 'PENDING' && op.runAfter > new Date() ? <span className="ml-2 text-xs text-muted-foreground">{op.runAfter.toLocaleString()}</span> : null}
+                  {op.status === 'PENDING' && op.runAfter > new Date() ? <span className="ml-2 text-xs text-muted-foreground">{formatDateTime(op.runAfter)}</span> : null}
                 </td>
                 <td className="p-2">{op.source}</td>
                 <td className="p-2 text-muted-foreground"><TruncatedText>{op.errorMessage ?? t('labels.none')}</TruncatedText></td>

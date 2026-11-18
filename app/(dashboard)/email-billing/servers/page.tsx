@@ -6,6 +6,7 @@ import { EmailBillingEmptyState, EmailBillingStatusBadge, EmailBillingTable, Tru
 import { ServerDialog, ServerRowActions } from '@/components/email-billing/client-actions';
 import { requireEmailBillingPage } from '../_data';
 import { loadMailBillingSettings } from '@/lib/email-billing/settings';
+import { formatDateTime } from '@/lib/email-billing/format';
 
 export default async function ServersPage() {
   const t = await getTranslations('EmailBilling');
@@ -35,7 +36,7 @@ export default async function ServersPage() {
               <td className="p-2"><div className="flex flex-wrap items-center gap-1"><EmailBillingStatusBadge value={server.accessMode} />{server.writesEnabled ? <EmailBillingStatusBadge value="ACTIVE" label={t('ops.writesOn')} /> : null}</div></td>
               <td className="p-2"><TruncatedText className="max-w-[22rem]">{server.baseUrl}</TruncatedText></td>
               <td className="p-2"><EmailBillingStatusBadge value={server.status} /></td>
-              <td className="p-2 whitespace-nowrap">{server.lastSyncAt?.toLocaleString() ?? t('labels.never')}</td>
+              <td className="p-2 whitespace-nowrap">{server.lastSyncAt ? formatDateTime(server.lastSyncAt) : t('labels.never')}</td>
               <td className="p-2">{server._count.domains}</td>
               <td className="p-2">{server._count.mailboxes}</td>
               <td className="p-2 text-muted-foreground"><TruncatedText>{server.lastSyncError ?? t('labels.notAvailable')}</TruncatedText></td>

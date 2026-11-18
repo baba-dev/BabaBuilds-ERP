@@ -13,6 +13,7 @@ import { decimalToNumber } from '@/lib/money';
 import { EmailBillingEmptyState, EmailBillingPanel, EmailBillingStatCard, EmailBillingStatusBadge, EmailBillingTable, TruncatedText } from '@/components/email-billing/ui';
 import { CollectDialog, CollectionActions, OpeningDatesDialog } from '@/components/email-billing/collections';
 import { requireEmailBillingPage } from '../../_data';
+import { formatDay } from '@/lib/email-billing/format';
 
 const money = (amount: number, currency: string) => new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(amount);
 
@@ -44,7 +45,7 @@ export default async function ClientStatementPage({ params, searchParams }: { pa
   const defaultDate = asOfDay;
 
   return (
-    <DashboardPageShell title={statement.clientName} description={t('balances.statementSubtitle', { date: new Date(asOfDay).toLocaleDateString() })} icon={<HandCoins className="size-5" />}
+    <DashboardPageShell title={statement.clientName} description={t('balances.statementSubtitle', { date: formatDay(asOfDay) })} icon={<HandCoins className="size-5" />}
       primaryAction={canCollect && current ? <CollectDialog clientId={clientId} clientName={statement.clientName} asOf={asOfDay} total={current.total} currency={current.currency} addresses={current.addresses} canRecordPayment={canPay} /> : undefined}
       secondaryActions={canBill ? <OpeningDatesDialog scope={{ clientId }} label={t('balances.openingDates')} defaultDate={defaultDate} /> : undefined}>
       <form action={`/email-billing/balances/${clientId}`} className="flex flex-wrap items-end gap-3">
@@ -71,13 +72,13 @@ export default async function ClientStatementPage({ params, searchParams }: { pa
             <EmailBillingStatCard label={t('balances.domains')} value={current.domains.length} />
           </section>
           {current.domains.map((domain) => (
-            <EmailBillingPanel key={domain.domainId} title={`${domain.domain} · ${money(domain.subtotal, current.currency)}`} description={t('balances.domainPeriod', { from: new Date(domain.firstDay).toLocaleDateString(), to: new Date(domain.lastDay).toLocaleDateString(), count: domain.addresses })}>
+            <EmailBillingPanel key={domain.domainId} title={`${domain.domain} · ${money(domain.subtotal, current.currency)}`} description={t('balances.domainPeriod', { from: formatDay(domain.firstDay), to: formatDay(domain.lastDay), count: domain.addresses })}>
               <EmailBillingTable headers={[t('tables.email'), t('balances.from'), t('balances.through'), t('balances.months'), t('calendar.amount')]} caption={domain.domain}>
                 {domain.lines.map((line) => (
                   <tr key={line.mailboxId} className="border-b hover:bg-muted/50">
                     <td className="p-2"><TruncatedText>{line.email}</TruncatedText></td>
-                    <td className="p-2 whitespace-nowrap">{new Date(line.firstDay).toLocaleDateString()}</td>
-                    <td className="p-2 whitespace-nowrap">{new Date(line.lastDay).toLocaleDateString()}</td>
+                    <td className="p-2 whitespace-nowrap">{formatDay(line.firstDay)}</td>
+                    <td className="p-2 whitespace-nowrap">{formatDay(line.lastDay)}</td>
                     <td className="p-2">{line.months.toFixed(2)}</td>
                     <td className="p-2 whitespace-nowrap">{money(line.amount, current.currency)}</td>
                   </tr>
@@ -95,8 +96,8 @@ export default async function ClientStatementPage({ params, searchParams }: { pa
           <EmailBillingTable headers={[t('calendar.date'), t('balances.throughDate'), t('calendar.amount'), t('calendar.invoice'), t('tables.status'), t('tables.actions')]} caption={t('balances.historyTitle')}>
             {collections.map((c) => (
               <tr key={c.id} className="border-b hover:bg-muted/50">
-                <td className="p-2 whitespace-nowrap">{c.createdAt.toLocaleDateString()}</td>
-                <td className="p-2 whitespace-nowrap">{c.asOf.toLocaleDateString()}</td>
+                <td className="p-2 whitespace-nowrap">{formatDay(c.createdAt)}</td>
+                <td className="p-2 whitespace-nowrap">{formatDay(c.asOf)}</td>
                 <td className="p-2 whitespace-nowrap">{money(decimalToNumber(c.total), c.currency)}</td>
                 <td className="p-2 whitespace-nowrap">{c.invoice ? <Link href="/income" className="underline-offset-2 hover:underline">{c.invoice.invoiceNumber}</Link> : '—'}</td>
                 <td className="p-2"><EmailBillingStatusBadge value={c.status === 'INVOICING' ? 'WARNING' : c.status === 'VOID' ? 'CANCELLED' : c.invoice?.status === 'PAID' ? 'ACTIVE' : 'OPEN'} label={c.status === 'INVOICING' ? t('balances.unfinished') : c.status === 'VOID' ? t('balances.void') : c.invoice?.status === 'PAID' ? t('balances.paid') : t('balances.unpaid')} /></td>

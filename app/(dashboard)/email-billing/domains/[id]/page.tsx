@@ -14,6 +14,7 @@ import { EmailBillingEmptyState, EmailBillingPanel, EmailBillingStatusBadge, Ema
 import { AddAliasDialog, CreateMailboxDialog, MailboxActions } from '@/components/email-billing/mailbox-manager';
 import { SetupBillingDialog } from '@/components/email-billing/billing-setup';
 import { requireEmailBillingPage } from '../../_data';
+import { formatDay, formatDateTime } from '@/lib/email-billing/format';
 
 export default async function DomainDetail({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('EmailBilling');
@@ -49,7 +50,7 @@ export default async function DomainDetail({ params }: { params: Promise<{ id: s
   const writesOn = d.server.accessMode === 'MANAGED_API' && d.server.writesEnabled;
   const calc = s ? calculateMailBilling({ plan: s.plan, subscription: s, syncedMailboxCount: d.mailboxCount, domain: d.domain }) : null;
   const issuedOn = (s?.startedAt ?? d.discoveredAt).toISOString().slice(0, 10);
-  const nextInvoice = s?.retainer?.status === 'ACTIVE' ? s.retainer.nextBillingDate.toLocaleDateString() : null;
+  const nextInvoice = s?.retainer?.status === 'ACTIVE' ? formatDay(s.retainer.nextBillingDate) : null;
 
   return (
     <DashboardPageShell title={d.domain} description={t('pages.domainDetailSubtitle')} icon={<Globe2 className="size-5" />}>
@@ -60,8 +61,8 @@ export default async function DomainDetail({ params }: { params: Promise<{ id: s
           <p>{t('tables.client')}: {d.client?.name ?? t('labels.unmapped')}</p>
           <p>{t('tables.mailboxes')}: {d.mailboxCount}</p>
           <p>{t('domainDetail.aliases')}: {d.aliasCount}</p>
-          <p>{t('tables.lastSeen')}: {d.lastSeenAt.toLocaleString()}</p>
-          <p>{t('domainDetail.issuedOn')}: {new Date(issuedOn).toLocaleDateString()}</p>
+          <p>{t('tables.lastSeen')}: {formatDateTime(d.lastSeenAt)}</p>
+          <p>{t('domainDetail.issuedOn')}: {formatDay(issuedOn)}</p>
           {accrual ? null : <p>{t('domainDetail.nextInvoice')}: {nextInvoice ?? t('labels.notAvailable')}</p>}
         </div>
       </EmailBillingPanel>
@@ -86,7 +87,7 @@ export default async function DomainDetail({ params }: { params: Promise<{ id: s
                   <td className="p-2">{m.usedMb === null ? t('directory.notReported') : `${m.usedMb} MB${percent === null ? '' : ` (${percent}%)`}`}</td>
                   <td className="p-2">{m.isAdmin ? t('tables.admin') : t('labels.notAvailable')}</td>
                   <td className="p-2"><EmailBillingStatusBadge value={m.status} />{m.suspendedAt ? <span className="ml-2 text-xs text-muted-foreground">{t('ops.suspended')}</span> : null}</td>
-                  <td className="p-2">{m.lastSeenAt.toLocaleString()}</td>
+                  <td className="p-2">{formatDateTime(m.lastSeenAt)}</td>
                   {canOperate ? (
                     <td className="p-2">
                       {m.status === 'ACTIVE' ? <MailboxActions mailbox={{ id: m.id, email: m.email, isAdmin: m.isAdmin, suspendedAt: m.suspendedAt?.toISOString() ?? null, deleteScheduledFor: m.deleteScheduledFor?.toISOString() ?? null }} enabled={writesOn} canDelete={canDelete} /> : null}

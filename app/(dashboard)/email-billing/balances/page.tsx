@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { listBalances } from '@/lib/email-billing/collections';
 import { EmailBillingEmptyState, EmailBillingStatCard, EmailBillingTable, TruncatedText } from '@/components/email-billing/ui';
 import { requireEmailBillingPage } from '../_data';
+import { formatDay } from '@/lib/email-billing/format';
 
 const PAGE_SIZE = 50;
 const money = (amount: number, currency: string) => new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(amount);
@@ -64,8 +65,8 @@ export default async function BalancesPage({ searchParams }: { searchParams?: Pr
               <td className="p-2 whitespace-nowrap font-medium">{money(r.owed, r.currency)}</td>
               <td className="p-2">{r.addresses}</td>
               <td className="p-2">{r.domains}</td>
-              <td className="p-2 whitespace-nowrap">{r.owed > 0 ? new Date(r.oldestUnchargedDay).toLocaleDateString() : '—'}</td>
-              <td className="p-2 whitespace-nowrap">{r.lastCollectedOn ? new Date(r.lastCollectedOn).toLocaleDateString() : t('labels.never')}</td>
+              <td className="p-2 whitespace-nowrap">{r.owed > 0 ? formatDay(r.oldestUnchargedDay) : '—'}</td>
+              <td className="p-2 whitespace-nowrap">{r.lastCollectedOn ? formatDay(r.lastCollectedOn) : t('labels.never')}</td>
               <td className="p-2 whitespace-nowrap">{r.openInvoices > 0 ? `${r.openInvoices} · ${money(r.openInvoiceAmount, r.currency)}` : '—'}</td>
               <td className="p-2"><Button asChild size="sm" variant="outline"><Link href={`/email-billing/balances/${r.clientId}${asOfDay !== today ? `?asOf=${asOfDay}` : ''}`}>{t('balances.open')}</Link></Button></td>
             </tr>

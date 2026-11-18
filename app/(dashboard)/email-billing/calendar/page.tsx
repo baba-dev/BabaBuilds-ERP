@@ -8,6 +8,7 @@ import { EmailBillingEmptyState, EmailBillingPanel, EmailBillingStatCard, EmailB
 import { getBillingCalendar, type CalendarEntry } from '@/lib/email-billing/calendar';
 import { loadMailBillingSettings } from '@/lib/email-billing/settings';
 import { requireEmailBillingPage } from '../_data';
+import { formatDay } from '@/lib/email-billing/format';
 
 const money = (amount: number | null, currency: string) => (amount === null ? '—' : new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(amount));
 
@@ -29,7 +30,7 @@ export default async function CalendarPage() {
     <EmailBillingTable headers={[t('calendar.date'), t('calendar.when'), t('tables.domain'), t('tables.client'), t('calendar.amount'), t('calendar.kind'), t('calendar.invoiceEmail')]} caption={caption}>
       {rows.map((e) => (
         <tr key={e.subscriptionId} className="border-b hover:bg-muted/50">
-          <td className="p-2 whitespace-nowrap">{new Date(e.dueOn).toLocaleDateString()}</td>
+          <td className="p-2 whitespace-nowrap">{formatDay(e.dueOn)}</td>
           <td className="p-2 whitespace-nowrap">{when(e.daysUntil)}</td>
           <td className="p-2"><Link href={`/email-billing/domains/${e.domainId}`} className="underline-offset-2 hover:underline"><TruncatedText>{e.domain}</TruncatedText></Link></td>
           <td className="p-2"><TruncatedText>{e.clientName}</TruncatedText></td>
@@ -66,7 +67,7 @@ export default async function CalendarPage() {
                 <td className="p-2"><TruncatedText>{i.domain ?? '—'}</TruncatedText></td>
                 <td className="p-2"><TruncatedText>{i.clientName}</TruncatedText></td>
                 <td className="p-2 whitespace-nowrap">{money(i.amount, i.currency)}</td>
-                <td className="p-2 whitespace-nowrap">{i.dueDate ? new Date(i.dueDate).toLocaleDateString() : '—'}</td>
+                <td className="p-2 whitespace-nowrap">{i.dueDate ? formatDay(i.dueDate) : '—'}</td>
                 <td className="p-2">{i.daysOverdue !== null && i.daysOverdue > 0 ? <span className="text-destructive">{t('calendar.daysLate', { count: i.daysOverdue })}</span> : t('calendar.notDue')}</td>
               </tr>
             ))}

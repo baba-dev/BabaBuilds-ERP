@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { formatDay } from '@/lib/email-billing/format';
 
 export type PlanOption = { id: string; name: string; frequency: string; currency: string };
 type ClientHit = { id: string; name: string; email: string | null };
@@ -112,7 +113,7 @@ export function SetupBillingDialog({ domainId, domain, plans, defaultPlanId, iss
     setBusy(true);
     try {
       const data = await send(`/api/email-billing/domains/${domainId}/setup-billing`, body);
-      const date = data.result?.firstBillingDate ? new Date(data.result.firstBillingDate).toLocaleDateString() : null;
+      const date = data.result?.firstBillingDate ? formatDay(data.result.firstBillingDate) : null;
       toast.success(date ? t('billingSetup.doneWithDate', { date }) : t('billingSetup.done'));
       setOpen(false);
       router.refresh();
