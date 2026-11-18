@@ -22,7 +22,21 @@ The people who pay are normal ERP **Clients** (customers) of the workspace; they
 
 **Settings -> Allow mailbox management from the ERP** is a switch for the whole module, off by default. While it is off the module only reads inventory and runs billing: the create/reset/quota/suspend/delete controls and the Operations page link are not shown, and the API refuses every write. Turning it on (or off) needs the server-admin permission and is written to the activity log. A write also needs the server itself to be in managed mode with writes enabled (below), so there are two deliberate steps. Operations already scheduled (such as a delayed delete) do not run while the switch is off; they fail with a clear message and the mailbox stops showing as scheduled.
 
-## Billing follows the issue date
+## Accrual billing: collect whenever you visit
+
+Some businesses do not invoice on a schedule: each email address earns charges every day, and the owner collects what has built up, from each client across all their domains, on whatever date they visit. That is **accrual billing**, chosen in Settings (*How customers are charged*). It is the model for a service priced per email address per month, with the base price including a quota and daily send limit.
+
+- **Charging.** Every address is charged its plan price per month for each day it is in service. The period is counted from the address's first day through the collection day, both included, as whole calendar months plus the remaining days as a fraction of the month they fall in, so one exact month is exactly one price (10 January to 9 February = 1 month; 40 days = 1 month and 9/28 of the next). Plans priced per quarter or per year are converted to a monthly rate. Amounts are rounded to cents per address.
+- **When charging starts.** Each address starts on the *issue date* you give when you set up billing (default: when the ERP first saw it). New addresses start on the day they appear. For customers who existed before the ERP, set the issue date, or record that they are *already paid up to* a day (Balances -> client -> *Set start or paid-up-to dates*). The paid-up-to date only moves forward.
+- **Where to look.** *Balances to collect* lists every client with what they owe today (or on a date you pick, to plan a visit), biggest first. A client page shows the statement address by address.
+- **Collecting.** *Collect* turns what is owed up to a date (never later than today) into **one invoice for the client**, one line per domain, through the normal invoice engine (numbering, tax, PDF), and moves every included address's "collected through" date. If the money is received then, tick *record the payment* and it is recorded against the invoice. Amounts on the statement are before tax; tax is added by your invoice settings. The total you confirm is sent with the request, and if anything changed in between, nothing is charged.
+- **Safe by construction.** The collection and the "collected through" dates are recorded first (and only if no one else changed those addresses), then the invoice is created; if that fails the dates are put back and nothing is charged. A crash in between leaves an *Unfinished* collection that *Finish* completes without invoicing twice. The *latest* collection can be undone (it voids the invoice and gives the days back), but not once a payment is recorded or addresses were changed afterwards.
+- **What stops charging.** An address removed from the server, a domain removed, or a cancelled subscription stop accruing on that day; what built up before is still collectable.
+- **Plans.** Use a per-mailbox plan. The plan's included quota (for example 10 GB) and daily outbound mails (for example 200) are shown for reference and are **not enforced or billed separately**; mailboxes over their quota are flagged by quota alerts.
+- **Limits today.** Collections are invoiced in your base currency (a plan priced in another currency is refused). A client charged in two currencies is collected one currency at a time. Domains with no plan are listed but not charged.
+- **Switching.** Accrual cannot be switched on while recurring retainers are still billing (customers would be invoiced twice); cancel or pause them first. The daily job then skips retainers, trials and quantity changes, still imports, snapshots, onboards new domains and raises quota alerts, and the digest lists who has the most built up.
+
+## Billing follows the issue date (recurring billing)
 
 Different domains are issued on different days, so each is billed on its own day:
 

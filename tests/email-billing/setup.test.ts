@@ -5,6 +5,7 @@ const m = vi.hoisted(() => {
   const tx = {
     mailBillingSubscription: { create: vi.fn(), update: vi.fn() },
     mailBillingDomain: { update: vi.fn() },
+    mailBillingMailbox: { updateMany: vi.fn() },
     retainer: { create: vi.fn() },
   };
   return {
@@ -134,6 +135,55 @@ describe('setupDomainBilling', () => {
 
   it('rejects an absurd start date far in the future', async () => {
     await expect(setupDomainBilling({ ...base, startDate: new Date('2030-01-01') })).rejects.toBeInstanceOf(SetupBillingError);
+  });
+});
+
+describe('accrual billing setup', () => {
+  beforeEach(() => { m.settings.mockResolvedValue({ ignoreAdminMailboxesFromBilling: false, billingModel: 'ACCRUAL' }); });
+
+  it('creates the subscription with the customer and rate but no retainer, and starts charging each uncollected address on the issue date', async () => {
+    const result = await setupDomainBilling({ ...base, startDate: new Date('2026-01-10') });
+    expect(result).toEqual({ subscriptionId: 's1', retainerId: null, status: 'ACTIVE', startDate: new Date('2026-01-10T00:00:00.000Z'), firstBillingDate: null });
+    expect(m.tx.retainer.create).not.toHaveBeenCalled();
+    expect(m.tx.mailBillingSubscription.create).toHaveBeenCalledWith({ data: expect.objectContaining({ domainId: 'd1', clientId: 'c1', planId: 'p1', billingStatus: 'ACTIVE', basePriceSnapshot: 100, currencySnapshot: 'INR', startedAt: new Date('2026-01-10T00:00:00.000Z') }) });
+    // Only addresses nothing has been collected from are moved, so a past collection is never disturbed.
+    expect(m.tx.mailBillingMailbox.updateMany).toHaveBeenCalledWith({ where: { workspaceId: 'w1', domainId: 'd1', billedThrough: null }, data: { billingStartsOn: new Date('2026-01-10T00:00:00.000Z') } });
+    expect(m.tx.mailBillingDomain.update).toHaveBeenCalledWith({ where: { id: 'd1' }, data: expect.objectContaining({ clientId: 'c1' }) });
+    expect(m.afterRetainerChange).not.toHaveBeenCalled();
+  });
+
+  it('defaults the issue date to when the domain was first seen, and uses a trial as a later first charged day', async () => {
+    await setupDomainBilling(base);
+    expect(m.tx.mailBillingMailbox.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({ data: { billingStartsOn: new Date('2025-03-10T00:00:00.000Z') } }));
+    await setupDomainBilling({ ...base, trialDays: 14 });
+    expect(m.tx.mailBillingMailbox.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({ data: { billingStartsOn: new Date('2026-12-02T00:00:00.000Z') } }));
+  });
+
+  it('only accepts a per-mailbox plan, because every address is charged', async () => {
+    m.prisma.mailBillingPlan.findFirst.mockResolvedValue(plan({ billingMode: 'FIXED' }));
+    await expect(setupDomainBilling(base)).rejects.toMatchObject({ status: 400, message: expect.stringContaining('per-mailbox') });
+    expect(m.prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('reuses an existing subscription and still refuses a removed domain or another workspace\'s client', async () => {
+    m.prisma.mailBillingDomain.findFirst.mockResolvedValue(domain({ subscriptions: [{ id: 's9', retainerId: null }] }));
+    m.tx.mailBillingSubscription.update.mockResolvedValue({ id: 's9' });
+    expect((await setupDomainBilling(base)).subscriptionId).toBe('s9');
+    expect(m.tx.mailBillingSubscription.create).not.toHaveBeenCalled();
+    m.prisma.mailBillingDomain.findFirst.mockResolvedValue(domain({ status: 'REMOVED' }));
+    await expect(setupDomainBilling(base)).rejects.toMatchObject({ status: 409 });
+    m.prisma.mailBillingDomain.findFirst.mockResolvedValue(domain());
+    m.prisma.client.findFirst.mockResolvedValue(null);
+    await expect(setupDomainBilling(base)).rejects.toMatchObject({ status: 404 });
+  });
+
+  it('previews bulk setup as a monthly run-rate with no first invoice date', async () => {
+    m.prisma.mailBillingDomain.count.mockResolvedValue(1);
+    m.prisma.mailBillingDomain.findMany.mockResolvedValue([{ id: 'd1', domain: 'a.com', clientId: 'c1', discoveredAt: new Date('2025-06-01T00:00:00Z'), mailboxCount: 4, client: { name: 'Acme' } }]);
+    m.prisma.mailBillingPlan.findFirst.mockResolvedValue(plan({ frequency: 'MONTHLY' }));
+    const preview = await previewBulkSetup({ workspaceId: 'w1', userId: 'u1', planId: 'p1', startDateSource: 'DISCOVERED', createClients: false, now: NOW });
+    expect(preview.model).toBe('ACCRUAL');
+    expect(preview.sample[0]).toMatchObject({ firstBillingDate: null, amount: 400, startDate: '2025-06-01' });
   });
 });
 

@@ -55,6 +55,8 @@ type PlanRow = {
   basePrice: string | number;
   includedMailboxes: number;
   extraMailboxPrice: string | number;
+  includedQuotaMb?: number | null;
+  outboundPerDay?: number | null;
   frequency: string;
   isActive: boolean;
   sortOrder: number;
@@ -77,6 +79,7 @@ type SettingsShape = {
   autoOnboardNewDomains?: boolean;
   autoOnboardEmailInvoices?: boolean;
   autoOnboardTrialDays?: number;
+  billingModel?: string;
 };
 
 async function postJson(url: string, body?: unknown, method = 'POST') {
@@ -210,7 +213,9 @@ export function PlanDialog({ plan, triggerLabel }: { plan?: PlanRow; triggerLabe
     setSubmitting(true);
     setError(null);
     const form = new FormData(event.currentTarget);
-    const payload = Object.fromEntries(form.entries());
+    const payload: Record<string, unknown> = Object.fromEntries(form.entries());
+    // A blank limit means "not stated", not zero.
+    for (const key of ['includedQuotaMb', 'outboundPerDay']) if (String(payload[key] ?? '').trim() === '') payload[key] = null;
     try {
       await postJson(plan ? `/api/email-billing/plans/${plan.id}` : '/api/email-billing/plans', payload, plan ? 'PATCH' : 'POST');
       toast.success(plan ? t('toast.planUpdated') : t('toast.planCreated'));
@@ -239,6 +244,8 @@ export function PlanDialog({ plan, triggerLabel }: { plan?: PlanRow; triggerLabe
             <Field id="plan-currency" label={t('tables.currency')}><Input id="plan-currency" name="currency" defaultValue={plan?.currency ?? 'INR'} required maxLength={3} /></Field>
             <Field id="plan-base" label={t('tables.basePrice')}><Input id="plan-base" name="basePrice" type="number" min="0" step="0.01" defaultValue={String(plan?.basePrice ?? 0)} required /></Field>
             <Field id="plan-included" label={t('tables.includedMailboxes')}><Input id="plan-included" name="includedMailboxes" type="number" min="0" step="1" defaultValue={String(plan?.includedMailboxes ?? 0)} /></Field>
+            <Field id="plan-quota" label={t('plans.includedQuotaMb')}><Input id="plan-quota" name="includedQuotaMb" type="number" min="0" step="1" defaultValue={plan?.includedQuotaMb ?? ''} placeholder="10240" /></Field>
+            <Field id="plan-outbound" label={t('plans.outboundPerDay')}><Input id="plan-outbound" name="outboundPerDay" type="number" min="0" step="1" defaultValue={plan?.outboundPerDay ?? ''} placeholder="200" /></Field>
             <Field id="plan-extra" label={t('tables.extraMailboxPrice')}><Input id="plan-extra" name="extraMailboxPrice" type="number" min="0" step="0.01" defaultValue={String(plan?.extraMailboxPrice ?? 0)} /></Field>
           </div>
           <DialogFooter><Button type="submit" disabled={submitting}>{submitting ? t('actions.saving') : t('actions.save')}</Button></DialogFooter>
@@ -309,6 +316,7 @@ export function SettingsForm({ settings, plans }: { settings: SettingsShape; pla
       allowMailboxManagement: form.get('allowMailboxManagement') === 'on',
       quotaAlertPercent: Math.min(100, Math.max(0, Number(form.get('quotaAlertPercent') ?? 90) || 0)),
       paymentDigest: String(form.get('paymentDigest') || 'DAILY'),
+      billingModel: String(form.get('billingModel') || 'RECURRING'),
       autoOnboardNewDomains: form.get('autoOnboardNewDomains') === 'on',
       autoOnboardEmailInvoices: form.get('autoOnboardEmailInvoices') === 'on',
       autoOnboardTrialDays: Math.min(365, Math.max(0, Math.trunc(Number(form.get('autoOnboardTrialDays') ?? 0) || 0))),
@@ -333,6 +341,15 @@ export function SettingsForm({ settings, plans }: { settings: SettingsShape; pla
         <Field id="settings-plan" label={t('tables.plan')}><Select name="defaultPlanId" defaultValue={settings.defaultPlanId ?? 'none'}><SelectTrigger id="settings-plan" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">{t('labels.none')}</SelectItem>{plans.map((plan) => <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>)}</SelectContent></Select></Field>
         <Field id="settings-sync" label={t('settingsLabels.syncFrequencyPreference')}><Select name="syncFrequencyPreference" defaultValue={settings.syncFrequencyPreference}><SelectTrigger id="settings-sync" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="MANUAL">MANUAL</SelectItem><SelectItem value="DAILY">DAILY</SelectItem><SelectItem value="WEEKLY">WEEKLY</SelectItem></SelectContent></Select></Field>
         <Field id="settings-policy" label={t('settingsLabels.usageBillingPolicy')}><Select name="usageBillingPolicy" defaultValue={settings.usageBillingPolicy ?? 'LATEST'}><SelectTrigger id="settings-policy" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="LATEST">{t('settingsLabels.policyLatest')}</SelectItem><SelectItem value="HIGH_WATER_MARK">{t('settingsLabels.policyHighWaterMark')}</SelectItem></SelectContent></Select></Field>
+      </div>
+      <div className="space-y-2 rounded-lg border border-border/70 p-3">
+        <Field id="settings-billing-model" label={t('settingsLabels.billingModel')}>
+          <Select name="billingModel" defaultValue={settings.billingModel ?? 'RECURRING'}>
+            <SelectTrigger id="settings-billing-model" className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="RECURRING">{t('settingsLabels.billingModelRecurring')}</SelectItem><SelectItem value="ACCRUAL">{t('settingsLabels.billingModelAccrual')}</SelectItem></SelectContent>
+          </Select>
+        </Field>
+        <p className="text-xs text-muted-foreground">{t('settingsLabels.billingModelHelp')}</p>
       </div>
       <div className="space-y-3 rounded-lg border border-border/70 p-3">
         <label className="flex items-start gap-2 text-sm font-medium"><Checkbox name="allowMailboxManagement" defaultChecked={settings.allowMailboxManagement === true} className="mt-0.5" />{t('settingsLabels.allowMailboxManagement')}</label>

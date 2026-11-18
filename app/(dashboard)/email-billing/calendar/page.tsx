@@ -1,10 +1,12 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { CalendarClock } from 'lucide-react';
 import { DashboardPageShell } from '@/components/layout/DashboardPageShell';
 import { Button } from '@/components/ui/button';
 import { EmailBillingEmptyState, EmailBillingPanel, EmailBillingStatCard, EmailBillingTable, TruncatedText } from '@/components/email-billing/ui';
 import { getBillingCalendar, type CalendarEntry } from '@/lib/email-billing/calendar';
+import { loadMailBillingSettings } from '@/lib/email-billing/settings';
 import { requireEmailBillingPage } from '../_data';
 
 const money = (amount: number | null, currency: string) => (amount === null ? 'â€”' : new Intl.NumberFormat(undefined, { style: 'currency', currency, maximumFractionDigits: 2 }).format(amount));
@@ -12,6 +14,8 @@ const money = (amount: number | null, currency: string) => (amount === null ? 'â
 export default async function CalendarPage() {
   const t = await getTranslations('EmailBilling');
   const workspaceId = await requireEmailBillingPage();
+  // With accrual billing there are no scheduled invoices; what matters is what each client owes.
+  if ((await loadMailBillingSettings(workspaceId)).billingModel === 'ACCRUAL') redirect('/email-billing/balances');
   const calendar = await getBillingCalendar(workspaceId, new Date(), 60);
 
   const late = calendar.due.filter((e) => e.daysUntil < 0);

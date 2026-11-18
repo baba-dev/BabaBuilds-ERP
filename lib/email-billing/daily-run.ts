@@ -59,9 +59,11 @@ export async function runEmailHostingDailyForWorkspace(workspaceId: string, now:
 
   const readings = await captureUsageSnapshots({ workspaceId, now, source: 'CRON' });
   stats.snapshots = readings.length;
-  stats.trials = await convertEndedTrials({ workspaceId, now });
+  // Accrual billing has no retainers: trials are a later first charged day and quantities are simply the live address count.
+  const accrual = settings.billingModel === 'ACCRUAL';
+  if (!accrual) stats.trials = await convertEndedTrials({ workspaceId, now });
 
-  for (const reading of readings) {
+  for (const reading of accrual ? [] : readings) {
     const decision = await evaluateSubscriptionQuantity({ workspaceId, subscriptionId: reading.subscriptionId, latest: reading.billableMailboxCount, now, settings });
     if (decision.action === 'APPLY') stats.quantityApplied++;
     else if (decision.action === 'REVIEW') stats.quantityQueuedForReview++;

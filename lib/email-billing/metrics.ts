@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { retainerMrr } from '@/lib/retainers/mrr';
 import { monthlyEquivalent } from '@/lib/retainers/schedule';
 import { calculateMailBilling } from './billing-calculator';
+import { monthlyRate } from './accrual';
+import { loadMailBillingSettings } from './settings';
 
 const DAY_MS = 86_400_000;
 export const METRICS_WINDOW_DAYS = 30;
@@ -30,8 +32,9 @@ export function activeAt(subs: SubForMetrics[], at: Date): number {
  */
 export async function computeEmailHostingMetrics(workspaceId: string, now = new Date()) {
   const windowStart = new Date(now.getTime() - METRICS_WINDOW_DAYS * DAY_MS);
-  const [workspace, subs] = await Promise.all([
+  const [workspace, settings, subs] = await Promise.all([
     prisma.workspace.findUnique({ where: { id: workspaceId }, select: { baseCurrency: true } }),
+    loadMailBillingSettings(workspaceId),
     prisma.mailBillingSubscription.findMany({
       where: { workspaceId },
       include: {
@@ -48,6 +51,12 @@ export async function computeEmailHostingMetrics(workspaceId: string, now = new 
   for (const s of subs) {
     if (s.billingStatus === 'CANCELLED') { counts.cancelled++; continue; }
     if (s.billingStatus === 'PAUSED') { counts.paused++; continue; }
+    if (settings.billingModel === 'ACCRUAL') {
+      // No retainers: the monthly run-rate is what the live addresses earn each month at their plan's price.
+      counts.active++;
+      if (s.billingStatus === 'ACTIVE' && s.currencySnapshot === baseCurrency) mrr += s.domain.mailboxCount * monthlyRate(s.basePriceSnapshot, s.plan?.frequency ?? 'MONTHLY');
+      continue;
+    }
     if (s.billingStatus === 'TRIALING') counts.trialing++;
     else if (s.billingStatus === 'REVIEW_REQUIRED') counts.reviewRequired++;
     else counts.active++;
@@ -73,6 +82,7 @@ export async function computeEmailHostingMetrics(workspaceId: string, now = new 
   const previous = await sumOn(earlierDay?.capturedOn);
 
   return {
+    billingModel: settings.billingModel,
     baseCurrency,
     mrr: Math.round(mrr * 100) / 100,
     pipelineMrr: Math.round(pipelineMrr * 100) / 100,

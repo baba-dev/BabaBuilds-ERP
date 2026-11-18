@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { logActivity } from '@/lib/security/activity-log';
 import { FREE_TIER_CLIENT_LIMIT, shouldApplyFreeTierLimits } from '@/lib/entitlements';
 import { calculateMailBilling } from './billing-calculator';
+import { monthlyRate } from './accrual';
+import { loadMailBillingSettings } from './settings';
 import { setupDomainBilling, SetupBillingError } from './setup';
 import { nextAnniversary, utcDay } from './usage-math';
 
@@ -56,6 +58,8 @@ export async function previewBulkSetup(input: BulkSetupInput) {
   const plan = await prisma.mailBillingPlan.findFirst({ where: { id: input.planId, workspaceId: input.workspaceId, isActive: true } });
   if (!plan) throw new SetupBillingError('Plan not found or inactive.', 404);
   const total = await prisma.mailBillingDomain.count({ where: eligibleWhere(input) });
+  const accrual = (await loadMailBillingSettings(input.workspaceId)).billingModel === 'ACCRUAL';
+  if (accrual && plan.billingMode !== 'PER_MAILBOX') throw new SetupBillingError('Choose a per-mailbox plan: with accrual billing every email address is charged for the days it is in service.', 400);
   const sample = await eligibleDomains(input, PREVIEW_SAMPLE);
   const unmappedSkipped = input.createClients ? 0 : await prisma.mailBillingDomain.count({
     where: { workspaceId: input.workspaceId, status: 'ACTIVE', clientId: null, ...(input.domainIds?.length ? { id: { in: input.domainIds } } : {}), subscriptions: { none: { retainerId: { not: null } } } },
@@ -65,11 +69,12 @@ export async function previewBulkSetup(input: BulkSetupInput) {
     return {
       domainId: d.id, domain: d.domain, client: d.clientName ?? (input.createClients ? `${d.domain} (new client)` : null),
       startDate: startFor(input, d).toISOString().slice(0, 10),
-      firstBillingDate: calc.reviewRequired ? null : nextAnniversary(startFor(input, d), plan.frequency, now).toISOString().slice(0, 10),
-      amount: calc.totalRecurringAmount, currency: calc.currency,
+      // Accrual billing has no first invoice date; the amount shown is what the addresses earn per month.
+      firstBillingDate: accrual || calc.reviewRequired ? null : nextAnniversary(startFor(input, d), plan.frequency, now).toISOString().slice(0, 10),
+      amount: accrual ? Math.round(d.mailboxCount * monthlyRate(plan.basePrice, plan.frequency) * 100) / 100 : calc.totalRecurringAmount, currency: calc.currency,
     };
   });
-  return { eligible: total, unmappedSkipped, willProcessNow: Math.min(total, BULK_APPLY_LIMIT), sample: rows, emailInvoices: input.emailInvoices === true };
+  return { model: accrual ? ('ACCRUAL' as const) : ('RECURRING' as const), eligible: total, unmappedSkipped, willProcessNow: Math.min(total, BULK_APPLY_LIMIT), sample: rows, emailInvoices: input.emailInvoices === true };
 }
 
 /** The customer record named after a domain: reuses one that exists, otherwise creates a bare one to be completed later. */

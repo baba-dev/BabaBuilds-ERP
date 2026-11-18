@@ -17,6 +17,8 @@ export type EffectiveMailBillingSettings = {
   autoOnboardSince: Date | null;
   autoOnboardEmailInvoices: boolean;
   autoOnboardTrialDays: number;
+  /** RECURRING: fixed invoices on a schedule (retainers). ACCRUAL: per-address charges build up daily and are collected per client on any date. */
+  billingModel: 'RECURRING' | 'ACCRUAL';
 };
 
 /** Settings for a workspace, with the documented defaults when it has never saved any. */
@@ -35,6 +37,7 @@ export async function loadMailBillingSettings(workspaceId: string): Promise<Effe
     autoOnboardSince: row?.autoOnboardSince ?? null,
     autoOnboardEmailInvoices: row?.autoOnboardEmailInvoices ?? false,
     autoOnboardTrialDays: row?.autoOnboardTrialDays ?? 0,
+    billingModel: row?.billingModel === 'ACCRUAL' ? 'ACCRUAL' : 'RECURRING',
     paymentDigest: row?.paymentDigest === 'OFF' || row?.paymentDigest === 'WEEKLY' ? row.paymentDigest : 'DAILY',
   };
 }

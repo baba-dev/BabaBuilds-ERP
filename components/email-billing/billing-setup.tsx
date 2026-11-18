@@ -77,7 +77,8 @@ function ClientPicker({ value, onPick }: { value: ClientHit | null; onPick: (cli
 
 const day = (value: string | Date) => (typeof value === 'string' ? value : value.toISOString()).slice(0, 10);
 
-export function SetupBillingDialog({ domainId, domain, plans, defaultPlanId, issuedOn, currentClient, canCreateClients }: {
+export function SetupBillingDialog({ domainId, domain, plans, defaultPlanId, issuedOn, currentClient, canCreateClients, accrual = false }: {
+  accrual?: boolean;
   domainId: string; domain: string; plans: PlanOption[]; defaultPlanId?: string | null; issuedOn: string;
   currentClient?: ClientHit | null; canCreateClients: boolean;
 }) {
@@ -104,8 +105,9 @@ export function SetupBillingDialog({ domainId, domain, plans, defaultPlanId, iss
       ...(creating ? { newClient: { name: String(form.get('newName') ?? '').trim(), email: String(form.get('newEmail') ?? '').trim() } } : { clientId: client?.id }),
       startDate: String(form.get('startDate') || issuedOn),
       ...(trial > 0 ? { trialDays: trial } : {}),
-      ...(first ? { firstBillingDate: first } : {}),
-      emailInvoices,
+      // Accrual billing has no first invoice date and no scheduled invoices to email.
+      ...(first && !accrual ? { firstBillingDate: first } : {}),
+      ...(accrual ? {} : { emailInvoices }),
     };
     setBusy(true);
     try {
@@ -128,7 +130,7 @@ export function SetupBillingDialog({ domainId, domain, plans, defaultPlanId, iss
       <Button type="button" size="sm" disabled={plans.length === 0} title={plans.length === 0 ? t('billingSetup.needPlan') : undefined} onClick={() => { setError(null); setOpen(true); }}>{t('billingSetup.open')}</Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent aria-describedby="setup-billing-description">
-          <DialogHeader><DialogTitle>{t('billingSetup.title', { domain })}</DialogTitle><DialogDescription id="setup-billing-description">{t('billingSetup.help')}</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>{t('billingSetup.title', { domain })}</DialogTitle><DialogDescription id="setup-billing-description">{accrual ? t('billingSetup.accrualHelp') : t('billingSetup.help')}</DialogDescription></DialogHeader>
           <form onSubmit={onSubmit} className="space-y-4">
             <ErrorLine error={error} />
             {duplicates.length ? <div className="space-y-1 text-sm">{duplicates.map((d) => <button key={d.id} type="button" className="block w-full rounded-lg border border-border/70 px-3 py-2 text-left hover:bg-muted" onClick={() => { setClient(d); setCreating(false); setDuplicates([]); setError(null); }}>{t('billingSetup.useExisting', { name: d.name })}</button>)}</div> : null}
@@ -148,9 +150,9 @@ export function SetupBillingDialog({ domainId, domain, plans, defaultPlanId, iss
             <Field id="setup-start" label={t('billingSetup.issuedOn')} hint={t('billingSetup.issuedOnHint')}><Input id="setup-start" name="startDate" type="date" required defaultValue={day(issuedOn)} /></Field>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field id="setup-trial" label={t('billingSetup.trialDays')}><Input id="setup-trial" name="trialDays" type="number" min={0} max={365} step={1} defaultValue={0} /></Field>
-              <Field id="setup-first" label={t('billingSetup.firstBillingDate')} hint={t('billingSetup.firstBillingDateHint')}><Input id="setup-first" name="firstBillingDate" type="date" /></Field>
+              {accrual ? null : <Field id="setup-first" label={t('billingSetup.firstBillingDate')} hint={t('billingSetup.firstBillingDateHint')}><Input id="setup-first" name="firstBillingDate" type="date" /></Field>}
             </div>
-            <label className="flex items-start gap-2 text-sm"><Checkbox checked={emailInvoices} onCheckedChange={(v) => setEmailInvoices(v === true)} className="mt-0.5" />{t('billingSetup.emailInvoices')}</label>
+            {accrual ? null : <label className="flex items-start gap-2 text-sm"><Checkbox checked={emailInvoices} onCheckedChange={(v) => setEmailInvoices(v === true)} className="mt-0.5" />{t('billingSetup.emailInvoices')}</label>}
             <DialogFooter><Button type="submit" disabled={busy || (!creating && !client) || !planId}>{busy ? t('actions.saving') : t('billingSetup.submit')}</Button></DialogFooter>
           </form>
         </DialogContent>
@@ -162,7 +164,7 @@ export function SetupBillingDialog({ domainId, domain, plans, defaultPlanId, iss
 type Preview = { eligible: number; unmappedSkipped: number; willProcessNow: number; sample: Array<{ domain: string; client: string | null; startDate: string; firstBillingDate: string | null; amount: number; currency: string }> };
 type Applied = { processed: number; succeeded: number; failed: number; remaining: number; results: Array<{ domain: string; ok: boolean; error?: string }> };
 
-export function BulkSetupDialog({ plans, defaultPlanId, canCreateClients }: { plans: PlanOption[]; defaultPlanId?: string | null; canCreateClients: boolean }) {
+export function BulkSetupDialog({ plans, defaultPlanId, canCreateClients, accrual = false }: { plans: PlanOption[]; defaultPlanId?: string | null; canCreateClients: boolean; accrual?: boolean }) {
   const t = useTranslations('EmailBilling');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -176,7 +178,7 @@ export function BulkSetupDialog({ plans, defaultPlanId, canCreateClients }: { pl
   const [preview, setPreview] = useState<Preview | null>(null);
   const [applied, setApplied] = useState<Applied | null>(null);
 
-  const payload = (mode: 'preview' | 'apply') => ({ mode, planId, startDateSource: source, ...(source === 'DATE' ? { startDate: date } : {}), createClients, emailInvoices });
+  const payload = (mode: 'preview' | 'apply') => ({ mode, planId, startDateSource: source, ...(source === 'DATE' ? { startDate: date } : {}), createClients, emailInvoices: accrual ? false : emailInvoices });
   const reset = () => { setPreview(null); setApplied(null); setError(null); };
 
   async function run(mode: 'preview' | 'apply') {
@@ -208,15 +210,15 @@ export function BulkSetupDialog({ plans, defaultPlanId, canCreateClients }: { pl
               {source === 'DATE' ? <Input aria-label={t('bulkSetup.fromDate')} type="date" value={date} onChange={(e) => { setDate(e.target.value); reset(); }} required /> : null}
             </fieldset>
             {canCreateClients ? <label className="flex items-start gap-2 text-sm"><Checkbox checked={createClients} onCheckedChange={(v) => { setCreateClients(v === true); reset(); }} className="mt-0.5" />{t('bulkSetup.createClients')}</label> : null}
-            <label className="flex items-start gap-2 text-sm"><Checkbox checked={emailInvoices} onCheckedChange={(v) => { setEmailInvoices(v === true); reset(); }} className="mt-0.5" />{t('bulkSetup.emailInvoices')}</label>
-            {emailInvoices ? <p className="rounded-lg border border-border/70 bg-muted p-2 text-xs">{t('bulkSetup.emailWarning')}</p> : null}
+            {accrual ? <p className="rounded-lg border border-border/70 bg-muted p-2 text-xs">{t('bulkSetup.accrualPreviewNote')}</p> : <label className="flex items-start gap-2 text-sm"><Checkbox checked={emailInvoices} onCheckedChange={(v) => { setEmailInvoices(v === true); reset(); }} className="mt-0.5" />{t('bulkSetup.emailInvoices')}</label>}
+            {!accrual && emailInvoices ? <p className="rounded-lg border border-border/70 bg-muted p-2 text-xs">{t('bulkSetup.emailWarning')}</p> : null}
 
             {preview ? (
               <div className="space-y-2 text-sm" aria-live="polite">
                 <p>{t('bulkSetup.previewSummary', { eligible: preview.eligible, now: preview.willProcessNow })}</p>
                 {preview.unmappedSkipped > 0 ? <p className="text-muted-foreground">{t('bulkSetup.skipped', { count: preview.unmappedSkipped })}</p> : null}
                 <ul className="max-h-48 divide-y overflow-auto rounded-lg border border-border/70">{preview.sample.map((r) => (
-                  <li key={r.domain} className="px-3 py-2"><span className="font-medium">{r.domain}</span> · {r.client ?? '—'} · {t('bulkSetup.from')} {r.startDate} · {t('bulkSetup.firstInvoice')} {r.firstBillingDate ?? '—'} · {r.currency} {r.amount}</li>
+                  <li key={r.domain} className="px-3 py-2"><span className="font-medium">{r.domain}</span> · {r.client ?? '—'} · {t('bulkSetup.from')} {r.startDate}{accrual ? '' : ` · ${t('bulkSetup.firstInvoice')} ${r.firstBillingDate ?? '—'}`} · {r.currency} {r.amount}{accrual ? ` ${t('bulkSetup.perMonth')}` : ''}</li>
                 ))}</ul>
               </div>
             ) : null}

@@ -3,7 +3,7 @@ import { NextRequest } from 'next/server';
 
 const m = vi.hoisted(() => ({
   guard: vi.fn(), audit: vi.fn(),
-  prisma: { mailBillingSettings: { findUnique: vi.fn(), upsert: vi.fn() }, mailBillingPlan: { findFirst: vi.fn() } },
+  prisma: { mailBillingSettings: { findUnique: vi.fn(), upsert: vi.fn() }, mailBillingPlan: { findFirst: vi.fn() }, mailBillingSubscription: { count: vi.fn() } },
 }));
 vi.mock('@/app/api/email-billing/_lib/auth', () => ({ requireEmailBilling: m.guard }));
 vi.mock('@/app/api/email-billing/_lib/audit', () => ({ auditEmailBilling: m.audit }));
@@ -18,6 +18,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   m.guard.mockResolvedValue({ userId: 'u1', workspaceId: 'w1' });
   m.prisma.mailBillingPlan.findFirst.mockResolvedValue({ id: 'p1' });
+  m.prisma.mailBillingSubscription.count.mockResolvedValue(0);
   m.prisma.mailBillingSettings.findUnique.mockResolvedValue({ allowMailboxManagement: false, autoOnboardNewDomains: false });
   m.prisma.mailBillingSettings.upsert.mockImplementation(async ({ update }: { update: Record<string, unknown> }) => ({ id: 'set1', ...update }));
 });
@@ -63,10 +64,38 @@ describe('PATCH /settings: write gate and automatic onboarding', () => {
     expect(m.audit).not.toHaveBeenCalledWith(expect.anything(), 'mailbox_management_disabled', expect.anything(), expect.anything(), expect.anything());
   });
 
+  it('refuses to switch to accrual billing while recurring retainers are still billing, so nobody is invoiced twice', async () => {
+    m.prisma.mailBillingSettings.findUnique.mockResolvedValue({ billingModel: 'RECURRING', allowMailboxManagement: false, autoOnboardNewDomains: false });
+    m.prisma.mailBillingSubscription.count.mockResolvedValue(3);
+    const res = await patch({ billingModel: 'ACCRUAL', defaultPlanId: 'p1' });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toMatchObject({ code: 'RETAINERS_ACTIVE', error: expect.stringContaining('3 subscriptions') });
+    expect(m.prisma.mailBillingSettings.upsert).not.toHaveBeenCalled();
+    expect(m.prisma.mailBillingSubscription.count).toHaveBeenCalledWith({ where: { workspaceId: 'w1', billingStatus: { in: ['ACTIVE', 'TRIALING', 'REVIEW_REQUIRED'] }, retainer: { status: 'ACTIVE' } } });
+  });
+
+  it('switches to accrual when nothing is billed by a retainer, audits the change, and allows going back', async () => {
+    m.prisma.mailBillingSettings.findUnique.mockResolvedValue({ billingModel: 'RECURRING', allowMailboxManagement: false, autoOnboardNewDomains: false });
+    expect((await patch({ billingModel: 'ACCRUAL', defaultPlanId: 'p1' })).status).toBe(200);
+    expect(upsertArgs().update.billingModel).toBe('ACCRUAL');
+    expect(m.audit).toHaveBeenCalledWith(expect.anything(), 'billing_model_changed', expect.anything(), { from: 'RECURRING', to: 'ACCRUAL' }, expect.anything());
+    m.prisma.mailBillingSubscription.count.mockClear();
+    m.prisma.mailBillingSettings.findUnique.mockResolvedValue({ billingModel: 'ACCRUAL', allowMailboxManagement: false, autoOnboardNewDomains: false });
+    expect((await patch({ billingModel: 'RECURRING', defaultPlanId: 'p1' })).status).toBe(200);
+    expect(m.prisma.mailBillingSubscription.count).not.toHaveBeenCalled();
+  });
+
+  it('does not audit or check anything when the model is not changed', async () => {
+    await patch({ defaultPlanId: 'p1' });
+    expect(m.audit).not.toHaveBeenCalledWith(expect.anything(), 'billing_model_changed', expect.anything(), expect.anything(), expect.anything());
+    expect(m.prisma.mailBillingSubscription.count).not.toHaveBeenCalled();
+  });
+
   it('validates the new fields', async () => {
     expect((await patch({ defaultPlanId: 'p1', autoOnboardTrialDays: 999 })).status).toBe(400);
     expect((await patch({ defaultPlanId: 'p1', autoOnboardNewDomains: 'yes' })).status).toBe(400);
     expect((await patch({ defaultPlanId: 'p1', quotaAlertPercent: 150 })).status).toBe(400);
     expect((await patch({ defaultPlanId: 'p1', paymentDigest: 'HOURLY' })).status).toBe(400);
+    expect((await patch({ defaultPlanId: 'p1', billingModel: 'WEEKLY' })).status).toBe(400);
   });
 });

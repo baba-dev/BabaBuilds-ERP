@@ -64,6 +64,22 @@ describe('runEmailHostingDailyForWorkspace', () => {
   });
 });
 
+describe('accrual billing mode', () => {
+  it('skips trials and quantity changes (there are no retainers) but still snapshots, onboards and alerts', async () => {
+    m.order.length = 0;
+    m.settings.mockResolvedValue({ ...base, syncFrequencyPreference: 'MANUAL', billingModel: 'ACCRUAL' });
+    m.onboard.mockResolvedValue({ status: 'DONE', onboarded: 1, failed: 0, candidates: 1 });
+    m.snapshots.mockResolvedValue([{ subscriptionId: 's1', billableMailboxCount: 4, mailboxCount: 4 }]);
+    m.quota.mockResolvedValue(0);
+    m.digest.mockResolvedValue('SKIPPED');
+    m.evaluate.mockReset();
+    const stats = await runEmailHostingDailyForWorkspace('w1', NOW);
+    expect(m.order).toEqual(['onboard', 'snapshots', 'quota', 'digest']);
+    expect(stats).toMatchObject({ domainsOnboarded: 1, snapshots: 1, quantityApplied: 0, quantityQueuedForReview: 0, trials: { converted: 0 } });
+    expect(m.digest).toHaveBeenCalledWith('w1', expect.objectContaining({ billingModel: 'ACCRUAL' }), NOW);
+  });
+});
+
 describe('alerts and digest never undo the billing work', () => {
   it('keeps the billing results when the alert or digest step fails', async () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});

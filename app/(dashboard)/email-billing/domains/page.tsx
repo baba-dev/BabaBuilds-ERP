@@ -41,7 +41,7 @@ export default async function DomainsPage({ searchParams }: { searchParams?: Pro
   const session = await getServerSession(authOptions);
   const perms = session?.user?.id ? await checkPermissionsSilent(session.user.id, workspaceId, ['email_hosting.billing', 'invoices.create', 'clients.manage', 'email_hosting.admin_server', 'workspace.manage_settings'] as const) : null;
   const canBill = Boolean(perms && (perms['email_hosting.billing'] || perms['invoices.create']));
-  const { allowMailboxManagement } = await loadMailBillingSettings(workspaceId);
+  const { allowMailboxManagement, billingModel } = await loadMailBillingSettings(workspaceId);
   // Adding a domain is a server-admin action and, like every write, hidden while mailbox management is off.
   const canAddDomain = allowMailboxManagement && Boolean(perms && (perms['email_hosting.admin_server'] || perms['workspace.manage_settings']));
   const writableServers = canAddDomain ? await prisma.mailBillingServer.findMany({ where: { workspaceId, accessMode: 'MANAGED_API', writesEnabled: true, status: { not: 'DISABLED' } }, select: { id: true, name: true }, orderBy: { name: 'asc' } }) : [];
@@ -73,7 +73,7 @@ export default async function DomainsPage({ searchParams }: { searchParams?: Pro
       primaryAction={<Button asChild variant="primary-action"><Link href="/email-billing/servers">{t('actions.syncNow')}</Link></Button>}
       secondaryActions={canBill || canAddDomain ? (
         <div className="flex flex-wrap gap-2">
-          {canBill ? <BulkSetupDialog plans={plans} defaultPlanId={settingsRow?.defaultPlanId ?? null} canCreateClients={Boolean(perms?.['clients.manage'])} /> : null}
+          {canBill ? <BulkSetupDialog plans={plans} defaultPlanId={settingsRow?.defaultPlanId ?? null} canCreateClients={Boolean(perms?.['clients.manage'])} accrual={billingModel === 'ACCRUAL'} /> : null}
           {canAddDomain ? <AddDomainDialog servers={writableServers} /> : null}
         </div>
       ) : undefined}

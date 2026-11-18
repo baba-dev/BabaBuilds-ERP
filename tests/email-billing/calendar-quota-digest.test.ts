@@ -17,9 +17,13 @@ const m = vi.hoisted(() => ({
 vi.mock('@/lib/prisma', () => ({ prisma: m.prisma }));
 vi.mock('@/lib/email-billing/review', () => ({ createMailBillingReviewItem: m.createReview, resolveMailBillingReviewItems: m.resolve }));
 vi.mock('@/lib/notifications/dispatcher', () => ({ dispatchNotification: m.dispatch }));
+vi.mock('@/lib/invoice/finalize-draft', () => ({ finalizeInvoiceFromDraft: vi.fn() }));
+vi.mock('@/lib/invoice/generation-context', () => ({ InvoiceValidationError: class extends Error {} }));
+vi.mock('@/lib/invoices/payments', () => ({ recordInvoicePayment: vi.fn() }));
+vi.mock('@/lib/invoices/void', () => ({ voidInvoice: vi.fn() }));
 
 import { buildPaymentDigest, getBillingCalendar } from '@/lib/email-billing/calendar';
-import { sendPaymentDigest } from '@/lib/email-billing/digest';
+import { buildBalanceDigest, sendPaymentDigest } from '@/lib/email-billing/digest';
 import { overQuota, quotaPercent, syncQuotaAlerts } from '@/lib/email-billing/quota';
 import { normalizeMailbox, parseUsedMb } from '@/lib/email-billing/miab/normalize';
 
@@ -203,5 +207,34 @@ describe('payment digest', () => {
       expect(await sendPaymentDigest('w1', { paymentDigest: 'DAILY' }, NOW)).toBe('SKIPPED');
       expect(m.dispatch).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('balance digest (accrual billing)', () => {
+  const row = (over: Row = {}) => ({ clientId: 'c1', clientName: 'Acme Ltd', currency: 'INR', owed: 1500, addresses: 5, domains: 2, oldestUnchargedDay: '2026-01-10', lastCollectedOn: null, openInvoices: 0, openInvoiceAmount: 0, ...over });
+
+  it('says nothing when nobody owes anything and there is nothing unpaid', () => {
+    expect(buildBalanceDigest({ asOf: '2026-11-18', rows: [], totals: [] })).toBeNull();
+    expect(buildBalanceDigest({ asOf: '2026-11-18', rows: [row({ owed: 0 })], totals: [{ currency: 'INR', owed: 0 }] })).toBeNull();
+  });
+
+  it('lists who has the most built up, with the total, and any unpaid collection invoices', () => {
+    const digest = buildBalanceDigest({ asOf: '2026-11-18', rows: [row(), row({ clientId: 'c2', clientName: 'Zed Co', owed: 0, addresses: 0, openInvoices: 2, openInvoiceAmount: 400 })], totals: [{ currency: 'INR', owed: 1500 }] })!;
+    const inr = (n: number) => new Intl.NumberFormat('en', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n);
+    expect(digest.title).toBe(`Email hosting: ${inr(1500)} to collect from 1 client · unpaid collection invoices`);
+    expect(digest.lines[0]).toMatch(/^Acme Ltd · .*1,500\.00 built up \(5 addresses, since 2026-01-10\)$/);
+    expect(digest.lines[1]).toMatch(/^Zed Co · 2 unpaid collection invoices \(.*400\.00\)$/);
+  });
+
+  it('is what is sent when the workspace uses accrual billing', async () => {
+    vi.clearAllMocks();
+    m.prisma.mailBillingDomain.findMany = vi.fn().mockResolvedValue([]);
+    m.prisma.mailCollection = { groupBy: vi.fn().mockResolvedValue([]) } as never;
+    m.prisma.mailBillingSettings.upsert.mockResolvedValue({});
+    m.prisma.mailBillingSettings.updateMany.mockResolvedValue({ count: 1 });
+    // Nobody owes anything, so even in accrual mode nothing is sent and the day is not used up.
+    expect(await sendPaymentDigest('w1', { paymentDigest: 'DAILY', billingModel: 'ACCRUAL' }, NOW)).toBe('SKIPPED');
+    expect(m.prisma.mailBillingSettings.updateMany).not.toHaveBeenCalled();
+    expect(m.prisma.mailBillingDomain.findMany).toHaveBeenCalled();
   });
 });

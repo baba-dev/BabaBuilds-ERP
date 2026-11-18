@@ -50,6 +50,9 @@ export const mailBillingPlanCreateSchema = z.object({
   currency: currencySchema.default('INR'),
   basePrice: moneySchema.default(0),
   includedMailboxes: nonNegativeIntSchema.default(0),
+  /** What the base price includes, shown to staff (not enforced): disk quota in MB and outbound mails per day. */
+  includedQuotaMb: nonNegativeIntSchema.max(10_000_000).nullish(),
+  outboundPerDay: nonNegativeIntSchema.max(10_000_000).nullish(),
   extraMailboxPrice: moneySchema.default(0),
   frequency: mailBillingFrequencySchema.default('MONTHLY'),
   sortOrder: z.coerce.number().int().default(0),
@@ -131,6 +134,8 @@ export const mailBillingSettingsPatchSchema = z.object({
   autoOnboardNewDomains: z.boolean().optional(),
   autoOnboardEmailInvoices: z.boolean().optional(),
   autoOnboardTrialDays: z.number().int().min(0).max(365).optional(),
+  /** How customers are charged. Switching to ACCRUAL is refused while recurring retainers are still active. */
+  billingModel: z.enum(['RECURRING', 'ACCRUAL']).optional(),
 });
 
 export const mailBillingApplyQuantitySchema = z.object({
@@ -165,6 +170,32 @@ export const mailBillingBulkSetupSchema = z
     domainIds: z.array(idSchema).max(500).optional(),
   })
   .refine((v) => v.startDateSource !== 'DATE' || Boolean(v.startDate), 'Enter the start date.');
+
+const PAYMENT_METHOD_VALUES = ['BANK_TRANSFER', 'UPI', 'CARD', 'CASH', 'CHEQUE', 'PAYMENT_LINK', 'OTHER'] as const;
+const paymentSchema = z.object({
+  method: z.enum(PAYMENT_METHOD_VALUES),
+  reference: z.string().trim().max(120).nullish(),
+  notes: z.string().trim().max(500).nullish(),
+});
+
+/** Collect what a client owes up to a day (default today). `payment` records the money received at the same time. */
+export const mailBillingCollectSchema = z.object({
+  asOf: dateString.optional(),
+  currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/).optional(),
+  idempotencyKey: z.string().trim().min(8).max(100).optional(),
+  /** The total shown on the statement the person confirmed; the collection is refused if it has changed. */
+  expectedTotal: z.number().finite().nonnegative().optional(),
+  payment: paymentSchema.optional(),
+});
+export const mailBillingCollectionPaymentSchema = paymentSchema;
+export const mailBillingUndoCollectionSchema = z.object({ reason: z.string().trim().min(3).max(300) });
+
+/** Opening position: when charging starts, or what was already paid up to, for one client, domain or address. */
+export const mailBillingDatesSchema = z.object({
+  kind: z.enum(['chargingStart', 'collectedThrough']),
+  scope: z.union([z.object({ clientId: idSchema }), z.object({ domainId: idSchema }), z.object({ mailboxId: idSchema })]),
+  date: dateString,
+});
 
 export function parseJsonBody<T>(schema: z.ZodSchema<T>, body: unknown) {
   const parsed = schema.safeParse(body);

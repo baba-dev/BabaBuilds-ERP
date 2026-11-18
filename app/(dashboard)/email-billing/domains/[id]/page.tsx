@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getServerSession } from 'next-auth';
 import { getTranslations } from 'next-intl/server';
@@ -17,7 +18,8 @@ import { requireEmailBillingPage } from '../../_data';
 export default async function DomainDetail({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations('EmailBilling');
   const workspaceId = await requireEmailBillingPage();
-  const { allowMailboxManagement } = await loadMailBillingSettings(workspaceId);
+  const { allowMailboxManagement, billingModel } = await loadMailBillingSettings(workspaceId);
+  const accrual = billingModel === 'ACCRUAL';
   const session = await getServerSession(authOptions);
   const perms = session?.user?.id
     ? await checkPermissionsSilent(session.user.id, workspaceId, ['email_hosting.operate', 'email_hosting.admin_server', 'email_hosting.billing', 'invoices.create', 'clients.manage', 'workspace.manage_settings'] as const)
@@ -60,7 +62,7 @@ export default async function DomainDetail({ params }: { params: Promise<{ id: s
           <p>{t('domainDetail.aliases')}: {d.aliasCount}</p>
           <p>{t('tables.lastSeen')}: {d.lastSeenAt.toLocaleString()}</p>
           <p>{t('domainDetail.issuedOn')}: {new Date(issuedOn).toLocaleDateString()}</p>
-          <p>{t('domainDetail.nextInvoice')}: {nextInvoice ?? t('labels.notAvailable')}</p>
+          {accrual ? null : <p>{t('domainDetail.nextInvoice')}: {nextInvoice ?? t('labels.notAvailable')}</p>}
         </div>
       </EmailBillingPanel>
 
@@ -100,7 +102,9 @@ export default async function DomainDetail({ params }: { params: Promise<{ id: s
 
       <div id="billing">
         <EmailBillingPanel title={t('sections.billing')}>
-          {calc ? (
+          {calc && accrual ? (
+            <p className="text-sm">{t('domainDetail.accrualSummary', { count: d.mailboxCount, price: `${calc.currency} ${s?.basePriceSnapshot?.toString() ?? ''}` })} · <Link href={d.clientId ? `/email-billing/balances/${d.clientId}` : '/email-billing/balances'} className="underline underline-offset-2">{t('balances.title')}</Link></p>
+          ) : calc ? (
             <p className="text-sm">{t('tables.billingMode')}: {calc.billingMode} · {t('domainDetail.billable')}: {calc.billableMailboxCount} · {t('domainDetail.synced')}: {d.mailboxCount} · {t('domainDetail.preview')}: {calc.currency} {calc.totalRecurringAmount}</p>
           ) : (
             <p className="text-sm text-muted-foreground">{t('domainDetail.notBilled')}</p>
@@ -110,7 +114,7 @@ export default async function DomainDetail({ params }: { params: Promise<{ id: s
             <div className="mt-3">
               <SetupBillingDialog
                 domainId={d.id} domain={d.domain} plans={plans} defaultPlanId={settingsRow?.defaultPlanId ?? null} issuedOn={issuedOn}
-                currentClient={d.client} canCreateClients={canCreateClients}
+                currentClient={d.client} canCreateClients={canCreateClients} accrual={accrual}
               />
             </div>
           ) : null}
