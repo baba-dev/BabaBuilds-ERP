@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       return (DEFAULT_ROLE_PERMISSIONS[role] as readonly string[]).includes('workforce.leave.approve') && m.userId !== request.employee.userId;
     }).map((m) => m.userId).filter(Boolean);
     if (approvers.length > 0) {
-      void dispatchNotification({ event: 'LEAVE_REQUEST_SUBMITTED', workspaceId, userIds: approvers, data: { employeeName: `${request.employee.firstName} ${request.employee.lastName}`, days: request.days, leaveType: request.leaveType.name } }).catch(() => undefined);
+      void dispatchNotification({ event: 'LEAVE_REQUEST_SUBMITTED', workspaceId, occurrenceKey: 'leave_' + request.id + '_submitted', userIds: approvers, data: { employeeName: `${request.employee.firstName} ${request.employee.lastName}`, days: request.days, leaveType: request.leaveType.name } }).catch(() => undefined);
     }
     void logActivity({ workspaceId, action: 'workforce.leave_requested', status: 'SUCCESS', actor: { userId, email }, entity: { type: 'leave_request', id: request.id }, metadata: { days: request.days, from: d.startDate, to: d.endDate } });
     return NextResponse.json(request, { status: 201 });

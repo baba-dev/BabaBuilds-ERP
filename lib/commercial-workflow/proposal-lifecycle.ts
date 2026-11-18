@@ -54,6 +54,7 @@ export async function markProposalAsViewed(proposalId: string, workspaceId: stri
     dispatchNotification({
       event: 'PROPOSAL_VIEWED',
       workspaceId,
+      occurrenceKey: 'proposal_' + proposalId + '_first_view',
       data: {
         proposalNo: updated.proposalNo,
         clientName: proposal.client?.name || 'Client',

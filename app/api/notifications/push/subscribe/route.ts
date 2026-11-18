@@ -27,8 +27,25 @@ export async function POST(request: Request) {
       userAgent?: string;
     };
 
-    if (!body.endpoint || !body.keys?.p256dh || !body.keys?.auth) {
+    if (!body.endpoint || !body.keys?.p256dh || !body.keys?.auth ||
+        typeof body.endpoint !== 'string' || body.endpoint.length > 2048 ||
+        typeof body.keys.p256dh !== 'string' || body.keys.p256dh.length > 512 ||
+        typeof body.keys.auth !== 'string' || body.keys.auth.length > 512) {
       return NextResponse.json({ error: 'Invalid subscription payload' }, { status: 400 });
+    }
+
+    // Only HTTPS browser push-service endpoints may be persisted. The worker
+    // separately verifies public DNS immediately before any outbound send.
+    let endpointUrl: URL;
+    try { endpointUrl = new URL(body.endpoint); }
+    catch { return NextResponse.json({ error: 'Invalid push endpoint' }, { status: 400 }); }
+    const host = endpointUrl.hostname.toLowerCase();
+    if (endpointUrl.protocol !== 'https:' || endpointUrl.username ||
+        endpointUrl.password || endpointUrl.hash || !host.includes('.') ||
+        host === 'localhost' || host.endsWith('.local') ||
+        host.endsWith('.internal') || (endpointUrl.port && endpointUrl.port !== '443') ||
+        /^\d{1,3}(?:\.\d{1,3}){3}$/.test(host) || host.startsWith('[')) {
+      return NextResponse.json({ error: 'Invalid push endpoint' }, { status: 400 });
     }
 
     // Upsert so re-registering an existing endpoint just refreshes keys

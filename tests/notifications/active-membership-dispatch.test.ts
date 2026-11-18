@@ -12,6 +12,7 @@ vi.mock('@/lib/prisma', () => ({
     pushSubscription: { findMany: m.subs, deleteMany: vi.fn() },
   },
 }));
+vi.mock('@/lib/jobs/notification-producer', () => ({ recordQueuedNotification: vi.fn() }));
 vi.mock('@/lib/mailer', () => ({ sendEmail: m.mail }));
 vi.mock('@/lib/notifications/web-push', () => ({ broadcastPush: m.push }));
 vi.mock('@/lib/notifications/email-templates', () => ({ buildEmailTemplate: m.template }));
