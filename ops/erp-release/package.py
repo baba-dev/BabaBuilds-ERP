@@ -54,7 +54,7 @@ def validate_members(members):
         total += entry.size
         if total > MAX_BYTES:
             raise ValueError("Release archive exceeds size limit")
-    if "release/server.js" not in seen or "release/public/sw.js" not in seen:
+    if "release/server.js" not in seen or "release/public/sw.js" not in seen or "release/erp-worker.mjs" not in seen:
         raise ValueError("Standalone server or production service worker missing")
     if any(name.startswith("release/.next/cache/") or
            name in ("release/.env", "release/.env.local", "release/.env.production") for name in seen):
@@ -82,6 +82,51 @@ def verify(archive, manifest, *, expected_sha=None):
     with tarfile.open(archive, "r:gz") as bundle:
         validate_members(bundle.getmembers())
     return meta
+
+def package_worker_runtime(root, release):
+    """Stage the standalone worker and its **reachable production packages** only.
+
+    Next standalone tracing does not include imports from a separate Node entry.
+    This does not copy full root node_modules, other apps, or any .env files.
+    """
+    source = root / "ops" / "erp-worker" / "worker.mjs"
+    if not source.is_file():
+        raise RuntimeError("ERP worker source missing")
+    shutil.copy2(source, release / "erp-worker.mjs")
+    subprocess.run(["node", "--check", str(release / "erp-worker.mjs")],
+                   check=True, capture_output=True, timeout=15)
+
+    completed = set()
+
+    def resolve_package(name, importer):
+        parent = importer
+        while parent == root or root in parent.parents:
+            target = parent / "node_modules" / name
+            if (target / "package.json").is_file():
+                return target
+            parent = parent.parent
+        raise RuntimeError("Required ERP worker dependency absent: " + name)
+
+    def stage_package(name, importer):
+        origin = resolve_package(name, importer)
+        if origin in completed:
+            return
+        completed.add(origin)
+        manifest = json.loads((origin / "package.json").read_text())
+        destination = release / origin.relative_to(root)
+        shutil.copytree(origin, destination, symlinks=False, dirs_exist_ok=True,
+                        ignore=lambda folder, names: {".env", ".env.local", ".env.production"} & set(names))
+        for dependency in manifest.get("dependencies", {}):
+            stage_package(dependency, origin)
+        for optional in manifest.get("optionalDependencies", {}):
+            try:
+                stage_package(optional, origin)
+            except RuntimeError:
+                pass
+
+    for name in ("bullmq", "pg"):
+        stage_package(name, root)
+
 
 def stage(sha, destination, root):
     assert_sha(sha)
@@ -116,6 +161,7 @@ def stage(sha, destination, root):
         static.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(root / ".next" / "static", static, dirs_exist_ok=True, symlinks=False)
         shutil.copytree(root / "public", release / "public", dirs_exist_ok=True, symlinks=False)
+        package_worker_runtime(root, release)
         # A release must not accidentally include the local checkout, env or caches.
         for forbidden in (release / ".env", release / ".env.local", release / ".next" / "cache"):
             if forbidden.exists():

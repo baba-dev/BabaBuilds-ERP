@@ -35,6 +35,7 @@ class ArchiveSafetyTests(unittest.TestCase):
             tarentry("release", type=tarfile.DIRTYPE),
             tarentry("release/server.js", size=1),
             tarentry("release/public/sw.js", size=1),
+            tarentry("release/erp-worker.mjs", size=1),
         ]))
 
     def test_rejects_absolute_or_traversal(self):

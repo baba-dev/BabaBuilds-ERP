@@ -164,7 +164,7 @@ function buildPushAndInAppContent(
   }
 }
 
-export async function dispatchNotification(payload: NotificationPayload): Promise<void> {
+export async function dispatchNotification(payload: NotificationPayload, options: { skipInApp?: boolean } = {}): Promise<void> {
   try {
     const { event, workspaceId, data, userIds } = payload;
     const APP_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://erp.bababuilds.com';
@@ -200,7 +200,7 @@ export async function dispatchNotification(payload: NotificationPayload): Promis
       workspaceUsers.map(async ({ user }) => {
         try {
           // ── 4a. IN-APP NOTIFICATION (always, if notifyInApp is true) ─────
-          if (user.notifyInApp) {
+          if (user.notifyInApp && !options.skipInApp) {
             await prisma.inAppNotification.create({
               data: {
                 userId: user.id,

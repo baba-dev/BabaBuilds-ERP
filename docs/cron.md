@@ -1,12 +1,12 @@
 # Scheduled jobs on the VPS
 
-The app runs under pm2 from `/var/www/bababuilds-erp`. Every job is a `GET /api/cron/<name>` call with `Authorization: Bearer $CRON_SECRET`. `scripts/run-cron.sh <name>` makes the call using the `CRON_SECRET` in the app's `.env` and prints the HTTP status.
+The production app runs as `bababuilds-erp.service` under pinned Node 26; never use PM2 for ERP. Every job is a `GET /api/cron/<name>` call with `Authorization: Bearer $CRON_SECRET`. `scripts/run-cron.sh <name>` makes the call using the `CRON_SECRET` in the app's `.env` and prints the HTTP status.
 
 ## Install
 
 ```bash
 cd /var/www/bababuilds-erp
-grep -c '^CRON_SECRET=' .env          # must print 1; if 0, add CRON_SECRET=<long random string> to .env and run: npx pm2 restart erp
+grep -c '^CRON_SECRET=' .env          # must print 1; if 0, add CRON_SECRET=<long random string> to .env and run: sudo systemctl restart bababuilds-erp.service
 chmod +x scripts/run-cron.sh
 scripts/run-cron.sh expense-automation   # test once; expect "HTTP 200"
 mkdir -p /var/log/bababuilds
@@ -73,3 +73,7 @@ All 19 routes live under `app/api/cron/` and need `Authorization: Bearer $CRON_S
 ```
 
 Run each new job once by hand first and expect `HTTP 200` before adding it to the crontab.
+
+## Phase 4 optional background pilot
+
+Existing cron schedules remain authoritative. When the isolated Phase 4 jobs feature and in-app deadline pilot are enabled, task-deadline **in-app** notices are persisted in PostgreSQL and delivered by the independent `bababuilds-erp-worker.service`. Email/push continue via the existing path. Do not remove or overlap cron schedules. No other cron paths are moved by Phase 4.

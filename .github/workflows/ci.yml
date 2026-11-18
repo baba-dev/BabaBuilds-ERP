@@ -79,6 +79,15 @@ jobs:
           --health-interval 5s
           --health-timeout 3s
           --health-retries 12
+      redis_jobs:
+        image: redis:7
+        ports:
+          - 6387:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
@@ -86,8 +95,25 @@ jobs:
       # PostgreSQL 17 only: apply committed baseline before all integration tests.
       - name: Prepare isolated PostgreSQL test database
         run: npx prisma migrate deploy
+      - name: Isolate CI jobs Redis ACL
+        run: |
+          node - <<'JS'
+          const Redis = require('ioredis');
+          (async () => {
+            const r = new Redis(6387, '127.0.0.1', {
+              connectTimeout: 4000, maxRetriesPerRequest: 1,
+            });
+            try {
+              const result = await r.call('ACL', 'SETUSER', 'erp_jobs', 'on',
+                '>ci-test-worker-only-password', '~erp:ci:v1:jobs:*', '+@all');
+              if (result !== 'OK') throw Error('ACL setup failed');
+              console.log('CI_JOBS_REDIS_ACL_READY');
+            } finally { r.disconnect(); }
+          })().catch(() => { console.error('CI_JOBS_ACL_FAILED'); process.exitCode = 1; });
+          JS
       - name: Vitest (complete suite, including financial concurrency)
         env:
+          CI_REDIS_JOBS_TESTS: "1"
           CI_POSTGRES_FINANCE_TESTS: "1"
           CI_REDIS_RATE_LIMIT_TESTS: "1"
           CI_REDIS_DATA_CACHE_TESTS: "1"
@@ -127,6 +153,9 @@ jobs:
           python3 -m py_compile ops/erp-release/{package,promote,commission,systemd_promote}.py
           bash -n scripts/operations/deploy-erp-standalone.sh ops/erp-release/install.sh
           bash -n scripts/operations/erp-redis-phase3-provision.sh scripts/operations/erp-redis-phase3-preflight.sh
+          bash -n scripts/operations/erp-redis-phase4-provision.sh scripts/operations/erp-redis-phase4-preflight.sh
+          bash -n scripts/operations/erp-phase4-audit.sh scripts/operations/erp-phase4-rehearse.sh
+          node --check ops/erp-worker/worker.mjs
           python3 -m unittest discover -s tests/ops -p 'test_*.py' -v
 
   build:

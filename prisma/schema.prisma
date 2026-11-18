@@ -641,6 +641,7 @@ model Workspace {
   updatedAt DateTime @default(now()) @updatedAt
 
   // RELATIONS
+  jobOutbox                       ErpJobOutbox[]
   users                           WorkspaceUser[]
   companyGroupLinks               CompanyGroupWorkspace[]
   billingForGroups                CompanyGroup[] @relation("CompanyGroupBillingWorkspace")
@@ -5580,4 +5581,26 @@ model PosCloseout {
   notes        String?
 
   @@index([workspaceId, closedAt])
+}
+
+/// PostgreSQL is authoritative for opted-in asynchronous work.
+/// A unique occurrence key plus atomic worker transaction prevents duplicate in-app notifications.
+model ErpJobOutbox {
+  id            String    @id @default(cuid())
+  workspaceId   String
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  kind          String
+  dedupeKey     String
+  payloadJson   Json
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  nextAttemptAt DateTime  @default(now())
+  lastError     String?
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([workspaceId, kind, dedupeKey])
+  @@index([status, nextAttemptAt])
+  @@index([workspaceId, createdAt(sort: Desc)])
 }
