@@ -69,7 +69,7 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 export const pretty = (k: string) => k.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
 const fmt = (v: unknown, f: string | undefined, cur: string) => (typeof v === 'number' ? (f === 'currency' ? `${cur} ${v.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : f === 'percent' ? `${v}%` : v.toLocaleString('en-IN')) : v == null ? '' : String(v));
 
-function emailHtml(name: string, result: ReportResult, link: string): string {
+export function reportEmailHtml(name: string, result: ReportResult, link: string): string {
   const kpis = result.kpis.map((k) => `<td style="padding:8px 14px;border:1px solid #e5e7eb"><div style="font-size:11px;color:#6b7280">${esc(pretty(k.key))}</div><div style="font-size:16px;font-weight:600">${esc(fmt(k.value, k.format, result.currency))}</div></td>`).join('');
   const head = result.columns.map((c) => `<th style="text-align:left;padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:12px">${esc(pretty(c.key))}</th>`).join('');
   const body = result.rows.slice(0, 15).map((r) => `<tr>${result.columns.map((c) => `<td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px">${esc(fmt(r[c.key], c.format, result.currency))}</td>`).join('')}</tr>`).join('');
@@ -105,7 +105,7 @@ export async function sendViewEmail(v: ViewRowDb, now: Date, overrideTo?: string
       attachments.push({ filename: `${def.id}-${stamp}.pdf`, path: f, contentType: 'application/pdf' });
     }
     const base = process.env.NEXTAUTH_URL?.replace(/\/$/, '') ?? '';
-    await sendEmail({ route: 'user', profile, to: recipients.join(', '), subject: `${v.name} · ${stamp}`, html: emailHtml(v.name, result, `${base}/reporting/${v.reportId}`), text: `${v.name}\n${base}/reporting/${v.reportId}`, attachments });
+    await sendEmail({ route: 'user', profile, to: recipients.join(', '), subject: `${v.name} · ${stamp}`, html: reportEmailHtml(v.name, result, `${base}/reporting/${v.reportId}`), text: `${v.name}\n${base}/reporting/${v.reportId}`, attachments });
   } finally {
     await Promise.all(files.map((f) => fs.rm(f, { force: true }).catch(() => null)));
   }
