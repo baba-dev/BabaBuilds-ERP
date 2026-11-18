@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import process from 'node:process';
 import pg from 'pg';
 import { Queue, Worker } from 'bullmq';
+import { processNotificationDelivery, workerNotificationChannels } from './notification-delivery.mjs';
 
 const KIND = 'inapp_task_deadline_v1';
 const QUEUE_NAME = 'internal-inapp';
@@ -56,6 +57,49 @@ const pool = new pg.Pool({
   application_name: 'bababuilds-erp-worker',
 });
 pool.on('error', () => console.error('[erp-worker] POSTGRES_IDLE_ERROR'));
+
+const notificationFlags = workerNotificationChannels();
+const notificationsActive = notificationFlags.email || notificationFlags.push;
+// A separate queue makes legacy in-app deadlines independent of SMTP/WebPush.
+const notificationQueueName = 'notification-delivery';
+const notificationQueue = notificationsActive ? new Queue(notificationQueueName, {
+  connection, prefix,
+  defaultJobOptions: {
+    attempts: 1, removeOnComplete: true,
+    removeOnFail: { age: 86400, count: 2000 },
+  },
+}) : null;
+notificationQueue?.on('error', () => console.error('[erp-worker] NOTIFICATION_QUEUE_ERROR'));
+
+const notificationWorker = notificationsActive ? new Worker(notificationQueueName, async (job) => {
+  if (!job.data || Object.keys(job.data).sort().join(',') !== 'deliveryId' ||
+      job.name !== 'notification_delivery_v1') {
+    throw new Error('INVALID_NOTIFICATION_JOB');
+  }
+  await processNotificationDelivery(pool, job.data.deliveryId, notificationFlags);
+}, {
+  connection, prefix, concurrency: 2,
+  limiter: { max: 20, duration: 60000 },
+  lockDuration: 30000,
+}) : null;
+notificationWorker?.on('error', () => console.error('[erp-worker] NOTIFICATION_WORKER_ERROR'));
+
+async function publishNotificationPending() {
+  if (!notificationQueue || !notificationFlags.workspaceId) return;
+  const rows = await pool.query(
+    'SELECT "id" FROM "ErpJobDelivery" WHERE "status"=$1 AND "workspaceId"=$2 ' +
+    'AND "nextAttemptAt"<=NOW() AND "channel" IN ($3,$4) ' +
+    'ORDER BY "nextAttemptAt" ASC LIMIT $5',
+    ['PENDING', notificationFlags.workspaceId,
+      notificationFlags.email ? 'EMAIL' : '__OFF_EMAIL__',
+      notificationFlags.push ? 'PUSH' : '__OFF_PUSH__', 50],
+  );
+  for (const row of rows.rows) {
+    if (stopping) break;
+    await notificationQueue.add('notification_delivery_v1', { deliveryId: row.id },
+      { jobId: row.id, attempts: 1, removeOnComplete: true });
+  }
+}
 
 const queue = new Queue(QUEUE_NAME, {
   connection, prefix,
@@ -197,6 +241,7 @@ async function publishPending() {
       'SELECT "id" FROM "ErpJobOutbox" WHERE "status"=$1 AND "kind"=$2 AND "nextAttemptAt"<=NOW() ORDER BY "nextAttemptAt" ASC LIMIT $3',
       ['PENDING', KIND, MAX_BATCH],
     );
+    await publishNotificationPending();
     for (const row of rows.rows) {
       if (stopping) break;
       // BullMQ job ID is the opaque outbox ID. Reconciliation can repeat
@@ -217,6 +262,11 @@ async function start() {
     await pool.query('SELECT "id" FROM "ErpJobOutbox" LIMIT 0');
     await queue.waitUntilReady();
     await worker.waitUntilReady();
+    if (notificationsActive) {
+      await notificationQueue.waitUntilReady();
+      await notificationWorker.waitUntilReady();
+      await pool.query('SELECT "id" FROM "ErpJobDelivery" LIMIT 0');
+    }
   } catch {
     fail('WORKER_STARTUP_PREFLIGHT_FAILED');
   }
@@ -231,6 +281,8 @@ async function shutdown() {
   stopping = true;
   clearInterval(tick);
   console.log('[erp-worker] DRAINING');
+  if (notificationWorker) await notificationWorker.close().catch(() => undefined);
+  if (notificationQueue) await notificationQueue.close().catch(() => undefined);
   await worker.close().catch(() => undefined);
   await queue.close().catch(() => undefined);
   await pool.end().catch(() => undefined);
