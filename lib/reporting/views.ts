@@ -5,6 +5,8 @@ import path from 'node:path';
 import { prisma } from '@/lib/prisma';
 import { sendEmail } from '@/lib/mailer';
 import { dispatchNotification } from '@/lib/notifications/dispatcher';
+import { reportQueueEnabled } from '@/lib/jobs/report-routing';
+import { enqueueDueScheduledReport } from '@/lib/jobs/report-producer';
 import { getReport, reportToCsv, runReport, type ReportResult } from '@/lib/reporting/engine';
 import { buildReportPdf } from '@/lib/reporting/pdf';
 import { PERIOD_KEYS, type PeriodKey } from '@/lib/expenses/period';
@@ -67,7 +69,7 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 export const pretty = (k: string) => k.replace(/_/g, ' ').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
 const fmt = (v: unknown, f: string | undefined, cur: string) => (typeof v === 'number' ? (f === 'currency' ? `${cur} ${v.toLocaleString('en-IN', { maximumFractionDigits: 2 })}` : f === 'percent' ? `${v}%` : v.toLocaleString('en-IN')) : v == null ? '' : String(v));
 
-function emailHtml(name: string, result: ReportResult, link: string): string {
+export function reportEmailHtml(name: string, result: ReportResult, link: string): string {
   const kpis = result.kpis.map((k) => `<td style="padding:8px 14px;border:1px solid #e5e7eb"><div style="font-size:11px;color:#6b7280">${esc(pretty(k.key))}</div><div style="font-size:16px;font-weight:600">${esc(fmt(k.value, k.format, result.currency))}</div></td>`).join('');
   const head = result.columns.map((c) => `<th style="text-align:left;padding:6px 10px;border-bottom:1px solid #e5e7eb;font-size:12px">${esc(pretty(c.key))}</th>`).join('');
   const body = result.rows.slice(0, 15).map((r) => `<tr>${result.columns.map((c) => `<td style="padding:6px 10px;border-bottom:1px solid #f3f4f6;font-size:12px">${esc(fmt(r[c.key], c.format, result.currency))}</td>`).join('')}</tr>`).join('');
@@ -103,34 +105,52 @@ export async function sendViewEmail(v: ViewRowDb, now: Date, overrideTo?: string
       attachments.push({ filename: `${def.id}-${stamp}.pdf`, path: f, contentType: 'application/pdf' });
     }
     const base = process.env.NEXTAUTH_URL?.replace(/\/$/, '') ?? '';
-    await sendEmail({ route: 'user', profile, to: recipients.join(', '), subject: `${v.name} · ${stamp}`, html: emailHtml(v.name, result, `${base}/reporting/${v.reportId}`), text: `${v.name}\n${base}/reporting/${v.reportId}`, attachments });
+    await sendEmail({ route: 'user', profile, to: recipients.join(', '), subject: `${v.name} · ${stamp}`, html: reportEmailHtml(v.name, result, `${base}/reporting/${v.reportId}`), text: `${v.name}\n${base}/reporting/${v.reportId}`, attachments });
   } finally {
     await Promise.all(files.map((f) => fs.rm(f, { force: true }).catch(() => null)));
   }
 }
 
-export type RunDueResult = { due: number; sent: number; failed: number };
+export type RunDueResult = { due: number; sent: number; queued: number; failed: number };
 
 /** Email every saved report whose schedule has come due. A failure on one view is recorded on it, the team is told once per new failure, and the rest carry on. */
 export async function runDueSchedules(now = new Date()): Promise<RunDueResult> {
   const due = await prisma.reportView.findMany({ where: { scheduleFrequency: { not: null }, scheduleEnabled: true, scheduleNextAt: { lte: now } }, take: 200 });
-  let sent = 0, failed = 0;
+  let sent = 0, queued = 0, failed = 0;
   for (const v of due) {
     const frequency = (FREQUENCIES as readonly string[]).includes(v.scheduleFrequency ?? '') ? (v.scheduleFrequency as Frequency) : null;
     if (!frequency) continue;
     const next = nextRunAfter(frequency, now, { hour: v.scheduleHour, tz: v.scheduleTz });
     try {
+      if (reportQueueEnabled(v.workspaceId)) {
+        // CAS + source outbox + recipient intents commit together. Never send
+        // via the legacy SMTP path after an ambiguous database outcome.
+        const result = await enqueueDueScheduledReport(v, next);
+        if (result === 'ENQUEUED') queued += 1;
+        if (result === 'INVALID_RECIPIENTS') failed += 1;
+        continue;
+      }
       await sendViewEmail(v, now);
       await prisma.reportView.update({ where: { id: v.id }, data: { scheduleLastAt: now, scheduleNextAt: next, scheduleLastError: null } });
       sent += 1;
     } catch (error) {
       failed += 1;
       const code = (error instanceof Error ? error.message : String(error)).slice(0, 200);
+      if (reportQueueEnabled(v.workspaceId)) {
+        // A producer failure must NEVER advance the due clock. The outbox
+        // transaction either committed atomically or rolled back; another
+        // authorized cron pass may safely attempt the same occurrence.
+        await prisma.reportView.updateMany({
+          where: { id: v.id, workspaceId: v.workspaceId, scheduleNextAt: v.scheduleNextAt },
+          data: { scheduleLastError: 'REPORT_QUEUE_WRITE_FAILED' },
+        }).catch(() => null);
+        continue;
+      }
       await prisma.reportView.update({ where: { id: v.id }, data: { scheduleNextAt: next, scheduleLastError: code } }).catch(() => null);
       if (code !== v.scheduleLastError) {
         void dispatchNotification({ event: 'GST_REMINDER', workspaceId: v.workspaceId, data: { title: 'A scheduled report could not be sent', body: `"${v.name}" failed (${code}). Open it in Reporting Center to fix the schedule.`, actionUrl: `/reporting/${v.reportId}` } }).catch(() => null);
       }
     }
   }
-  return { due: due.length, sent, failed };
+  return { due: due.length, sent, queued, failed };
 }

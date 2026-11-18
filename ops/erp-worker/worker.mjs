@@ -9,6 +9,9 @@ import process from 'node:process';
 import pg from 'pg';
 import { Queue, Worker } from 'bullmq';
 import { processNotificationDelivery, workerNotificationChannels } from './notification-delivery.mjs';
+import {
+  processReportDelivery, workerReportFlag, reconcileAcceptedReportSchedules,
+} from './report-delivery.mjs';
 
 const KIND = 'inapp_task_deadline_v1';
 const QUEUE_NAME = 'internal-inapp';
@@ -57,6 +60,45 @@ const pool = new pg.Pool({
   application_name: 'bababuilds-erp-worker',
 });
 pool.on('error', () => console.error('[erp-worker] POSTGRES_IDLE_ERROR'));
+
+const reportWorkspace = workerReportFlag();
+const reportQueue = reportWorkspace ? new Queue('scheduled-report-email', {
+  connection, prefix,
+  defaultJobOptions: { attempts: 1, removeOnComplete: true, removeOnFail: true },
+}) : null;
+reportQueue?.on('error', () => console.error('[erp-worker] REPORT_QUEUE_ERROR'));
+const reportWorker = reportWorkspace ? new Worker('scheduled-report-email', async (job) => {
+  if (job.name !== 'scheduled_report_email_v1' ||
+      !job.data || Object.keys(job.data).sort().join(',') !== 'deliveryId') {
+    throw new Error('INVALID_REPORT_JOB');
+  }
+  await processReportDelivery(pool, job.data.deliveryId, reportWorkspace);
+}, {
+  connection, prefix, concurrency: 1,
+  limiter: { max: 6, duration: 60000 },
+  lockDuration: 90000,
+}) : null;
+reportWorker?.on('error', () => console.error('[erp-worker] REPORT_WORKER_ERROR'));
+
+let lastReportRepairAt = 0;
+async function publishReportPending() {
+  if (!reportQueue || !reportWorkspace) return;
+  const result = await pool.query(
+    'SELECT "id" FROM "ErpJobDelivery" WHERE "workspaceId"=$1 ' +
+    'AND "eventKind"=$2 AND "channel"=$3 AND "status"=$4 ' +
+    'AND "nextAttemptAt"<=NOW() ORDER BY "nextAttemptAt" ASC LIMIT 40',
+    [reportWorkspace, 'scheduled_report_email_v1', 'REPORT_EMAIL', 'PENDING'],
+  );
+  for (const row of result.rows) {
+    if (stopping) break;
+    await reportQueue.add('scheduled_report_email_v1', { deliveryId: row.id },
+      { jobId: row.id, attempts: 1, removeOnComplete: true, removeOnFail: true });
+  }
+  if (Date.now() - lastReportRepairAt >= 60_000) {
+    lastReportRepairAt = Date.now();
+    await reconcileAcceptedReportSchedules(pool, reportWorkspace);
+  }
+}
 
 const notificationFlags = workerNotificationChannels();
 const notificationsActive = notificationFlags.email || notificationFlags.push;
@@ -244,6 +286,7 @@ async function publishPending() {
       ['PENDING', KIND, MAX_BATCH],
     );
     await publishNotificationPending();
+    await publishReportPending();
     for (const row of rows.rows) {
       if (stopping) break;
       // BullMQ job ID is the opaque outbox ID. Reconciliation can repeat
@@ -264,6 +307,11 @@ async function start() {
     await pool.query('SELECT "id" FROM "ErpJobOutbox" LIMIT 0');
     await queue.waitUntilReady();
     await worker.waitUntilReady();
+    if (reportWorkspace) {
+      await reportQueue.waitUntilReady();
+      await reportWorker.waitUntilReady();
+      await pool.query('SELECT "id" FROM "ErpJobDelivery" LIMIT 0');
+    }
     if (notificationsActive) {
       await notificationQueue.waitUntilReady();
       await notificationWorker.waitUntilReady();
@@ -283,6 +331,8 @@ async function shutdown() {
   stopping = true;
   clearInterval(tick);
   console.log('[erp-worker] DRAINING');
+  if (reportWorker) await reportWorker.close().catch(() => undefined);
+  if (reportQueue) await reportQueue.close().catch(() => undefined);
   if (notificationWorker) await notificationWorker.close().catch(() => undefined);
   if (notificationQueue) await notificationQueue.close().catch(() => undefined);
   await worker.close().catch(() => undefined);
