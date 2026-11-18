@@ -103,7 +103,7 @@ async function resolveRecipient(pool, delivery) {
   return result.rows.find((r) => keyOf(r.id, 'PUSH') === recipientKey) || null;
 }
 
-async function smtpSend(pool, delivery, recipient, payload) {
+async function prepareSmtp(pool, delivery) {
   const info = await pool.query(
     'SELECT "smtpHost","smtpPort","smtpUser","smtpPassword","smtpFromEmail","companyName" ' +
     'FROM "BusinessProfile" WHERE "workspaceId"=$1', [delivery.workspaceId],
@@ -124,12 +124,15 @@ async function smtpSend(pool, delivery, recipient, payload) {
     pool: false,
   });
   const label = (p.companyName || 'BabaBuilds ERP').replace(/[\r\n"]/g, '').slice(0, 120);
-  const ack = await transporter.sendMail({
-    from: '"' + label + '" <' + fromAddress + '>',
+  return { transporter, from: '"' + label + '" <' + fromAddress + '>' };
+}
+
+async function smtpSend(smtp, delivery, recipient, payload) {
+  const ack = await smtp.transporter.sendMail({
+    from: smtp.from,
     to: recipient.email, subject: payload.subject, html: payload.html, text: payload.text,
     messageId: '<' + delivery.id + '@erp.bababuilds.com>',
   });
-  // Message-ID is stable, but SMTP does NOT guarantee provider-side dedupe.
   const accepted = (ack.accepted || []).some((a) =>
     String(a).trim().toLowerCase() === recipient.email.trim().toLowerCase());
   const rejected = (ack.rejected || []).some((a) =>
@@ -200,14 +203,16 @@ export async function processNotificationDelivery(pool, id, flags = workerNotifi
         Date.now() - new Date(source.rows[0].createdAt).getTime() > 86_400_000) {
       await transition(pool, id, token, 'SUPPRESSED', 'PUSH_EXPIRED'); return;
     }
+    let smtp = null;
     if (delivery.channel === 'EMAIL') {
       const p = payload.email;
       if (typeof p.subject !== 'string' || typeof p.html !== 'string' ||
           typeof p.text !== 'string' || p.html.length > 100_000) {
         await transition(pool, id, token, 'FAILED', 'INVALID_EMAIL_PAYLOAD'); return;
       }
-      // Validate and resolve SMTP before committing the irreversible attempt
-      // where possible. Any error in smtpSend AFTER this line is ambiguous.
+      // DNS, credentials and transport construction are pre-send checks.
+      // None may mark a delivery UNCERTAIN unless provider IO has begun.
+      smtp = await prepareSmtp(pool, delivery);
     } else {
       if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
         await transition(pool, id, token, 'FAILED', 'PUSH_NOT_CONFIGURED'); return;
@@ -222,7 +227,7 @@ export async function processNotificationDelivery(pool, id, flags = workerNotifi
     if (!marked.rows.length) return;
     attempted = true;
     if (delivery.channel === 'EMAIL') {
-      const ack = await smtpSend(pool, delivery, recipient, payload.email);
+      const ack = await smtpSend(smtp, delivery, recipient, payload.email);
       await transition(pool, id, token, 'PROVIDER_ACCEPTED', null, ack);
     } else {
       try {
