@@ -72,7 +72,7 @@ export async function getJobHealth(): Promise<JobHealth> {
   }
   function infoNumber(raw: string, key: string): number | null {
     const value = infoField(raw, key);
-    const parsed = value && /^\\d+$/.test(value) ? Number(value) : NaN;
+    const parsed = value && /^[0-9]+$/.test(value) ? Number(value) : NaN;
     return Number.isSafeInteger(parsed) ? parsed : null;
   }
   if (config?.enabled && config.endpoint) {
@@ -89,7 +89,7 @@ export async function getJobHealth(): Promise<JobHealth> {
         if (config.workerEnabled) {
           try {
             const value = await client.get(config.namespace + ':jobs:worker:heartbeat');
-            const parsed = /^(ok|degraded):(\\d{13})$/.exec(value || '');
+            const parsed = /^(ok|degraded):([0-9]{13})$/.exec(value || '');
             const age = parsed ? Math.floor((Date.now() - Number(parsed[2])) / 1000) : NaN;
             if (Number.isFinite(age) && age >= 0 && age <= 35) {
               result.workerHeartbeatAgeSeconds = age;
