@@ -17,7 +17,7 @@ export async function PATCH(req: Request, ctx: Ctx) {
     const d = leaveDecisionSchema.parse(await readJson(req));
     const { request, status } = await decideLeave({ workspaceId, requestId: id, approverUserId: userId, action: d.action, rejectionReason: d.rejectionReason });
     if (request.employee.userId) {
-      void dispatchNotification({ event: status === 'APPROVED' ? 'LEAVE_APPROVED' : 'LEAVE_REJECTED', workspaceId, userIds: [request.employee.userId], data: { leaveType: request.leaveType.name, employeeName: `${request.employee.firstName} ${request.employee.lastName}` } }).catch(() => undefined);
+      void dispatchNotification({ event: status === 'APPROVED' ? 'LEAVE_APPROVED' : 'LEAVE_REJECTED', workspaceId, occurrenceKey: 'leave_' + id + '_' + status.toLowerCase(), userIds: [request.employee.userId], data: { leaveType: request.leaveType.name, employeeName: `${request.employee.firstName} ${request.employee.lastName}` } }).catch(() => undefined);
     }
     void logActivity({ workspaceId, action: `workforce.leave_${status.toLowerCase()}`, status: 'SUCCESS', actor: { userId, email }, entity: { type: 'leave_request', id }, metadata: { days: request.days } });
     return NextResponse.json({ success: true, status });
