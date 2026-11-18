@@ -90,3 +90,16 @@ export async function validateMailBillingUrlForFetch(rawUrl: string, env = proce
   }
   return url;
 }
+
+/**
+ * URL of a Mail-in-a-Box admin API path. The API lives under /admin, so a base URL of just the host gets /admin added;
+ * a base that already has a path is kept. The path is appended (never resolved from the host root, which would drop /admin).
+ */
+export function miabApiUrl(base: URL, path: string): URL {
+  const root = new URL(base.toString());
+  root.search = '';
+  root.hash = '';
+  if (root.pathname === '' || root.pathname === '/') root.pathname = '/admin/';
+  else if (!root.pathname.endsWith('/')) root.pathname = `${root.pathname}/`;
+  return new URL(path.replace(/^\/+/, ''), root);
+}

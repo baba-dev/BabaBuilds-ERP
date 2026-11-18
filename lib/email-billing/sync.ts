@@ -52,7 +52,7 @@ async function syncDomain(args: {
         mailboxesAdded++;
         reviewItemsCreated += await review({ workspaceId, domainId: domain.id, serverId, type: 'MAILBOX_ADDED', severity: 'INFO', title: `Mailbox added: ${m.email}`, description: `${m.email} was discovered during inventory sync.`, suggestedAction: 'Review whether billing quantity should change.', newValueJson: { email: m.email } }, tx);
       }
-      const fields = { localPart: m.email.split('@')[0], quotaMb: m.quotaMb ?? null, isAdmin: Boolean(m.isAdmin), status: m.status || 'ACTIVE', lastSeenAt: now, rawJson: m.raw as Prisma.InputJsonValue };
+      const fields = { localPart: m.email.split('@')[0], quotaMb: m.quotaMb ?? null, usedMb: m.usedMb ?? null, usageCheckedAt: m.usedMb == null ? null : now, isAdmin: Boolean(m.isAdmin), status: m.status || 'ACTIVE', lastSeenAt: now, rawJson: m.raw as Prisma.InputJsonValue };
       await tx.mailBillingMailbox.upsert({
         where: { workspaceId_serverId_email: { workspaceId, serverId, email: m.email } },
         create: { workspaceId, serverId, domainId: domain.id, email: m.email, ...fields },

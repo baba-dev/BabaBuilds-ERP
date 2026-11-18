@@ -5,10 +5,12 @@ import { prisma } from '@/lib/prisma';
 import { EmailBillingEmptyState, EmailBillingStatusBadge, EmailBillingTable, TruncatedText } from '@/components/email-billing/ui';
 import { ServerDialog, ServerRowActions } from '@/components/email-billing/client-actions';
 import { requireEmailBillingPage } from '../_data';
+import { loadMailBillingSettings } from '@/lib/email-billing/settings';
 
 export default async function ServersPage() {
   const t = await getTranslations('EmailBilling');
   const workspaceId = await requireEmailBillingPage();
+  const { allowMailboxManagement } = await loadMailBillingSettings(workspaceId);
   const servers = await prisma.mailBillingServer.findMany({
     where: { workspaceId },
     include: { _count: { select: { domains: true, mailboxes: true } }, syncRuns: { orderBy: { startedAt: 'desc' }, take: 5 } },
@@ -30,7 +32,7 @@ export default async function ServersPage() {
             <tr key={server.id} className="border-b hover:bg-muted/50">
               <td className="p-2 font-medium"><TruncatedText>{server.name}</TruncatedText></td>
               <td className="p-2">{server.provider}</td>
-              <td className="p-2"><EmailBillingStatusBadge value={server.accessMode} /></td>
+              <td className="p-2"><div className="flex flex-wrap items-center gap-1"><EmailBillingStatusBadge value={server.accessMode} />{server.writesEnabled ? <EmailBillingStatusBadge value="ACTIVE" label={t('ops.writesOn')} /> : null}</div></td>
               <td className="p-2"><TruncatedText className="max-w-[22rem]">{server.baseUrl}</TruncatedText></td>
               <td className="p-2"><EmailBillingStatusBadge value={server.status} /></td>
               <td className="p-2 whitespace-nowrap">{server.lastSyncAt?.toLocaleString() ?? t('labels.never')}</td>
@@ -38,7 +40,7 @@ export default async function ServersPage() {
               <td className="p-2">{server._count.mailboxes}</td>
               <td className="p-2 text-muted-foreground"><TruncatedText>{server.lastSyncError ?? t('labels.notAvailable')}</TruncatedText></td>
               <td className="p-2"><EmailBillingStatusBadge value={server.encryptedToken ? 'ACTIVE' : 'DISABLED'} label={server.encryptedToken ? t('labels.tokenSet') : t('labels.tokenNotConfigured')} /></td>
-              <td className="p-2"><ServerRowActions server={{ id: server.id, name: server.name, baseUrl: server.baseUrl, accessMode: server.accessMode, status: server.status, hasToken: Boolean(server.encryptedToken) }} /></td>
+              <td className="p-2"><ServerRowActions managementAllowed={allowMailboxManagement} server={{ id: server.id, name: server.name, baseUrl: server.baseUrl, accessMode: server.accessMode, status: server.status, hasToken: Boolean(server.encryptedToken), writesEnabled: server.writesEnabled, miabVersion: server.miabVersion }} /></td>
             </tr>
           ))}
         </EmailBillingTable>

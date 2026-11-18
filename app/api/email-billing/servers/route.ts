@@ -13,6 +13,8 @@ type MailBillingServerForApi = {
   accessMode: string;
   baseUrl: string;
   encryptedToken: string | null;
+  writesEnabled: boolean;
+  miabVersion: string | null;
   status: string;
   lastSyncAt: Date | null;
   lastSyncStatus: string | null;
@@ -32,6 +34,8 @@ const sanitizeServer = (server: MailBillingServerForApi) => ({
   lastSyncStatus: server.lastSyncStatus,
   lastSyncError: server.lastSyncError,
   hasToken: Boolean(server.encryptedToken),
+  writesEnabled: server.writesEnabled,
+  miabVersion: server.miabVersion,
   createdAt: server.createdAt,
   updatedAt: server.updatedAt,
 });

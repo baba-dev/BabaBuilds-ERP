@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const mailBillingAccessModeSchema = z.enum(['READ_ONLY_ADAPTER', 'DIRECT_MIAB_API']);
+export const mailBillingAccessModeSchema = z.enum(['READ_ONLY_ADAPTER', 'DIRECT_MIAB_API', 'MANAGED_API']);
 export const mailBillingServerStatusSchema = z.enum(['ACTIVE', 'DISABLED', 'ERROR']);
 export const mailBillingBillingModeSchema = z.enum(['FIXED', 'PER_MAILBOX', 'BUNDLE_PLUS_EXTRA', 'MANUAL']);
 export const mailBillingFrequencySchema = z.enum(['MONTHLY', 'QUARTERLY', 'ANNUALLY']);
@@ -38,6 +38,8 @@ export const mailBillingServerPatchSchema = z
     token: z.string().optional(),
     clearToken: z.boolean().optional(),
     status: mailBillingServerStatusSchema.optional(),
+    /** Turns write operations on or off. Turning on checks the credential against the box first. */
+    writesEnabled: z.boolean().optional(),
   })
   .refine((value) => Object.keys(value).length > 0, 'At least one field is required');
 
@@ -48,6 +50,9 @@ export const mailBillingPlanCreateSchema = z.object({
   currency: currencySchema.default('INR'),
   basePrice: moneySchema.default(0),
   includedMailboxes: nonNegativeIntSchema.default(0),
+  /** What the base price includes, shown to staff (not enforced): disk quota in MB and outbound mails per day. */
+  includedQuotaMb: nonNegativeIntSchema.max(10_000_000).nullish(),
+  outboundPerDay: nonNegativeIntSchema.max(10_000_000).nullish(),
   extraMailboxPrice: moneySchema.default(0),
   frequency: mailBillingFrequencySchema.default('MONTHLY'),
   sortOrder: z.coerce.number().int().default(0),
@@ -121,11 +126,75 @@ export const mailBillingSettingsPatchSchema = z.object({
   // Optional so a client that does not send them leaves the saved values unchanged.
   usageBillingPolicy: z.enum(['LATEST', 'HIGH_WATER_MARK']).optional(),
   prorateIncreases: z.boolean().optional(),
+  /** Turns on every write feature (create/reset/quota/suspend/delete, new domains). Needs the server-admin permission. */
+  allowMailboxManagement: z.boolean().optional(),
+  quotaAlertPercent: z.number().int().min(0).max(100).optional(),
+  paymentDigest: z.enum(['OFF', 'DAILY', 'WEEKLY']).optional(),
+  /** Set up billing automatically for domains discovered after this is switched on. Needs a default plan. */
+  autoOnboardNewDomains: z.boolean().optional(),
+  autoOnboardEmailInvoices: z.boolean().optional(),
+  autoOnboardTrialDays: z.number().int().min(0).max(365).optional(),
+  /** How customers are charged. Switching to ACCRUAL is refused while recurring retainers are still active. */
+  billingModel: z.enum(['RECURRING', 'ACCRUAL']).optional(),
 });
 
 export const mailBillingApplyQuantitySchema = z.object({
   /** Defaults to the pending count awaiting approval. */
   toCount: nonNegativeIntSchema.max(100_000).optional(),
+});
+
+const dateString = z.string().trim().refine((value) => !Number.isNaN(Date.parse(value)), 'Date must be valid');
+
+/** Everything needed to start billing a hosted domain: who pays, which plan, and the day it was issued. */
+export const mailBillingSetupBillingSchema = z
+  .object({
+    planId: idSchema,
+    clientId: idSchema.optional(),
+    newClient: z.object({ name: z.string().trim().min(1).max(160), email: z.union([z.literal(''), z.string().trim().email().max(254)]).optional() }).optional(),
+    /** The day the domain was issued to the customer; billing repeats on this day. */
+    startDate: dateString.optional(),
+    trialDays: z.coerce.number().int().min(0).max(365).optional(),
+    firstBillingDate: dateString.optional(),
+    emailInvoices: z.boolean().optional(),
+  })
+  .refine((v) => Boolean(v.clientId) !== Boolean(v.newClient), 'Choose an existing client or enter a new one, not both.');
+
+export const mailBillingBulkSetupSchema = z
+  .object({
+    mode: z.enum(['preview', 'apply']),
+    planId: idSchema,
+    startDateSource: z.enum(['DISCOVERED', 'DATE']),
+    startDate: dateString.optional(),
+    createClients: z.boolean().default(false),
+    emailInvoices: z.boolean().default(false),
+    domainIds: z.array(idSchema).max(500).optional(),
+  })
+  .refine((v) => v.startDateSource !== 'DATE' || Boolean(v.startDate), 'Enter the start date.');
+
+const PAYMENT_METHOD_VALUES = ['BANK_TRANSFER', 'UPI', 'CARD', 'CASH', 'CHEQUE', 'PAYMENT_LINK', 'OTHER'] as const;
+const paymentSchema = z.object({
+  method: z.enum(PAYMENT_METHOD_VALUES),
+  reference: z.string().trim().max(120).nullish(),
+  notes: z.string().trim().max(500).nullish(),
+});
+
+/** Collect what a client owes up to a day (default today). `payment` records the money received at the same time. */
+export const mailBillingCollectSchema = z.object({
+  asOf: dateString.optional(),
+  currency: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/).optional(),
+  idempotencyKey: z.string().trim().min(8).max(100).optional(),
+  /** The total shown on the statement the person confirmed; the collection is refused if it has changed. */
+  expectedTotal: z.number().finite().nonnegative().optional(),
+  payment: paymentSchema.optional(),
+});
+export const mailBillingCollectionPaymentSchema = paymentSchema;
+export const mailBillingUndoCollectionSchema = z.object({ reason: z.string().trim().min(3).max(300) });
+
+/** Opening position: when charging starts, or what was already paid up to, for one client, domain or address. */
+export const mailBillingDatesSchema = z.object({
+  kind: z.enum(['chargingStart', 'collectedThrough']),
+  scope: z.union([z.object({ clientId: idSchema }), z.object({ domainId: idSchema }), z.object({ mailboxId: idSchema })]),
+  date: dateString,
 });
 
 export function parseJsonBody<T>(schema: z.ZodSchema<T>, body: unknown) {

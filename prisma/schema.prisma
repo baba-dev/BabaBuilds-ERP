@@ -719,6 +719,8 @@ model Workspace {
   mailBillingSettings             MailBillingSettings?
   mailUsageSnapshots              MailUsageSnapshot[]
   mailBillingChanges              MailBillingChange[]
+  mailOperations                  MailOperation[]
+  mailCollections                 MailCollection[]
 
   // IMS Relations
   products           Product[]
@@ -1624,6 +1626,7 @@ model Client {
   paymentBehavior ClientPaymentBehavior?
   mailBillingDomains MailBillingDomain[]
   mailBillingSubscriptions MailBillingSubscription[]
+  mailCollections MailCollection[]
 
   @@unique([name, workspaceId])
   @@index([workspaceId])
@@ -1734,6 +1737,7 @@ model Invoice {
   // The retainer cycle that produced this invoice (null for everything else).
   retainerId String?
   retainer   Retainer? @relation("RetainerInvoices", fields: [retainerId], references: [id], onDelete: SetNull)
+  mailCollections MailCollection[]
   // Automatic reminders already sent for this invoice (retainer collections).
   reminderCount Int @default(0)
 
@@ -3755,11 +3759,16 @@ model MailBillingServer {
   lastSyncAt     DateTime?
   lastSyncStatus String?
   lastSyncError  String?
+  /// Version reported by the box (/system/version) the last time the connection was tested.
+  miabVersion    String?
+  /// Master switch for write operations. Off until an administrator turns it on for a MANAGED_API server.
+  writesEnabled  Boolean   @default(false)
 
   domains   MailBillingDomain[]
   mailboxes MailBillingMailbox[]
   syncRuns  MailBillingSyncRun[]
   reviewItems MailBillingReviewItem[]
+  operations MailOperation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -3794,6 +3803,7 @@ model MailBillingDomain {
   mailboxes MailBillingMailbox[]
   subscriptions MailBillingSubscription[]
   reviewItems MailBillingReviewItem[]
+  operations MailOperation[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3820,6 +3830,21 @@ model MailBillingMailbox {
   lastSeenAt DateTime @default(now())
   archivedAt DateTime?
   rawJson Json?
+  /// Set while the mailbox login is locked by a suspend operation; sync never clears it.
+  suspendedAt DateTime?
+  suspendedReason String?
+  /// First day this address is charged (inclusive). Defaults to when the ERP first saw it; set an earlier date for addresses issued before.
+  billingStartsOn DateTime @default(now())
+  /// Last day already collected (inclusive). Null until the first collection or an opening date is set.
+  billedThrough DateTime?
+  /// Disk used in MB, when the mail source reports it. Null means "not reported", not zero.
+  usedMb Int?
+  usageCheckedAt DateTime?
+  /// A delete is scheduled to run at this time unless cancelled (soft-delete window).
+  deleteScheduledFor DateTime?
+  /// The operation that created this mailbox, when it was created from the ERP.
+  provisionedByOperationId String?
+  operations MailOperation[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -3865,6 +3890,9 @@ model MailBillingPlan {
   includedMailboxes Int @default(0)
   extraMailboxPrice Decimal @default(0)
   frequency         String @default("MONTHLY")
+  /// What the base price includes. Shown to staff; not enforced by the ERP.
+  includedQuotaMb   Int?
+  outboundPerDay    Int?
   isActive          Boolean @default(true)
   sortOrder         Int @default(0)
 
@@ -3977,10 +4005,98 @@ model MailBillingSettings {
   usageBillingPolicy String @default("LATEST")
   /// Charge a prorated one-off line on the next invoice when the billable quantity goes up mid-cycle.
   prorateIncreases Boolean @default(true)
+  /// Master switch for changing anything on the mail servers from the ERP (create/reset/quota/suspend/delete, new domains).
+  /// Off by default: the module then only reads inventory and runs billing.
+  allowMailboxManagement Boolean @default(false)
+  /// Raise a review item when a mailbox is at or above this percent of its quota. 0 turns the alert off.
+  quotaAlertPercent Int @default(90)
+  /// OFF | DAILY | WEEKLY: a notification listing payments due soon and overdue invoices, sent only when there is something to collect.
+  paymentDigest String @default("DAILY")
+  lastDigestOn DateTime?
+  /// Automatically set up billing (customer, subscription, retainer) for domains discovered after this was switched on.
+  /// Needs a default plan. Domains that already existed are never touched; use the previewed bulk setup for those.
+  autoOnboardNewDomains Boolean @default(false)
+  /// When auto-onboarding was last switched on. Only domains first seen after this (and after the server's first
+  /// successful sync) are onboarded, so connecting a server never bills your whole existing base.
+  autoOnboardSince DateTime?
+  /// Email each invoice of an auto-onboarded domain. Off by default: the customer record has no email until you add one.
+  autoOnboardEmailInvoices Boolean @default(false)
+  autoOnboardTrialDays Int @default(0)
+  /// RECURRING: fixed invoices on a schedule through retainers. ACCRUAL: each address is charged per day and the owner
+  /// collects what has built up, per client, on any date (one invoice per collection).
+  billingModel String @default("RECURRING")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([workspaceId, defaultPlanId])
+}
+
+/// A change the ERP makes on the mail server. Payloads and results never contain passwords or tokens.
+model MailOperation {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  serverId    String
+  server      MailBillingServer @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  domainId    String?
+  domain      MailBillingDomain? @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  mailboxId   String?
+  mailbox     MailBillingMailbox? @relation(fields: [mailboxId], references: [id], onDelete: SetNull)
+
+  /// MAILBOX_CREATE | PASSWORD_RESET | QUOTA_SET | ALIAS_ADD | ALIAS_REMOVE | MAILBOX_SUSPEND | MAILBOX_RESUME | MAILBOX_DELETE
+  type   String
+  /// PENDING | RUNNING | SUCCEEDED | FAILED | CANCELLED
+  status String @default("PENDING")
+  /// UI | API | BILLING | AI
+  source String @default("UI")
+  /// Same key from the same workspace returns the original operation instead of repeating the change.
+  idempotencyKey String?
+  payloadJson Json?
+  resultJson  Json?
+  errorMessage String?
+  attempts    Int @default(0)
+  /// 1 for operations that hand out a one-time password (it is never stored, so they cannot be retried by a job).
+  maxAttempts Int @default(1)
+  runAfter    DateTime @default(now())
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  requestedByUserId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, status, runAfter])
+  @@index([workspaceId, serverId, createdAt])
+  @@index([mailboxId])
+}
+
+/// One collection from a client: the charges built up across all their domains up to `asOf`, turned into one invoice.
+/// The per-address periods are kept in linesJson so an unfinished collection can be completed and a wrong one undone.
+model MailCollection {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  invoiceId   String?
+  invoice     Invoice?  @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  /// Last day charged (inclusive).
+  asOf     DateTime
+  currency String
+  total    Decimal
+  /// INVOICING (charges recorded, invoice not yet linked) | INVOICED | VOID
+  status   String @default("INVOICING")
+  linesJson Json
+  idempotencyKey String?
+  createdByUserId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  completedAt DateTime?
+
+  @@unique([workspaceId, idempotencyKey])
+  @@index([workspaceId, clientId, createdAt])
+  @@index([workspaceId, status])
 }
 
 /// One audited usage reading per subscription per day. It is the input to quantity changes, MRR and growth reports.

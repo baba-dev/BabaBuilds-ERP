@@ -16,6 +16,8 @@ export async function createMailRetainer(tx: Tx, args: {
   calc: ReturnType<typeof calculateMailBilling>;
   frequency?: string;
   nextBillingDate: Date;
+  /** Whether the retainer job emails each invoice to the client. Defaults to the retainer default (true). */
+  emailInvoice?: boolean;
   actorUserId?: string | null;
 }) {
   const { workspaceId, subscription, calc } = args;
@@ -26,6 +28,7 @@ export async function createMailRetainer(tx: Tx, args: {
       currency: calc.currency,
       frequency: args.frequency || subscription.plan?.frequency || 'MONTHLY',
       nextBillingDate: args.nextBillingDate,
+      ...(args.emailInvoice === undefined ? {} : { emailInvoice: args.emailInvoice }),
       amount: calc.totalRecurringAmount,
       serviceName: `Email Billing - ${subscription.domain.domain}`,
       items: { create: calc.lineItems.map((i) => ({ title: i.title, quantity: i.quantity, unitPrice: i.unitPrice, taxRate: 0 })) },

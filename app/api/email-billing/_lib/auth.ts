@@ -10,13 +10,16 @@ import { ModuleDisabledError, requireModule } from '@/lib/modules';
  * What a caller is trying to do, independent of the ERP permission keys behind it.
  *  - view:   read domains, mailboxes, plans, subscriptions and the review queue
  *  - billing: change plans, subscriptions, retainer links and review items
- *  - admin:  manage server connections and credentials, run syncs
+ *  - operate: change mailboxes and aliases on the mail server (needs the server in managed mode)
+ *  - admin:  manage server connections and credentials, run syncs, delete mailboxes
  */
-export type EmailBillingAction = 'view' | 'billing' | 'admin';
+export type EmailBillingAction = 'view' | 'billing' | 'operate' | 'admin';
 
 const ACTION_PERMISSIONS: Record<EmailBillingAction, { current: Permission; legacy: Permission }> = {
   view: { current: 'email_hosting.view', legacy: 'invoices.view' },
   billing: { current: 'email_hosting.billing', legacy: 'invoices.edit' },
+  // operate is new, so its fallback is the same owner/admin-only permission: no role gains write power it did not already have.
+  operate: { current: 'email_hosting.operate', legacy: 'workspace.manage_settings' },
   admin: { current: 'email_hosting.admin_server', legacy: 'workspace.manage_settings' },
 };
 

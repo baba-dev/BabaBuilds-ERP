@@ -10,7 +10,7 @@ export default async function PlansPage() {
   const t = await getTranslations('EmailBilling');
   const workspaceId = await requireEmailBillingPage();
   const plans = await prisma.mailBillingPlan.findMany({ where: { workspaceId }, include: { _count: { select: { subscriptions: true } } }, orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }] });
-  const headers = ['name', 'description', 'billingMode', 'currency', 'basePrice', 'includedMailboxes', 'extraMailboxPrice', 'frequency', 'status', 'subscriptions', 'actions'].map((k) => t(`tables.${k}`));
+  const headers = ['name', 'description', 'billingMode', 'currency', 'basePrice', 'includedMailboxes', 'extraMailboxPrice', 'includes', 'frequency', 'status', 'subscriptions', 'actions'].map((k) => t(`tables.${k}`));
   return (
     <DashboardPageShell title={t('pages.plansTitle')} description={t('pages.plansSubtitle')} icon={<Tags className="size-5" />} primaryAction={<PlanDialog triggerLabel={t('actions.createPlan')} />}>
       {plans.length === 0 ? <EmailBillingEmptyState title={t('empty.noPlansTitle')} description={t('empty.noPlansDescription')} /> : (
@@ -24,10 +24,11 @@ export default async function PlansPage() {
               <td className="p-2">{plan.basePrice.toString()}</td>
               <td className="p-2">{plan.includedMailboxes}</td>
               <td className="p-2">{plan.extraMailboxPrice.toString()}</td>
+              <td className="p-2 whitespace-nowrap">{[plan.includedQuotaMb ? `${plan.includedQuotaMb >= 1024 ? `${Math.round((plan.includedQuotaMb / 1024) * 10) / 10} GB` : `${plan.includedQuotaMb} MB`}` : null, plan.outboundPerDay ? t('plans.perDay', { count: plan.outboundPerDay }) : null].filter(Boolean).join(' · ') || t('labels.notAvailable')}</td>
               <td className="p-2">{plan.frequency}</td>
               <td className="p-2"><EmailBillingStatusBadge value={plan.isActive ? 'ACTIVE' : 'DISABLED'} /></td>
               <td className="p-2">{plan._count.subscriptions}</td>
-              <td className="p-2"><PlanRowActions plan={{ id: plan.id, name: plan.name, description: plan.description, billingMode: plan.billingMode, currency: plan.currency, basePrice: plan.basePrice.toString(), includedMailboxes: plan.includedMailboxes, extraMailboxPrice: plan.extraMailboxPrice.toString(), frequency: plan.frequency, isActive: plan.isActive, sortOrder: plan.sortOrder }} /></td>
+              <td className="p-2"><PlanRowActions plan={{ id: plan.id, name: plan.name, description: plan.description, billingMode: plan.billingMode, currency: plan.currency, basePrice: plan.basePrice.toString(), includedMailboxes: plan.includedMailboxes, includedQuotaMb: plan.includedQuotaMb, outboundPerDay: plan.outboundPerDay, extraMailboxPrice: plan.extraMailboxPrice.toString(), frequency: plan.frequency, isActive: plan.isActive, sortOrder: plan.sortOrder }} /></td>
             </tr>
           ))}
         </EmailBillingTable>

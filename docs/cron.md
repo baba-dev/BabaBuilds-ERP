@@ -28,6 +28,8 @@ Add these lines with `crontab -e` (times are the server's timezone; adjust to ta
 0  5  * * * /var/www/bababuilds-erp/scripts/run-cron.sh cash-forecast      >> /var/log/bababuilds/cron.log 2>&1
 # Email Hosting: usage snapshots, trial conversion and mailbox-quantity changes; must run BEFORE process-retainers (07:00)
 50 6  * * * /var/www/bababuilds-erp/scripts/run-cron.sh email-hosting       >> /var/log/bababuilds/cron.log 2>&1
+# Email Hosting: runs scheduled mailbox deletes and retries failed server operations
+*/5 * * * * /var/www/bababuilds-erp/scripts/run-cron.sh email-hosting-operations >> /var/log/bababuilds/cron.log 2>&1
 # Out-of-stock and low-stock digests, and a nudge when a supplier is late with a purchase order
 40 7  * * * /var/www/bababuilds-erp/scripts/run-cron.sh inventory-alerts    >> /var/log/bababuilds/cron.log 2>&1
 # Closes abandoned shop checkouts and reminds you about unshipped and refund-due shop orders
@@ -36,7 +38,7 @@ Add these lines with `crontab -e` (times are the server's timezone; adjust to ta
 
 ## Every job
 
-All 18 routes live under `app/api/cron/` and need `Authorization: Bearer $CRON_SECRET`. Schedule the ones marked **recommended**; the rest are conditional.
+All 19 routes live under `app/api/cron/` and need `Authorization: Bearer $CRON_SECRET`. Schedule the ones marked **recommended**; the rest are conditional.
 
 | Route | What it does | Schedule | Notes |
 | --- | --- | --- | --- |
@@ -44,7 +46,8 @@ All 18 routes live under `app/api/cron/` and need `Authorization: Bearer $CRON_S
 | `ar-reminders` | Overdue-invoice reminders for workspaces that enabled AR Collections and opted in to automatic reminders | daily 06:30 | **recommended**; skips workspaces whose module is off or plan has lapsed |
 | `gst-reminders` | Due-date reminders (7, 3, 1 days before, on the day, weekly once overdue) plus a Monday digest of what blocks filing | daily 06:45 | **recommended** |
 | `trial-expiry` | Expires `TRIALING` workspaces past `subscriptionEndsAt` | daily 06:00 | **recommended** |
-| `email-hosting` | Per workspace with Email Hosting on: syncs mail servers on the DAILY/WEEKLY preference, records usage snapshots, ends trials and applies or queues mailbox-quantity changes | daily 06:50 | **recommended** if Email Hosting is used; must run **before** `process-retainers` so that day's invoices use current quantities |
+| `email-hosting` | Per workspace with Email Hosting on: syncs mail servers on the DAILY/WEEKLY preference, records usage snapshots, ends trials, applies or queues mailbox-quantity changes, raises quota alerts and sends the payments digest | daily 06:50 | **recommended** if Email Hosting is used; must run **before** `process-retainers` so that day's invoices use current quantities |
+| `email-hosting-operations` | Runs scheduled mailbox deletes (the soft-delete window) and retries failed Email Hosting server operations; fails operations a crash left half-done | every 5 min | **recommended** if managed mode is used; without it scheduled deletes never run |
 | `process-retainers` | Generates one invoice per due active retainer, sends retainer reminders | daily 07:00 | **recommended**; a retainer several cycles behind catches up one cycle per run |
 | `sync-payments` | Reconciles pending invoices that have a provider payment link | every 15 min | **recommended** if Razorpay/Stripe links are used; `maxDuration` 300s |
 | `alerts` | Deadline, renewal, payment and tax notifications (in-app + web push) | daily 08:00 | **recommended**; push needs `VAPID_*` in `.env` |

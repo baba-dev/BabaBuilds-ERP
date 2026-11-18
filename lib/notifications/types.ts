@@ -16,6 +16,7 @@ export type NotificationEventType =
   | 'TAX_ALERT'
   | 'GST_REMINDER'
   | 'GST_DIGEST'
+  | 'EMAIL_HOSTING_DIGEST'
   | 'SHOP_ORDER_CREATED'
   | 'SHOP_ORDER_UPDATED'
   | 'SHOP_ORDER_DELETED'
