@@ -19,8 +19,9 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { emitMarketingAnalyticsEvent } from "@/lib/marketing-analytics";
+import { FEATURES_PATH } from "@/content/marketing/erp-features";
 
-export default function LandingNavbar() {
+export default function LandingNavbar({ sectionPath = "" }: { sectionPath?: string }) {
   const t = useTranslations("LandingNavbar");
   const { data: session } = useSession();
   const [isScrolled, setIsScrolled] = useState(false);
@@ -35,9 +36,9 @@ export default function LandingNavbar() {
   }, []);
 
   const navLinks = [
-    { name: t("nav.features"), href: "#features" },
-    { name: t("nav.comparison"), href: "#comparison" },
-    { name: t("nav.pricing"), href: "#pricing" },
+    { name: t("nav.features"), href: FEATURES_PATH },
+    { name: t("nav.comparison"), href: `${sectionPath}#comparison` },
+    { name: t("nav.pricing"), href: `${sectionPath}#pricing` },
     { name: t("nav.forCa.title"), href: "/for-ca" },
     { name: t("nav.reseller.title"), href: "/reseller" },
   ];
@@ -147,7 +148,7 @@ export default function LandingNavbar() {
                 className="font-bold text-zinc-700 dark:text-zinc-300 hover:text-orange-600"
               >
                 <Link
-                  href="#demo-launcher"
+                  href={`${sectionPath}#demo-launcher`}
                   onClick={() =>
                     emitMarketingAnalyticsEvent("interactive_demo_click", {
                       source: "navbar",
@@ -246,7 +247,7 @@ export default function LandingNavbar() {
                   className="w-full rounded-xl font-bold py-6"
                 >
                   <Link
-                    href="#demo-launcher"
+                    href={`${sectionPath}#demo-launcher`}
                     onClick={() =>
                       emitMarketingAnalyticsEvent("interactive_demo_click", {
                         source: "mobile_navbar",

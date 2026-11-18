@@ -18,7 +18,7 @@ Retainers provide predictable, recurring revenue, which is the lifeblood of a st
 
 ## Creating a Retainer Agreement
 
-When a client signs a recurring contract, log it as a Retainer in the ERP to ensure it is tracked for MRR calculations and automated invoice drafting.
+When a client signs a recurring contract, log it as a Retainer in the ERP to ensure it is tracked for MRR calculations and scheduled invoice generation.
 
 
 <Steps>
@@ -52,7 +52,7 @@ A retainer isn't just a billing schedule; it's a relationship that requires moni
 
 **Don't**
 - Forget to mark a retainer as "Cancelled" or "Paused" if the client churns. Failing to do so will falsely inflate your MRR metrics.
-- Rely on memory to send recurring invoices. Let the retainer module generate draft invoices automatically based on the schedule.
+- Rely on memory to send recurring invoices. The retainer module generates invoices for active agreements when they come due. Enable email delivery on the retainer if you want the system to send them to configured invoice recipients.
 
 ---
 
@@ -61,4 +61,4 @@ A retainer isn't just a billing schedule; it's a relationship that requires moni
 | Problem | Likely reason | Fix |
 |---|---|---|
 | MRR metric is incorrect | Expired retainers are still marked active | Review your retainer list and close out any contracts that have ended. |
-| Retainer invoice didn't generate | Start date is in the future | Check the contract start date. Automated drafts only begin on or after the start date. |
+| Retainer invoice didn't generate | Next billing date is in the future, or the agreement is inactive | Check the next billing date and retainer status. |

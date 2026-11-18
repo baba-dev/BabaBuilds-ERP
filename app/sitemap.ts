@@ -3,6 +3,7 @@ import path from 'node:path';
 import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 import { getAllDocs, groupDocsByCategory } from '@/lib/docs';
+import { erpFeatures, featureHref, FEATURES_PATH } from '@/content/marketing/erp-features';
 
 const BASE_URL = 'https://erp.bababuilds.com';
 
@@ -72,6 +73,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority,
   }));
 
+  const featureRoutes: MetadataRoute.Sitemap = [
+    FEATURES_PATH,
+    ...erpFeatures.map(({ slug }) => featureHref(slug)),
+  ].map((route) => ({ url: `${BASE_URL}${route}` }));
+
   const docs = getAllDocs();
   const docRoutes: MetadataRoute.Sitemap = docs.map((doc) => ({
     url: `${BASE_URL}/help/${doc.slug}`,
@@ -106,5 +112,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...categoryRoutes, ...docRoutes, ...shopRoutes] satisfies MetadataRoute.Sitemap;
+  return [...staticRoutes, ...featureRoutes, ...categoryRoutes, ...docRoutes, ...shopRoutes] satisfies MetadataRoute.Sitemap;
 }
