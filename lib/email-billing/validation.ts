@@ -123,12 +123,44 @@ export const mailBillingSettingsPatchSchema = z.object({
   // Optional so a client that does not send them leaves the saved values unchanged.
   usageBillingPolicy: z.enum(['LATEST', 'HIGH_WATER_MARK']).optional(),
   prorateIncreases: z.boolean().optional(),
+  /** Turns on every write feature (create/reset/quota/suspend/delete, new domains). Needs the server-admin permission. */
+  allowMailboxManagement: z.boolean().optional(),
+  quotaAlertPercent: z.number().int().min(0).max(100).optional(),
+  paymentDigest: z.enum(['OFF', 'DAILY', 'WEEKLY']).optional(),
 });
 
 export const mailBillingApplyQuantitySchema = z.object({
   /** Defaults to the pending count awaiting approval. */
   toCount: nonNegativeIntSchema.max(100_000).optional(),
 });
+
+const dateString = z.string().trim().refine((value) => !Number.isNaN(Date.parse(value)), 'Date must be valid');
+
+/** Everything needed to start billing a hosted domain: who pays, which plan, and the day it was issued. */
+export const mailBillingSetupBillingSchema = z
+  .object({
+    planId: idSchema,
+    clientId: idSchema.optional(),
+    newClient: z.object({ name: z.string().trim().min(1).max(160), email: z.union([z.literal(''), z.string().trim().email().max(254)]).optional() }).optional(),
+    /** The day the domain was issued to the customer; billing repeats on this day. */
+    startDate: dateString.optional(),
+    trialDays: z.coerce.number().int().min(0).max(365).optional(),
+    firstBillingDate: dateString.optional(),
+    emailInvoices: z.boolean().optional(),
+  })
+  .refine((v) => Boolean(v.clientId) !== Boolean(v.newClient), 'Choose an existing client or enter a new one, not both.');
+
+export const mailBillingBulkSetupSchema = z
+  .object({
+    mode: z.enum(['preview', 'apply']),
+    planId: idSchema,
+    startDateSource: z.enum(['DISCOVERED', 'DATE']),
+    startDate: dateString.optional(),
+    createClients: z.boolean().default(false),
+    emailInvoices: z.boolean().default(false),
+    domainIds: z.array(idSchema).max(500).optional(),
+  })
+  .refine((v) => v.startDateSource !== 'DATE' || Boolean(v.startDate), 'Enter the start date.');
 
 export function parseJsonBody<T>(schema: z.ZodSchema<T>, body: unknown) {
   const parsed = schema.safeParse(body);

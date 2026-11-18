@@ -3828,6 +3828,9 @@ model MailBillingMailbox {
   /// Set while the mailbox login is locked by a suspend operation; sync never clears it.
   suspendedAt DateTime?
   suspendedReason String?
+  /// Disk used in MB, when the mail source reports it. Null means "not reported", not zero.
+  usedMb Int?
+  usageCheckedAt DateTime?
   /// A delete is scheduled to run at this time unless cancelled (soft-delete window).
   deleteScheduledFor DateTime?
   /// The operation that created this mailbox, when it was created from the ERP.
@@ -3990,6 +3993,14 @@ model MailBillingSettings {
   usageBillingPolicy String @default("LATEST")
   /// Charge a prorated one-off line on the next invoice when the billable quantity goes up mid-cycle.
   prorateIncreases Boolean @default(true)
+  /// Master switch for changing anything on the mail servers from the ERP (create/reset/quota/suspend/delete, new domains).
+  /// Off by default: the module then only reads inventory and runs billing.
+  allowMailboxManagement Boolean @default(false)
+  /// Raise a review item when a mailbox is at or above this percent of its quota. 0 turns the alert off.
+  quotaAlertPercent Int @default(90)
+  /// OFF | DAILY | WEEKLY: a notification listing payments due soon and overdue invoices, sent only when there is something to collect.
+  paymentDigest String @default("DAILY")
+  lastDigestOn DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const m = vi.hoisted(() => ({
   prisma: { workspaceModule: { findMany: vi.fn() }, mailBillingServer: { findMany: vi.fn() } },
-  settings: vi.fn(), sync: vi.fn(), snapshots: vi.fn(), trials: vi.fn(), evaluate: vi.fn(), order: [] as string[],
+  settings: vi.fn(), quota: vi.fn(), digest: vi.fn(), sync: vi.fn(), snapshots: vi.fn(), trials: vi.fn(), evaluate: vi.fn(), order: [] as string[],
 }));
 
 vi.mock('@/lib/prisma', () => ({ prisma: m.prisma }));
@@ -10,12 +10,14 @@ vi.mock('@/lib/email-billing/settings', () => ({ loadMailBillingSettings: m.sett
 vi.mock('@/lib/email-billing/sync', () => ({ syncMailBillingServer: async (a: unknown) => { m.order.push('sync'); return m.sync(a); } }));
 vi.mock('@/lib/email-billing/usage', () => ({ captureUsageSnapshots: async (a: unknown) => { m.order.push('snapshots'); return m.snapshots(a); } }));
 vi.mock('@/lib/email-billing/lifecycle', () => ({ convertEndedTrials: async (a: unknown) => { m.order.push('trials'); return m.trials(a); } }));
+vi.mock('@/lib/email-billing/quota', () => ({ syncQuotaAlerts: async (...a: unknown[]) => { m.order.push('quota'); return m.quota(...a); } }));
+vi.mock('@/lib/email-billing/digest', () => ({ sendPaymentDigest: async (...a: unknown[]) => { m.order.push('digest'); return m.digest(...a); } }));
 vi.mock('@/lib/email-billing/quantity', () => ({ evaluateSubscriptionQuantity: async (a: unknown) => { m.order.push('quantity'); return m.evaluate(a); } }));
 
 import { runEmailHostingDaily, runEmailHostingDailyForWorkspace } from '@/lib/email-billing/daily-run';
 
 const NOW = new Date('2026-11-17T06:50:00.000Z');
-const base = { autoUpdateRetainerQuantities: false, ignoreAdminMailboxesFromBilling: false, usageBillingPolicy: 'LATEST', prorateIncreases: true };
+const base = { autoUpdateRetainerQuantities: false, ignoreAdminMailboxesFromBilling: false, usageBillingPolicy: 'LATEST', prorateIncreases: true, quotaAlertPercent: 90, paymentDigest: 'DAILY' };
 
 describe('runEmailHostingDailyForWorkspace', () => {
   beforeEach(() => {
@@ -23,14 +25,17 @@ describe('runEmailHostingDailyForWorkspace', () => {
     m.order.length = 0;
     m.trials.mockResolvedValue({ converted: 1, needsReview: 0, skipped: 0, failed: 0 });
     m.snapshots.mockResolvedValue([{ subscriptionId: 's1', billableMailboxCount: 4, mailboxCount: 4 }, { subscriptionId: 's2', billableMailboxCount: 1, mailboxCount: 1 }]);
+    m.quota.mockResolvedValue(2);
+    m.digest.mockResolvedValue('SENT');
     m.evaluate.mockResolvedValueOnce({ action: 'APPLY', toCount: 4 }).mockResolvedValueOnce({ action: 'REVIEW', toCount: 1 });
   });
 
   it('never syncs on a MANUAL preference, and runs snapshot -> trials -> quantity in order', async () => {
     m.settings.mockResolvedValue({ ...base, syncFrequencyPreference: 'MANUAL' });
     const stats = await runEmailHostingDailyForWorkspace('w1', NOW);
-    expect(m.order).toEqual(['snapshots', 'trials', 'quantity', 'quantity']);
-    expect(stats).toMatchObject({ snapshots: 2, quantityApplied: 1, quantityQueuedForReview: 1, serversSynced: 0 });
+    expect(m.order).toEqual(['snapshots', 'trials', 'quantity', 'quantity', 'quota', 'digest']);
+    expect(stats).toMatchObject({ snapshots: 2, quantityApplied: 1, quantityQueuedForReview: 1, serversSynced: 0, quotaAlerts: 2, digest: 'SENT' });
+    expect(m.quota).toHaveBeenCalledWith('w1', 90);
   });
 
   it('syncs first on DAILY, but only servers not synced in the last ~20 hours, and survives a failing sync', async () => {
@@ -54,6 +59,24 @@ describe('runEmailHostingDailyForWorkspace', () => {
     m.sync.mockResolvedValue({});
     await runEmailHostingDailyForWorkspace('w1', NOW);
     expect(m.sync.mock.calls.map((c) => (c[0] as { serverId: string }).serverId)).toEqual(['b']);
+  });
+});
+
+describe('alerts and digest never undo the billing work', () => {
+  it('keeps the billing results when the alert or digest step fails', async () => {
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    m.order.length = 0;
+    m.settings.mockResolvedValue({ ...base, syncFrequencyPreference: 'MANUAL' });
+    m.snapshots.mockResolvedValue([{ subscriptionId: 's1', billableMailboxCount: 4, mailboxCount: 4 }]);
+    m.trials.mockResolvedValue({ converted: 2, needsReview: 0, skipped: 0, failed: 0 });
+    m.evaluate.mockReset();
+    m.evaluate.mockResolvedValue({ action: 'APPLY', toCount: 4 });
+    m.quota.mockRejectedValue(new Error('db'));
+    m.digest.mockRejectedValue(new Error('smtp'));
+    const stats = await runEmailHostingDailyForWorkspace('w1', NOW);
+    expect(stats).toMatchObject({ snapshots: 1, quantityApplied: 1, quotaAlerts: 0, digest: 'SKIPPED', trials: { converted: 2 } });
+    expect(stats.error).toBeUndefined();
+    spy.mockRestore();
   });
 });
 

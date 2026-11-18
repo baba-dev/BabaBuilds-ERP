@@ -3005,7 +3005,14 @@
       "usageBillingPolicy": "Mailbox count used for billing",
       "prorateIncreases": "Prorate mailbox increases mid-cycle",
       "policyLatest": "Latest count",
-      "policyHighWaterMark": "Highest count in the billing cycle"
+      "policyHighWaterMark": "Highest count in the billing cycle",
+      "allowMailboxManagement": "Allow mailbox management from the ERP",
+      "allowMailboxManagementHelp": "Off: the ERP only shows your domains and mailboxes and handles billing. On: authorised people can create mailboxes, reset passwords, set quotas, suspend, delete and add domains. Each server also needs write access enabled in its own settings.",
+      "paymentDigest": "Payments digest",
+      "digestDaily": "Daily, when something is due or overdue",
+      "digestWeekly": "Mondays, when something is due or overdue",
+      "digestOff": "Off",
+      "quotaAlertPercent": "Warn when a mailbox is this % full (0 = off)"
     },
     "ops": {
       "title": "Operations",
@@ -3044,6 +3051,7 @@
       "done": "Done",
       "writesOff": "Write operations are off for this server. Turn them on in the server settings.",
       "writesOn": "Writes on",
+      "gateOffHint": "Mailbox management is turned off in the Email Hosting settings, so write access cannot be enabled yet.",
       "managedHint": "Managed mode needs a token in the form admin-email:password. Use a dedicated admin account.",
       "enableWrites": "Allow write operations (the credential is checked first)",
       "columns": {

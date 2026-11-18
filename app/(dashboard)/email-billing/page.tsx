@@ -5,13 +5,14 @@ import { DashboardPageShell } from '@/components/layout/DashboardPageShell';
 import { Button } from '@/components/ui/button';
 import { prisma } from '@/lib/prisma';
 import { computeEmailHostingMetrics } from '@/lib/email-billing/metrics';
+import { loadMailBillingSettings } from '@/lib/email-billing/settings';
 import { requireEmailBillingPage } from './_data';
 import { EmailBillingActions, EmailBillingEmptyState, EmailBillingPanel, EmailBillingStatCard, EmailBillingStatusBadge } from '@/components/email-billing/ui';
 
 export default async function EmailBillingPage() {
   const t = await getTranslations('EmailBilling');
   const workspaceId = await requireEmailBillingPage();
-  const [domains, mailboxes, subs, review, syncRuns, servers, metrics] = await Promise.all([
+  const [domains, mailboxes, subs, review, syncRuns, servers, metrics, settings] = await Promise.all([
     prisma.mailBillingDomain.findMany({ where: { workspaceId }, include: { client: true, subscriptions: { include: { plan: true } } } }),
     prisma.mailBillingMailbox.count({ where: { workspaceId, status: 'ACTIVE' } }),
     prisma.mailBillingSubscription.findMany({ where: { workspaceId }, include: { plan: true, domain: true } }),
@@ -19,6 +20,7 @@ export default async function EmailBillingPage() {
     prisma.mailBillingSyncRun.findMany({ where: { workspaceId }, orderBy: { startedAt: 'desc' }, take: 5 }),
     prisma.mailBillingServer.findMany({ where: { workspaceId }, orderBy: { createdAt: 'desc' }, take: 1 }),
     computeEmailHostingMetrics(workspaceId),
+    loadMailBillingSettings(workspaceId),
   ]);
   const activeSubs = subs.filter((s) => s.billingStatus === 'ACTIVE');
   const money = (n: number) => new Intl.NumberFormat(undefined, { style: 'currency', currency: metrics.baseCurrency, maximumFractionDigits: 2 }).format(n);
@@ -30,7 +32,7 @@ export default async function EmailBillingPage() {
     [t('cards.churn30d'), metrics.churn.ratePercent === null ? t('labels.notAvailable') : `${metrics.churn.ratePercent}%`], [t('cards.mailboxChange30d'), signed(metrics.mailboxes.change)], [t('cards.newSubscriptions30d'), metrics.newSubscriptions],
     [t('cards.openReviewItems'), review.length], [t('cards.lastSyncStatus'), syncRuns[0]?.status ?? t('labels.never')],
   ];
-  return <DashboardPageShell title={t('pages.dashboardTitle')} description={t('pages.dashboardSubtitle')} icon={<RefreshCw className="size-5" />} primaryAction={<Button asChild variant="primary-action"><Link href="/email-billing/servers">{t('actions.syncNow')}</Link></Button>} secondaryActions={<EmailBillingActions items={[{ href: '/email-billing/servers', label: t('actions.addServer') }, { href: '/email-billing/plans', label: t('actions.managePlans') }, { href: '/email-billing/review', label: t('actions.reviewQueue') }, { href: '/email-billing/operations', label: t('ops.title') }]} />}>
+  return <DashboardPageShell title={t('pages.dashboardTitle')} description={t('pages.dashboardSubtitle')} icon={<RefreshCw className="size-5" />} primaryAction={<Button asChild variant="primary-action"><Link href="/email-billing/servers">{t('actions.syncNow')}</Link></Button>} secondaryActions={<EmailBillingActions items={[{ href: '/email-billing/servers', label: t('actions.addServer') }, { href: '/email-billing/plans', label: t('actions.managePlans') }, { href: '/email-billing/review', label: t('actions.reviewQueue') }, ...(settings.allowMailboxManagement ? [{ href: '/email-billing/operations', label: t('ops.title') }] : [])]} />}>
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3" aria-label={t('pages.dashboardTitle')}>{statCards.map(([label, value]) => <EmailBillingStatCard key={label} label={String(label)} value={String(value)} />)}</section>
     {servers.length === 0 ? <EmailBillingEmptyState title={t('empty.noServersTitle')} description={t('empty.noServersDescription')} action={{ href: '/email-billing/servers', label: t('actions.addServer') }} /> : null}
     {domains.length === 0 && servers.length > 0 ? <EmailBillingEmptyState title={t('empty.noDomainsTitle')} description={t('empty.noDomainsDescription')} action={{ href: '/email-billing/servers', label: t('actions.syncNow') }} /> : null}

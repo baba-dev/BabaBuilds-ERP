@@ -6,6 +6,7 @@ const m = vi.hoisted(() => {
   return {
     state,
     write: vi.fn(),
+    gate: vi.fn(),
     inventory: vi.fn(),
     logActivity: vi.fn(),
     mailbox: { findFirst: vi.fn(), findFirstExisting: vi.fn(), update: vi.fn(), updateMany: vi.fn(), upsert: vi.fn() },
@@ -15,6 +16,7 @@ const m = vi.hoisted(() => {
 });
 
 vi.mock('@/lib/encryption', () => ({ decrypt: (v: string) => v }));
+vi.mock('@/lib/email-billing/settings', () => ({ loadMailBillingSettings: async () => ({ allowMailboxManagement: m.gate() }) }));
 vi.mock('@/lib/security/activity-log', () => ({ logActivity: m.logActivity }));
 vi.mock('@/lib/email-billing/miab-client', () => ({ fetchMailBillingInventory: m.inventory }));
 vi.mock('@/lib/email-billing/miab/writes', () => ({
@@ -52,6 +54,7 @@ const req = (input: Row, over: Row = {}) => requestOperation({ workspaceId: 'w1'
 beforeEach(() => {
   vi.clearAllMocks();
   m.state.ops.length = 0; m.state.seq = 0;
+  m.gate.mockReturnValue(true);
   m.write.mockResolvedValue('ok');
   m.inventory.mockResolvedValue({ domains: [{ domain: 'x.com', mailboxes: [{ email: 'new@x.com', status: 'ACTIVE' }] }] });
   m.server.findFirst.mockResolvedValue(server());
@@ -102,6 +105,30 @@ describe('mailbox create', () => {
     await expect(req(create)).rejects.toThrow('already exists');
     await expect(req({ ...create, email: '.bad@x.com' })).rejects.toBeInstanceOf(OperationError);
     expect(m.write).not.toHaveBeenCalled();
+  });
+});
+
+describe('module setting: allow mailbox management', () => {
+  it('refuses every operation while the setting is off, before looking anything up or queueing', async () => {
+    m.gate.mockReturnValue(false);
+    for (const input of [
+      { type: 'MAILBOX_CREATE', email: 'new@x.com' }, { type: 'QUOTA_SET', mailboxId: 'mb1', quotaMb: 1 },
+      { type: 'MAILBOX_SUSPEND', mailboxId: 'mb1' }, { type: 'MAILBOX_DELETE', mailboxId: 'mb1', confirmEmail: 'ann@x.com', delayDays: 0 },
+    ]) await expect(req(input)).rejects.toMatchObject({ status: 409, message: expect.stringContaining('turned off') });
+    expect(m.write).not.toHaveBeenCalled();
+    expect(m.state.ops).toHaveLength(0);
+    expect(m.mailbox.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('stops a delete scheduled earlier when the setting is switched off, and clears its schedule', async () => {
+    const { operation } = await req({ type: 'MAILBOX_DELETE', mailboxId: 'mb1', confirmEmail: 'ann@x.com' });
+    expect(operation.status).toBe('PENDING');
+    m.gate.mockReturnValue(false);
+    const stats = await processDueOperations(new Date(NOW.getTime() + 8 * 86_400_000));
+    expect(stats).toMatchObject({ ran: 1, failed: 1 });
+    expect(m.state.ops[0]).toMatchObject({ status: 'FAILED', errorMessage: expect.stringContaining('turned off') });
+    expect(m.write).not.toHaveBeenCalled();
+    expect(m.mailbox.updateMany).toHaveBeenCalledWith({ where: { id: 'mb1', workspaceId: 'w1' }, data: { deleteScheduledFor: null } });
   });
 });
 

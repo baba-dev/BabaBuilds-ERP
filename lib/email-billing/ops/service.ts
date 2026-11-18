@@ -6,6 +6,7 @@ import { logActivity } from '@/lib/security/activity-log';
 import { fetchMailBillingInventory } from '../miab-client';
 import { MiabApiError, miabWrite } from '../miab/writes';
 import { generateMailboxPassword } from './password';
+import { loadMailBillingSettings } from '../settings';
 import { LOCAL_PART_PATTERN, SECRET_OPERATIONS, type OperationRequest, type OperationType } from './schemas';
 
 /** Thrown for a request that cannot be accepted (bad target, writes off, guard hit). `status` is the HTTP status to use. */
@@ -38,6 +39,13 @@ function assertWritable(server: Target['server']) {
   if (!server.writesEnabled) throw new OperationError('Write operations are not enabled for this server.', 409);
   if (server.status === 'DISABLED') throw new OperationError('This server is disabled.', 409);
   if (!server.encryptedToken) throw new OperationError('This server has no admin credential.', 409);
+}
+
+/** The module-level switch. Everything that writes to a mail server is off until an admin turns it on in the module settings. */
+async function assertManagementAllowed(workspaceId: string) {
+  if (!(await loadMailBillingSettings(workspaceId)).allowMailboxManagement) {
+    throw new OperationError('Mailbox management is turned off. An admin can turn it on in the Email Hosting settings.', 409);
+  }
 }
 
 /** Admin address of the credential the ERP uses. Locking or deleting it would cut the ERP off the box. */
@@ -116,6 +124,7 @@ export async function requestOperation(args: {
     const repeated = await prisma.mailOperation.findUnique({ where: { workspaceId_idempotencyKey: { workspaceId, idempotencyKey: input.idempotencyKey } } });
     if (repeated) return { operation: repeated };
   }
+  await assertManagementAllowed(workspaceId);
   const target = await resolveTarget(workspaceId, input);
   assertAllowed(input, target);
 
@@ -247,6 +256,7 @@ export async function executeOperation(operationId: string, opts: { now?: Date }
   if (claimed.count === 0) return { operation: op };
 
   try {
+    await assertManagementAllowed(op.workspaceId);
     const target = await resolveTargetForRun(op);
     assertWritable(target.server);
     const token = decrypt(target.server.encryptedToken!);
@@ -267,6 +277,10 @@ export async function executeOperation(operationId: string, opts: { now?: Date }
         ? { status: 'PENDING', errorMessage: message, runAfter: new Date(now.getTime() + backoffMs(op.attempts)) }
         : { status: 'FAILED', finishedAt: new Date(), errorMessage: message },
     });
+    // A delete that will not run must not keep showing as scheduled on the mailbox.
+    if (!retry && op.type === 'MAILBOX_DELETE' && op.mailboxId) {
+      await prisma.mailBillingMailbox.updateMany({ where: { id: op.mailboxId, workspaceId: op.workspaceId }, data: { deleteScheduledFor: null } });
+    }
     void audit(failed, retry ? 'operation_retry_scheduled' : 'operation_failed', { attempts: op.attempts, error: message });
     return { operation: failed };
   }

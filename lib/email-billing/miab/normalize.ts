@@ -9,6 +9,8 @@ export type MailBillingInventory = {
     mailboxes: Array<{
       email: string;
       quotaMb?: number | null;
+      /** Disk used, when the source reports it. */
+      usedMb?: number | null;
       isAdmin?: boolean;
       status?: 'ACTIVE' | 'ARCHIVED' | 'REMOVED';
       raw?: unknown;
@@ -36,6 +38,15 @@ export function parseQuotaMb(value: unknown): number | null {
   return Math.round(mb);
 }
 
+/** Used space in MB from whichever field the source provides: `usedMb`/`used_mb` (megabytes) or `box_size` (bytes). Null when not reported. */
+export function parseUsedMb(record: Record<string, unknown>): number | null {
+  const mb = record.usedMb ?? record.used_mb;
+  if (mb !== undefined && mb !== null && mb !== '') { const n = Number(mb); return Number.isFinite(n) && n >= 0 ? Math.round(n) : null; }
+  const bytes = record.box_size ?? record.boxSize;
+  if (bytes !== undefined && bytes !== null && bytes !== '') { const n = Number(bytes); return Number.isFinite(n) && n >= 0 ? Math.round(n / (1024 * 1024)) : null; }
+  return null;
+}
+
 export function normalizeMailbox(raw: unknown) {
   const m = asRecord(raw);
   const email = String(m.email ?? '').trim().toLowerCase();
@@ -47,6 +58,7 @@ export function normalizeMailbox(raw: unknown) {
   return {
     email,
     quotaMb: parseQuotaMb(quotaValue),
+    usedMb: parseUsedMb(m),
     isAdmin: Boolean(m.isAdmin ?? m.admin) || privileges.includes('admin'),
     status: m.status === 'REMOVED' ? ('REMOVED' as const) : archived ? ('ARCHIVED' as const) : ('ACTIVE' as const),
     raw,

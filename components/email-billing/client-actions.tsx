@@ -71,6 +71,9 @@ type SettingsShape = {
   ignoreAdminMailboxesFromBilling: boolean;
   usageBillingPolicy?: string;
   prorateIncreases?: boolean;
+  allowMailboxManagement?: boolean;
+  quotaAlertPercent?: number;
+  paymentDigest?: string;
 };
 
 async function postJson(url: string, body?: unknown, method = 'POST') {
@@ -94,7 +97,7 @@ function Field({ id, label, children, error }: { id: string; label: string; chil
   );
 }
 
-export function ServerDialog({ server, triggerLabel }: { server?: ServerRow; triggerLabel: string }) {
+export function ServerDialog({ server, triggerLabel, managementAllowed = true }: { server?: ServerRow; triggerLabel: string; managementAllowed?: boolean }) {
   const t = useTranslations('EmailBilling');
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -164,7 +167,8 @@ export function ServerDialog({ server, triggerLabel }: { server?: ServerRow; tri
             <Input id="server-token" name="token" type="password" autoComplete="new-password" placeholder={server?.hasToken ? 'SET' : ''} />
           </Field>
           {mode === 'MANAGED_API' ? <p className="text-xs text-muted-foreground">{t('ops.managedHint')}</p> : null}
-          {server && mode === 'MANAGED_API' ? <label className="flex items-start gap-2 text-sm"><Checkbox checked={writes} onCheckedChange={(value) => setWrites(value === true)} className="mt-0.5" />{t('ops.enableWrites')}{server.miabVersion ? ` (${server.miabVersion})` : ''}</label> : null}
+          {server && mode === 'MANAGED_API' && !managementAllowed ? <p className="text-xs text-muted-foreground">{t('ops.gateOffHint')}</p> : null}
+          {server && mode === 'MANAGED_API' && managementAllowed ? <label className="flex items-start gap-2 text-sm"><Checkbox checked={writes} onCheckedChange={(value) => setWrites(value === true)} className="mt-0.5" />{t('ops.enableWrites')}{server.miabVersion ? ` (${server.miabVersion})` : ''}</label> : null}
           {server?.hasToken ? <label className="flex items-center gap-2 text-sm"><Checkbox checked={clearToken} onCheckedChange={(value) => setClearToken(value === true)} />{t('forms.clearTokenConfirm')}</label> : null}
           <DialogFooter><Button type="submit" disabled={submitting}>{submitting ? t('actions.saving') : t('actions.save')}</Button></DialogFooter>
         </form>
@@ -173,7 +177,7 @@ export function ServerDialog({ server, triggerLabel }: { server?: ServerRow; tri
   );
 }
 
-export function ServerRowActions({ server }: { server: ServerRow }) {
+export function ServerRowActions({ server, managementAllowed = true }: { server: ServerRow; managementAllowed?: boolean }) {
   const t = useTranslations('EmailBilling');
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -189,7 +193,7 @@ export function ServerRowActions({ server }: { server: ServerRow }) {
       setBusy(null);
     }
   }
-  return <div className="flex flex-wrap gap-2"><ServerDialog server={server} triggerLabel={t('actions.editServer')} /><Button type="button" variant="outline" size="sm" disabled={busy !== null} onClick={() => run('test')}>{t('actions.testConnection')}</Button><Button type="button" variant="outline" size="sm" disabled={busy !== null} onClick={() => run('sync')}>{t('actions.syncNow')}</Button></div>;
+  return <div className="flex flex-wrap gap-2"><ServerDialog server={server} triggerLabel={t('actions.editServer')} managementAllowed={managementAllowed} /><Button type="button" variant="outline" size="sm" disabled={busy !== null} onClick={() => run('test')}>{t('actions.testConnection')}</Button><Button type="button" variant="outline" size="sm" disabled={busy !== null} onClick={() => run('sync')}>{t('actions.syncNow')}</Button></div>;
 }
 
 export function PlanDialog({ plan, triggerLabel }: { plan?: PlanRow; triggerLabel: string }) {
@@ -299,6 +303,9 @@ export function SettingsForm({ settings, plans }: { settings: SettingsShape; pla
       ignoreAdminMailboxesFromBilling: form.get('ignoreAdminMailboxesFromBilling') === 'on',
       usageBillingPolicy: String(form.get('usageBillingPolicy') || 'LATEST'),
       prorateIncreases: form.get('prorateIncreases') === 'on',
+      allowMailboxManagement: form.get('allowMailboxManagement') === 'on',
+      quotaAlertPercent: Math.min(100, Math.max(0, Number(form.get('quotaAlertPercent') ?? 90) || 0)),
+      paymentDigest: String(form.get('paymentDigest') || 'DAILY'),
     };
     try {
       await postJson('/api/email-billing/settings', payload, 'PATCH');
@@ -320,6 +327,14 @@ export function SettingsForm({ settings, plans }: { settings: SettingsShape; pla
         <Field id="settings-plan" label={t('tables.plan')}><Select name="defaultPlanId" defaultValue={settings.defaultPlanId ?? 'none'}><SelectTrigger id="settings-plan" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">{t('labels.none')}</SelectItem>{plans.map((plan) => <SelectItem key={plan.id} value={plan.id}>{plan.name}</SelectItem>)}</SelectContent></Select></Field>
         <Field id="settings-sync" label={t('settingsLabels.syncFrequencyPreference')}><Select name="syncFrequencyPreference" defaultValue={settings.syncFrequencyPreference}><SelectTrigger id="settings-sync" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="MANUAL">MANUAL</SelectItem><SelectItem value="DAILY">DAILY</SelectItem><SelectItem value="WEEKLY">WEEKLY</SelectItem></SelectContent></Select></Field>
         <Field id="settings-policy" label={t('settingsLabels.usageBillingPolicy')}><Select name="usageBillingPolicy" defaultValue={settings.usageBillingPolicy ?? 'LATEST'}><SelectTrigger id="settings-policy" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="LATEST">{t('settingsLabels.policyLatest')}</SelectItem><SelectItem value="HIGH_WATER_MARK">{t('settingsLabels.policyHighWaterMark')}</SelectItem></SelectContent></Select></Field>
+      </div>
+      <div className="space-y-3 rounded-lg border border-border/70 p-3">
+        <label className="flex items-start gap-2 text-sm font-medium"><Checkbox name="allowMailboxManagement" defaultChecked={settings.allowMailboxManagement === true} className="mt-0.5" />{t('settingsLabels.allowMailboxManagement')}</label>
+        <p className="text-xs text-muted-foreground">{t('settingsLabels.allowMailboxManagementHelp')}</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field id="settings-digest" label={t('settingsLabels.paymentDigest')}><Select name="paymentDigest" defaultValue={settings.paymentDigest ?? 'DAILY'}><SelectTrigger id="settings-digest" className="w-full"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="DAILY">{t('settingsLabels.digestDaily')}</SelectItem><SelectItem value="WEEKLY">{t('settingsLabels.digestWeekly')}</SelectItem><SelectItem value="OFF">{t('settingsLabels.digestOff')}</SelectItem></SelectContent></Select></Field>
+        <Field id="settings-quota-alert" label={t('settingsLabels.quotaAlertPercent')}><Input id="settings-quota-alert" name="quotaAlertPercent" type="number" min={0} max={100} step={1} defaultValue={settings.quotaAlertPercent ?? 90} /></Field>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {booleanFields.map((field) => <label key={field} className="flex items-center gap-2 rounded-lg border border-border/70 p-3 text-sm"><Checkbox name={field} defaultChecked={field === 'prorateIncreases' ? settings.prorateIncreases !== false : Boolean(settings[field])} />{t(`settingsLabels.${field}`)}</label>)}

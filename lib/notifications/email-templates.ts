@@ -329,6 +329,23 @@ export function buildEmailTemplate(
         text: `${String(data.title)}\n${String(data.body)}`,
       };
     }
+    case 'EMAIL_HOSTING_DIGEST': {
+      const title = escapeHtml(data.title);
+      const lines = Array.isArray(data.lines) ? (data.lines as unknown[]).map((l) => `<li>${escapeHtml(l)}</li>`).join('') : '';
+      return {
+        subject: `📬 ${title}`,
+        html: layout({
+          appUrl, companyName, locale, dir, emoji: '📬',
+          headline: 'Email hosting payments',
+          subheadline: title,
+          accentColor: '#4f46e5',
+          body: `<p>${escapeHtml(data.body)}</p>${lines ? `<ul>${lines}</ul>` : ''}<p style="color:#71717a;font-size:12px">Billing dates follow the day each domain was issued. Invoices are raised and sent by the recurring billing job.</p>`,
+          ctaLabel: 'Open payments calendar',
+          ctaUrl: `${appUrl}/email-billing/calendar`,
+        }),
+        text: `${String(data.title)}\n${String(data.body)}\n${Array.isArray(data.lines) ? (data.lines as unknown[]).map(String).join('\n') : ''}`,
+      };
+    }
     case 'SHOP_ORDER_CREATED': {
       const orderId = escapeHtml(data.orderId);
       const serviceName = escapeHtml(data.serviceName);

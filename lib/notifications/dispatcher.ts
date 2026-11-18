@@ -91,6 +91,8 @@ function buildPushAndInAppContent(
       return { title: `${d.title}`, body: `${d.body}`, actionUrl: d.actionUrl || '/tax' };
     case 'GST_DIGEST':
       return { title: `${d.title}`, body: `${d.body}`, actionUrl: '/tax?tab=issues' };
+    case 'EMAIL_HOSTING_DIGEST':
+      return { title: `${d.title}`, body: `${d.body}`, actionUrl: '/email-billing/calendar' };
     case 'SHOP_ORDER_CREATED':
       return {
         title: `🛒 New Shop Order: ${d.orderId}`,

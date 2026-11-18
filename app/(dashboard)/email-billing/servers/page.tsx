@@ -5,10 +5,12 @@ import { prisma } from '@/lib/prisma';
 import { EmailBillingEmptyState, EmailBillingStatusBadge, EmailBillingTable, TruncatedText } from '@/components/email-billing/ui';
 import { ServerDialog, ServerRowActions } from '@/components/email-billing/client-actions';
 import { requireEmailBillingPage } from '../_data';
+import { loadMailBillingSettings } from '@/lib/email-billing/settings';
 
 export default async function ServersPage() {
   const t = await getTranslations('EmailBilling');
   const workspaceId = await requireEmailBillingPage();
+  const { allowMailboxManagement } = await loadMailBillingSettings(workspaceId);
   const servers = await prisma.mailBillingServer.findMany({
     where: { workspaceId },
     include: { _count: { select: { domains: true, mailboxes: true } }, syncRuns: { orderBy: { startedAt: 'desc' }, take: 5 } },
@@ -38,7 +40,7 @@ export default async function ServersPage() {
               <td className="p-2">{server._count.mailboxes}</td>
               <td className="p-2 text-muted-foreground"><TruncatedText>{server.lastSyncError ?? t('labels.notAvailable')}</TruncatedText></td>
               <td className="p-2"><EmailBillingStatusBadge value={server.encryptedToken ? 'ACTIVE' : 'DISABLED'} label={server.encryptedToken ? t('labels.tokenSet') : t('labels.tokenNotConfigured')} /></td>
-              <td className="p-2"><ServerRowActions server={{ id: server.id, name: server.name, baseUrl: server.baseUrl, accessMode: server.accessMode, status: server.status, hasToken: Boolean(server.encryptedToken), writesEnabled: server.writesEnabled, miabVersion: server.miabVersion }} /></td>
+              <td className="p-2"><ServerRowActions managementAllowed={allowMailboxManagement} server={{ id: server.id, name: server.name, baseUrl: server.baseUrl, accessMode: server.accessMode, status: server.status, hasToken: Boolean(server.encryptedToken), writesEnabled: server.writesEnabled, miabVersion: server.miabVersion }} /></td>
             </tr>
           ))}
         </EmailBillingTable>

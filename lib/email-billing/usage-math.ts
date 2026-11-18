@@ -90,3 +90,33 @@ export function planRetainerItemSync(existing: RetainerItemRow[], lines: LineIte
   const remove = [...current.values()].filter((i) => !wanted.has(i.title)).map((i) => i.id);
   return { update, create, remove };
 }
+
+function daysInUtcMonth(year: number, month: number) {
+  return new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+}
+
+/** `date` plus `months` calendar months, always measured from the original day (Jan 31 + 1 month = Feb 28, + 2 months = Mar 31). */
+export function addUtcMonths(date: Date, months: number): Date {
+  const total = date.getUTCFullYear() * 12 + date.getUTCMonth() + months;
+  const year = Math.floor(total / 12);
+  const month = total - year * 12;
+  return new Date(Date.UTC(year, month, Math.min(date.getUTCDate(), daysInUtcMonth(year, month))));
+}
+
+/**
+ * The billing date that follows a service start (issue) date: the start day itself when it is today or later, otherwise
+ * the next monthly/quarterly/yearly anniversary of it. Anniversaries are counted from the start date, so a domain issued
+ * on 31 January is billed on 28/29 February and back on 31 March, never drifting.
+ */
+export function nextAnniversary(start: Date, frequency: string, from: Date): Date {
+  const first = utcDay(start);
+  const today = utcDay(from);
+  if (first.getTime() >= today.getTime()) return first;
+  const step = monthsPerCycle(frequency);
+  const gap = (today.getUTCFullYear() - first.getUTCFullYear()) * 12 + (today.getUTCMonth() - first.getUTCMonth());
+  let cycles = Math.max(1, Math.ceil(gap / step));
+  while (addUtcMonths(first, (cycles - 1) * step).getTime() >= today.getTime() && cycles > 1) cycles -= 1;
+  let due = addUtcMonths(first, cycles * step);
+  while (due.getTime() < today.getTime()) { cycles += 1; due = addUtcMonths(first, cycles * step); }
+  return due;
+}

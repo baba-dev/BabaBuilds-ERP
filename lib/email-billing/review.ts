@@ -9,7 +9,7 @@ export type MailBillingReviewType =
   | 'NEW_DOMAIN_DISCOVERED' | 'DOMAIN_MISSING_CLIENT' | 'DOMAIN_MISSING_SUBSCRIPTION' | 'DOMAIN_MISSING_RETAINER'
   | 'MAILBOX_COUNT_CHANGED' | 'MAILBOX_ADDED' | 'MAILBOX_REMOVED' | 'DOMAIN_REMOVED_FROM_MIAB'
   | 'BILLING_ACTIVE_BUT_DOMAIN_REMOVED' | 'RETAINER_PAUSED_BUT_DOMAIN_ACTIVE' | 'SYNC_FAILED' | 'SERVER_CONNECTION_FAILED'
-  | 'TRIAL_ENDED_NEEDS_RETAINER';
+  | 'TRIAL_ENDED_NEEDS_RETAINER' | 'MAILBOX_QUOTA_HIGH';
 
 export async function createMailBillingReviewItem(input: {
   workspaceId: string; domainId?: string | null; subscriptionId?: string | null; serverId?: string | null;

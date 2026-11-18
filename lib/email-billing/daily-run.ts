@@ -5,6 +5,8 @@ import { captureUsageSnapshots } from './usage';
 import { evaluateSubscriptionQuantity } from './quantity';
 import { convertEndedTrials, type TrialConversionStats } from './lifecycle';
 import { loadMailBillingSettings } from './settings';
+import { syncQuotaAlerts } from './quota';
+import { sendPaymentDigest } from './digest';
 
 const HOUR_MS = 3_600_000;
 /** A little under the nominal interval so a job that runs slightly early or late still syncs on schedule. */
@@ -18,6 +20,8 @@ export type WorkspaceRunStats = {
   quantityApplied: number;
   quantityQueuedForReview: number;
   trials: TrialConversionStats;
+  quotaAlerts: number;
+  digest: 'SENT' | 'SKIPPED';
   error?: string;
 };
 
@@ -29,7 +33,7 @@ export type WorkspaceRunStats = {
 export async function runEmailHostingDailyForWorkspace(workspaceId: string, now: Date): Promise<WorkspaceRunStats> {
   const stats: WorkspaceRunStats = {
     workspaceId, serversSynced: 0, serversFailed: 0, snapshots: 0, quantityApplied: 0, quantityQueuedForReview: 0,
-    trials: { converted: 0, needsReview: 0, skipped: 0, failed: 0 },
+    trials: { converted: 0, needsReview: 0, skipped: 0, failed: 0 }, quotaAlerts: 0, digest: 'SKIPPED',
   };
   const settings = await loadMailBillingSettings(workspaceId);
 
@@ -57,6 +61,11 @@ export async function runEmailHostingDailyForWorkspace(workspaceId: string, now:
     if (decision.action === 'APPLY') stats.quantityApplied++;
     else if (decision.action === 'REVIEW') stats.quantityQueuedForReview++;
   }
+
+  // Alerts last, so they reflect the inventory just synced and the billing just applied.
+  // A failure here must not discard the billing work above, so each is contained.
+  stats.quotaAlerts = await syncQuotaAlerts(workspaceId, settings.quotaAlertPercent).catch((error) => { console.error('Quota alerts failed:', workspaceId, error); return 0; });
+  stats.digest = await sendPaymentDigest(workspaceId, settings, now).catch((error) => { console.error('Payment digest failed:', workspaceId, error); return 'SKIPPED' as const; });
   return stats;
 }
 
@@ -74,7 +83,7 @@ export async function runEmailHostingDaily(now: Date, only?: { workspaceId: stri
       console.error('Email hosting daily run failed for workspace:', workspaceId, error);
       results.push({
         workspaceId, serversSynced: 0, serversFailed: 0, snapshots: 0, quantityApplied: 0, quantityQueuedForReview: 0,
-        trials: { converted: 0, needsReview: 0, skipped: 0, failed: 0 }, error: 'FAILED',
+        trials: { converted: 0, needsReview: 0, skipped: 0, failed: 0 }, quotaAlerts: 0, digest: 'SKIPPED', error: 'FAILED',
       });
     }
   }
