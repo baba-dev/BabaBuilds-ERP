@@ -15,6 +15,7 @@ import { BulkSetupDialog } from '@/components/email-billing/billing-setup';
 import { AddDomainDialog } from '@/components/email-billing/mailbox-manager';
 import { loadMailBillingSettings } from '@/lib/email-billing/settings';
 import { requireEmailBillingPage } from '../_data';
+import { formatDay } from '@/lib/email-billing/format';
 
 const PAGE_SIZE = 50;
 
@@ -98,7 +99,7 @@ export default async function DomainsPage({ searchParams }: { searchParams?: Pro
                 <td className="p-2"><EmailBillingStatusBadge value={subscription?.billingStatus ?? 'REVIEW_REQUIRED'} label={subscription?.billingStatus ?? t('labels.missing')} /></td>
                 <td className="p-2"><TruncatedText>{subscription?.retainer?.serviceName ?? t('labels.notLinked')}</TruncatedText></td>
                 <td className="p-2 whitespace-nowrap">{subscription?.retainer?.nextBillingDate?.toLocaleDateString?.() ?? t('labels.notAvailable')}</td>
-                <td className="p-2 whitespace-nowrap">{domain.lastSeenAt.toLocaleDateString()}</td>
+                <td className="p-2 whitespace-nowrap">{formatDay(domain.lastSeenAt)}</td>
                 <td className="p-2"><EmailBillingStatusBadge value={!domain.clientId || !subscription ? 'REVIEW_REQUIRED' : subscription.billingStatus} /></td>
                 <td className="p-2"><DomainRowActions domainId={domain.id} /></td>
               </tr>

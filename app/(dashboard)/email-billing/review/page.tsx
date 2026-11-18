@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { EmailBillingEmptyState, EmailBillingPanel, EmailBillingStatusBadge } from '@/components/email-billing/ui';
 import { ReviewItemActions } from '@/components/email-billing/client-actions';
 import { requireEmailBillingPage } from '../_data';
+import { formatDateTime } from '@/lib/email-billing/format';
 
 export default async function ReviewPage() {
   const t = await getTranslations('EmailBilling');
@@ -22,7 +23,7 @@ export default async function ReviewPage() {
                 {group.items.map((item) => (
                   <article key={item.id} className="rounded-lg border border-border/70 bg-muted/20 p-4">
                     <div className="flex flex-wrap gap-2"><EmailBillingStatusBadge value={item.severity} /><EmailBillingStatusBadge value={item.status} /><h2 className="font-medium">{item.title}</h2></div>
-                    <p className="mt-1 text-sm text-muted-foreground">{item.domain?.domain ?? t('labels.notAvailable')} · {item.domain?.client?.name ?? t('labels.noClient')} · {item.server?.name ?? t('labels.notAvailable')} · {item.createdAt.toLocaleString()}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{item.domain?.domain ?? t('labels.notAvailable')} · {item.domain?.client?.name ?? t('labels.noClient')} · {item.server?.name ?? t('labels.notAvailable')} · {formatDateTime(item.createdAt)}</p>
                     <p className="mt-2 text-sm">{item.description}</p>
                     <p className="mt-2 text-sm font-medium">{t('tables.suggestedAction')}: {item.suggestedAction}</p>
                     <div className="mt-3"><ReviewItemActions item={{ id: item.id, type: item.type, domainId: item.domainId, subscriptionId: item.subscriptionId }} /></div>

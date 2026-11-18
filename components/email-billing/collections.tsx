@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { formatDay } from '@/lib/email-billing/format';
 
 const METHODS = ['CASH', 'UPI', 'BANK_TRANSFER', 'CHEQUE', 'CARD', 'OTHER'] as const;
 type Method = (typeof METHODS)[number];
@@ -86,7 +87,7 @@ export function CollectDialog({ clientId, clientName, asOf, total, currency, add
         <DialogContent aria-describedby="collect-description">
           <DialogHeader>
             <DialogTitle>{t('balances.collectTitle', { client: clientName })}</DialogTitle>
-            <DialogDescription id="collect-description">{t('balances.collectHelp', { amount: money(total), date: new Date(asOf).toLocaleDateString(), count: addresses })}</DialogDescription>
+            <DialogDescription id="collect-description">{t('balances.collectHelp', { amount: money(total), date: formatDay(asOf), count: addresses })}</DialogDescription>
           </DialogHeader>
           {done ? (
             <div className="space-y-3 text-sm" aria-live="polite">
