@@ -162,9 +162,6 @@ async function validatePublicPushEndpoint(endpoint) {
 }
 
 async function pushSend(recipient, payload) {
-  // Historical subscriptions predate validation at registration. Revalidate
-  // the actual endpoint before the web-push transport makes a network call.
-  await validatePublicPushEndpoint(recipient.endpoint);
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
     throw new Error('PUSH_VAPID_MISSING');
   }
@@ -240,6 +237,8 @@ export async function processNotificationDelivery(pool, id, flags = workerNotifi
       if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
         await transition(pool, id, token, 'FAILED', 'PUSH_NOT_CONFIGURED'); return;
       }
+      // Endpoint checks are a pre-send decision, never an ambiguous provider result.
+      await validatePublicPushEndpoint(recipient.endpoint);
     }
     const marked = await pool.query(
       'UPDATE "ErpJobDelivery" SET "externalAttemptedAt"=NOW(),"updatedAt"=NOW() ' +
