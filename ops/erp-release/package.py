@@ -97,7 +97,11 @@ def package_worker_runtime(root, release):
     if not notify_source.is_file():
         raise RuntimeError("Phase 5 outbound worker source missing")
     shutil.copy2(notify_source, release / "notification-delivery.mjs")
-    for worker_source in ("erp-worker.mjs", "notification-delivery.mjs"):
+    report_source = root / "ops" / "erp-worker" / "report-delivery.mjs"
+    if not report_source.is_file():
+        raise RuntimeError("Phase 5 scheduled report worker source missing")
+    shutil.copy2(report_source, release / "report-delivery.mjs")
+    for worker_source in ("erp-worker.mjs", "notification-delivery.mjs", "report-delivery.mjs"):
         subprocess.run(["node", "--check", str(release / worker_source)],
                        check=True, capture_output=True, timeout=15)
 
