@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Activity, Building2, ChevronDown, LayoutDashboard, Network, ScrollText, ShieldCheck, Store, Wrench, type LucideIcon } from "lucide-react";
+import { Activity, Building2, ChevronDown, LayoutDashboard, Network, ScrollText, MailWarning, ShieldCheck, Store, Wrench, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Item = { href: string; label: string; hint: string; icon: LucideIcon; match: (p: string) => boolean };
@@ -17,6 +17,7 @@ const GROUPS: Array<{ title: string; items: Item[] }> = [
     { href: "/admin/security", label: "Security", hint: "Sign-in failures, configuration, access", icon: ShieldCheck, match: (p) => p.startsWith("/admin/security") },
     { href: "/admin/operations", label: "Operations", hint: "Backups and maintenance", icon: Wrench, match: (p) => p.startsWith("/admin/operations") },
     { href: "/admin/logs", label: "Activity log", hint: "Who did what, platform-wide", icon: ScrollText, match: (p) => p.startsWith("/admin/logs") },
+    { href: "/admin/jobs/deliveries", label: "Delivery recovery", hint: "SMTP, push and report exceptions", icon: MailWarning, match: (p) => p.startsWith("/admin/jobs/deliveries") },
     { href: "/admin/system-health", label: "Diagnostics", hint: "Incidents and approvals", icon: Activity, match: (p) => p.startsWith("/admin/system-health") },
   ] },
   { title: "Partners", items: [
