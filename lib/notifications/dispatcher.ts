@@ -229,7 +229,7 @@ export async function dispatchNotification(payload: NotificationPayload, options
           }
 
           // ── 4b. EMAIL ────────────────────────────────────────────────────
-          if (!queued.email && user.notifyEmail && user.transactionalAlerts && user.email) {
+          if (user.notifyEmail && user.transactionalAlerts && user.email && !queued.email) {
             // Optional modules/reports use workspace-provided SMTP.
             // Global infra SMTP is reserved for auth/login flows elsewhere.
             const route = 'user';
@@ -262,7 +262,9 @@ export async function dispatchNotification(payload: NotificationPayload, options
           }
 
           // ── 4c. PUSH ─────────────────────────────────────────────────────
-          if (!queued.push && user.notifyPush) {
+          if (user.notifyPush) {
+            // Queued channel has a committed delivery intent; never also send legacy.
+            if (queued.push) return;
             const subs = await prisma.pushSubscription.findMany({
               where: { userId: user.id },
             });
