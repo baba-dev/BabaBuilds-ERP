@@ -48,7 +48,7 @@ Financial postings, external webhooks, auth, payment settlements, payroll and cr
 2. Pin the reviewed PR merge SHA when approved. Copy `scripts/operations/erp-redis-phase4-provision.sh` and `ops/systemd/bababuilds-erp-worker.service` from that exact commit. `bash -n` the operator, then run as root with the worker unit path. **This is a separate manual operator action; the GitHub Actions web deploy never executes it.**
 3. The operator creates only ERP Redis `127.0.0.1:6387` with isolated ACL, 128MB noeviction AOF everysec, and installs the **disabled** worker unit. It appends protected `ERP_REDIS_JOB_URL`, `ERP_REDIS_JOB_WORKER_ENABLED=false`, `ERP_REDIS_INAPP_DEADLINE_ENABLED=false` to the root-only ERP env. Run the authenticated Phase 4 preflight script; never output passwords.
 4. With the PostgreSQL schema migrated and matching the release, explicitly set `ERP_REDIS_JOBS_ENABLED=true` and `ERP_REDIS_JOB_WORKER_ENABLED=true`. Restart **ERP web only** for new producer config, then `systemctl start bababuilds-erp-worker.service` manually (do not enable at boot until soak succeeds). Confirm `/api/admin/jobs/health` shows jobs Redis ready and worker flag on. Pilot remains OFF.
-5. Choose **one** internal workspace with a future task; set `ERP_REDIS_INAPP_DEADLINE_WORKSPACE_IDS=<verified internal workspace ID>` while the pilot remains OFF. Verify the ID exists and is internal. Only then set `ERP_REDIS_INAPP_DEADLINE_ENABLED=true`, restart only ERP web. Trigger its authorized existing alert cron once. Confirm one outbox row, eventual DONE, one in-app notification per intended active recipient and no duplicate on repeated cron. Existing email/push channels remain separate; do not send test messages to real customers.
+5. Choose **one** verified, operator-approved internal workspace with a task due in the next seven days. Audit its active members and disable external email/push for this test workspace. With `ERP_REDIS_INAPP_DEADLINE_WORKSPACE_IDS=<exact internal workspace ID>` set, independently enable `ERP_REDIS_JOBS_ENABLED=true`, `ERP_REDIS_JOB_WORKER_ENABLED=true` and `ERP_REDIS_INAPP_DEADLINE_ENABLED=true` in the ERP **web** env and restart **only ERP web** after a protected configuration backup and full preflight. The already-running standalone worker uses its own reviewed systemd drop-in. Exercise exactly that task using the **scoped Phase 4 canary endpoint** documented below. Verify one outbox occurrence, DONE and one in-app notice per active opted-in recipient, even on a repeat request. **Never manually invoke the global `/api/cron/alerts` route** as a one-workspace test; it sends unrelated tenant financial reminders, email and push. Existing scheduled cron must continue on its normal schedule; monitor it separately.
 6. Watch pending age, failed jobs, PostgreSQL connections, Redis AOF memory and login throttling for a full operational cycle. Revoke test membership and re-run to check no new notification. Do not alter 6384/6385/6386 or MenuMinute/ClubKeep services.
 7. Rollback the pilot independently by setting `ERP_REDIS_INAPP_DEADLINE_ENABLED=false` and restarting ERP web, **then drain the worker before stopping it**. If pending events exist, decide whether to drain or park them; returning to the immediate legacy path before draining can duplicate notices. Never delete outbox records or use Redis FLUSH commands. For full jobs rollback turn off the worker, stop only `bababuilds-erp-worker.service`, and finally disable the jobs master; retain AOF and PostgreSQL outbox.
 8. To retry a FAILED occurrence, use the admin Security jobs card. It removes only that specific failed BullMQ job ID and atomically returns the corresponding PostgreSQL outbox row to PENDING; the worker's reconciler republishes it. Never bulk retry unknown external side effects.
@@ -60,3 +60,36 @@ Financial postings, external webhooks, auth, payment settlements, payroll and cr
 - No notifications to deactivated users, no stale task notifications after task completion/suspension; read live preferences at execution.
 - CI PostgreSQL/Redis replay test and immutable ARM64 package pass. All Phase 2/3 feature toggles unchanged.
 - No production activation, migrations, VPS service installation or cross-app restart from opening/merging the PR.
+
+
+## Phase 4 G operator-only scoped producer canary (no global cron)
+
+The dedicated `POST /api/cron/alerts/phase4-canary` route is opt-in. It is authorized by the existing `CRON_SECRET`, requires all three Phase 4 web flags and exactly one valid allowlisted workspace, validates **one** task in the original 7-day deadline window and at least one current active in-app recipient, then writes only the existing unique PostgreSQL outbox occurrence. The worker subsequently rechecks the task, active memberships and in-app preferences. It never sends email/push, scans other workspaces, executes unrelated cron work, or provides a GET handler. A second identical request reuses the same unique outbox occurrence. If a database commit is uncertain, the endpoint fails without legacy dispatch; check PostgreSQL before retrying.
+
+**Production gate before using it:** the reviewed endpoint PR must pass CI/CodeQL, merge, and deploy as an immutable ERP Node26 release. Verify the new deployed SHA, worker version/health, applied migration history, loopback job Redis, isolated ACL, and healthy MenuMinute and ClubKeep. Do not run it on the currently deployed 023d06db Phase 4 release; that release does not contain this endpoint. Confirm the chosen workspace is an internal test organization rather than a customer, every intended recipient is authorized and notifyInApp=true, and all test-workspace users have external notifyEmail=false/notifyPush=false. Do not use a task belonging to a different workspace or an actual customer task.
+
+After separate approval and scoped flag activation, run this command from the ERP VPS as root, **replacing the two IDs with audited internal identifiers** (never print or paste secrets). Node reads `CRON_SECRET` from the protected .env and sends it only through loopback; the secret is not placed in shell command arguments:
+
+```bash
+sudo env PHASE4_WORKSPACE_ID='INTERNAL_WORKSPACE_ID' PHASE4_TASK_ID='INTERNAL_TASK_ID' \
+  /opt/bababuilds-erp/node26/bin/node --env-file=/var/www/bababuilds-erp/.env - <<'JS'
+const { PHASE4_WORKSPACE_ID: workspaceId, PHASE4_TASK_ID: taskId, CRON_SECRET } = process.env;
+if (!/^[A-Za-z0-9_-]{8,80}$/.test(workspaceId || '') ||
+    !/^[A-Za-z0-9_-]{8,80}$/.test(taskId || '') || !CRON_SECRET) process.exit(2);
+const response = await fetch('http://127.0.0.1:3000/api/cron/alerts/phase4-canary', {
+  method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(10000),
+  headers: { 'Authorization': 'Bearer ' + CRON_SECRET, 'Content-Type': 'application/json' },
+  body: JSON.stringify({ workspaceId, taskId }),
+});
+console.log('ERP_PHASE4_SCOPED_PRODUCER_HTTP_' + response.status);
+if (response.status !== 202) process.exitCode = 2;
+JS
+```
+
+Use read-only PostgreSQL queries scoped to the approved workspace/task to confirm one `ErpJobOutbox` occurrence reaches DONE, each intended active opted-in member receives exactly one `DEADLINE_ALERT` notification from that task, and there is no unintended recipient. The outbox does not record recipients separately, so for a clean count use a workspace with exactly one eligible task and no existing deadline notifications in the test window; if those conditions cannot be guaranteed, stop rather than make unsupported claims. Repeating the scoped POST tests deduplication, but **do not** repeat the global cron.
+
+### H — final soak and rollback acceptance
+
+Maintain the worker with boot enablement **off** through a minimum 24-hour observation period. Check at intervals: worker PID and readiness/journal errors; PostgreSQL PENDING/DONE/FAILED and oldest pending age; Redis 6387 auth errors, memory, AOF and noeviction; Postgres connections; ERP HTTP latency; Redis 6384/6385/6386 health; and `menuminute-web`, `menuminute-worker`, `clubkeep-web` services. Keep the one-workspace allowlist in place throughout. Failed jobs, duplicate real notifications, Redis pressure, cross-tenant activity or service regressions are stop conditions.
+
+To rollback, first stop any additional canary POST calls, change the **ERP web** pilot switch OFF and restart ERP web only. Inspect/allow the worker to drain in-flight events before considering a return to the legacy in-app route: switching paths while rows remain pending can double-notify. Then stop only the ERP worker if necessary, preserving all PostgreSQL outbox rows and Redis AOF. Do not FLUSH, revoke unrelated Redis ACLs, change migration history, or touch MenuMinute/ClubKeep. **Only after 24h evidence and written signoff** should the operator consider enabling the worker at boot. This completes the narrow in-app deadline Phase 4 pilot, **not** a migration of financial or external notification workloads.
