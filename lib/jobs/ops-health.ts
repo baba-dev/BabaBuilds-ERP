@@ -2,6 +2,7 @@ import 'server-only';
 import { prisma } from '@/lib/prisma';
 import { loadErpJobsConfig } from '@/lib/jobs/config';
 import Redis from 'ioredis';
+import { parseRedisInfo, parseRedisInfoNumber, parseWorkerHeartbeat } from '@/lib/jobs/heartbeat';
 
 export type JobHealth = {
   producerEnabled: boolean;
@@ -9,6 +10,16 @@ export type JobHealth = {
   pilotEnabled: boolean;
   redisStatus: 'disabled' | 'ready' | 'unavailable' | 'misconfigured';
   postgresStatus: 'ready' | 'unavailable';
+  /** Redis evidence from the worker reconciler; not inferred from a web flag. */
+  workerHeartbeat: 'disabled' | 'ready' | 'degraded' | 'stale' | 'unavailable';
+  workerHeartbeatAgeSeconds: number | null;
+  jobsRedis: {
+    memoryUsedBytes: number | null;
+    memoryLimitBytes: number | null;
+    maxmemoryPolicy: string | null;
+    aofEnabled: boolean | null;
+    evictedKeys: number | null;
+  };
   pending: number;
   done: number;
   failed: number;
@@ -25,6 +36,12 @@ export async function getJobHealth(): Promise<JobHealth> {
     pilotEnabled: config?.inAppDeadlineEnabled ?? false,
     redisStatus: config ? (config.enabled ? 'unavailable' : 'disabled') : 'misconfigured',
     postgresStatus: 'unavailable',
+    workerHeartbeat: config?.workerEnabled ? 'unavailable' : 'disabled',
+    workerHeartbeatAgeSeconds: null,
+    jobsRedis: {
+      memoryUsedBytes: null, memoryLimitBytes: null, maxmemoryPolicy: null,
+      aofEnabled: null, evictedKeys: null,
+    },
     pending: 0, done: 0, failed: 0, oldestPendingSeconds: null, failedJobs: [],
   };
   try {
@@ -60,6 +77,32 @@ export async function getJobHealth(): Promise<JobHealth> {
     try {
       await client.connect();
       result.redisStatus = (await client.ping()) === 'PONG' ? 'ready' : 'unavailable';
+      if (result.redisStatus === 'ready') {
+        if (config.workerEnabled) {
+          try {
+            const value = await client.get(config.namespace + ':jobs:worker:heartbeat');
+            const pulse = parseWorkerHeartbeat(value);
+            result.workerHeartbeat = pulse.status;
+            result.workerHeartbeatAgeSeconds = pulse.ageSeconds;
+          } catch {
+            result.workerHeartbeat = 'unavailable';
+          }
+        }
+        // INFO is read-only and confined to the existing authenticated job Redis.
+        // A metrics failure does not masquerade as a worker outage.
+        try {
+          const [memory, persistence, stats] = await Promise.all([
+            client.info('memory'), client.info('persistence'), client.info('stats'),
+          ]);
+          result.jobsRedis = {
+            memoryUsedBytes: parseRedisInfoNumber(memory, 'used_memory'),
+            memoryLimitBytes: parseRedisInfoNumber(memory, 'maxmemory'),
+            maxmemoryPolicy: parseRedisInfo(memory, 'maxmemory_policy'),
+            aofEnabled: parseRedisInfo(persistence, 'aof_enabled') === '1',
+            evictedKeys: parseRedisInfoNumber(stats, 'evicted_keys'),
+          };
+        } catch { /* retain unknown metrics */ }
+      }
     } catch { result.redisStatus = 'unavailable'; }
     finally { client.disconnect(); }
   }

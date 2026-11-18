@@ -174,6 +174,9 @@ export async function dispatchNotification(payload: NotificationPayload, options
     const workspaceUsers = await prisma.workspaceUser.findMany({
       where: {
         workspaceId,
+        // Never deliver in-app/email/push to revoked or deactivated members.
+        // Revalidate active membership each time a legacy notification is sent.
+        isActive: true,
         ...(userIds && userIds.length > 0 ? { userId: { in: userIds } } : {}),
       },
       include: { user: true },
