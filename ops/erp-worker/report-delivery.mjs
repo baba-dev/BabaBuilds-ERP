@@ -13,10 +13,15 @@ const RENDER_URL = 'http://127.0.0.1:3000/api/internal/erp-report-render';
 
 export function workerReportFlag(env = process.env) {
   const ws = env.ERP_REDIS_REPORT_WORKSPACE_ID?.trim() || '';
-  return env.ERP_REDIS_ENABLED === 'true' && env.ERP_REDIS_JOBS_ENABLED === 'true' &&
+  const enabled = env.ERP_REDIS_ENABLED === 'true' &&
+    env.ERP_REDIS_JOBS_ENABLED === 'true' &&
     env.ERP_REDIS_JOB_WORKER_ENABLED === 'true' &&
     env.ERP_REDIS_REPORT_EMAIL_ENABLED === 'true' &&
-    env.ERP_STAGING_MODE !== '1' && ID.test(ws) ? ws : null;
+    env.ERP_STAGING_MODE !== '1';
+  if (!enabled) return null;
+  if (env.ERP_REDIS_EXTERNAL_DELIVERY_SCOPE === 'sitewide' &&
+      env.ERP_REDIS_SITEWIDE_DELIVERY_APPROVED === 'true') return 'SITEWIDE';
+  return ID.test(ws) ? ws : null;
 }
 
 function recipientHash(address) {
@@ -152,17 +157,19 @@ async function authenticatedRender(delivery, token) {
   return { subject: result.subject, html: result.html, text: result.text, attachments };
 }
 
-export async function processReportDelivery(pool, id, workspaceId = workerReportFlag()) {
-  if (!workspaceId || !ID.test(id)) return;
+export async function processReportDelivery(pool, id, scope = workerReportFlag()) {
+  if (!scope || !ID.test(id)) return;
   const claimed = await pool.query(
     'UPDATE "ErpJobDelivery" SET "status"=$2,"claimToken"=$3,' +
     '"leaseExpiresAt"=NOW()+INTERVAL \'120 seconds\',"attempts"="attempts"+1,' +
     '"updatedAt"=NOW() WHERE "id"=$1 AND "status"=$4 AND "nextAttemptAt"<=NOW() ' +
-    'AND "workspaceId"=$5 AND "eventKind"=$6 AND "channel"=$7 RETURNING *',
-    [id, 'CLAIMED', randomUUID(), 'PENDING', workspaceId, KIND, 'REPORT_EMAIL'],
+    'AND ($5::text=$8 OR "workspaceId"=$5) ' +
+    'AND "eventKind"=$6 AND "channel"=$7 RETURNING *',
+    [id, 'CLAIMED', randomUUID(), 'PENDING', scope, KIND, 'REPORT_EMAIL', 'SITEWIDE'],
   );
   const delivery = claimed.rows[0];
   if (!delivery) return;
+  const workspaceId = delivery.workspaceId;
   const token = delivery.claimToken;
   let attempted = false;
   try {
@@ -217,15 +224,16 @@ export async function processReportDelivery(pool, id, workspaceId = workerReport
 
 /** Repair a crash between PG provider ack and schedule finalization only.
  * Does NOT replay an external side effect. */
-export async function reconcileAcceptedReportSchedules(pool, workspaceId) {
-  if (!workspaceId) return;
+export async function reconcileAcceptedReportSchedules(pool, scope) {
+  if (!scope) return;
   const rows = await pool.query(
-    'SELECT DISTINCT "occurrenceKey" FROM "ErpJobDelivery" WHERE "workspaceId"=$1 ' +
+    'SELECT DISTINCT "workspaceId","occurrenceKey" FROM "ErpJobDelivery" ' +
+    'WHERE ($1::text=$4 OR "workspaceId"=$1) ' +
     'AND "eventKind"=$2 AND "status"=$3 AND "createdAt">NOW()-INTERVAL \'7 days\' ' +
-    'ORDER BY "occurrenceKey" ASC LIMIT 100',
-    [workspaceId, KIND, 'PROVIDER_ACCEPTED'],
+    'ORDER BY "workspaceId","occurrenceKey" ASC LIMIT 100',
+    [scope, KIND, 'PROVIDER_ACCEPTED', 'SITEWIDE'],
   );
   for (const row of rows.rows) {
-    await finalizeReportOccurrence(pool, workspaceId, row.occurrenceKey);
+    await finalizeReportOccurrence(pool, row.workspaceId, row.occurrenceKey);
   }
 }
