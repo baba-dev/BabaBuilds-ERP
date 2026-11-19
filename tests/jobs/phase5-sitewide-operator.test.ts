@@ -6,6 +6,7 @@ import path from 'node:path';
 describe('Phase 5 sitewide release operator', () => {
   const operatorPath = path.resolve('scripts/operations/erp-phase5-sitewide-activate.sh');
   const workflowPath = path.resolve('.github/workflows/erp-phase5-sitewide.yml');
+  const pausePath = path.resolve('scripts/operations/erp-phase5-sitewide-pause.sh');
   const script = readFileSync(operatorPath, 'utf8');
   const workflow = readFileSync(workflowPath, 'utf8');
 
@@ -25,6 +26,17 @@ describe('Phase 5 sitewide release operator', () => {
     expect(script).not.toContain('systemctl restart menuminute');
     expect(script).not.toContain('systemctl restart clubkeep');
     expect(script).not.toContain('/api/cron/alerts');
+  });
+
+  it('ships a valid emergency pause that does not replay unknown provider outcomes', () => {
+    expect(() => execFileSync('bash', ['-n', pausePath], { timeout: 15000 }))
+      .not.toThrow();
+    const pause = readFileSync(pausePath, 'utf8');
+    expect(pause).toContain('ERP_PHASE5_SITEWIDE_EXTERNAL_DELIVERY_PAUSED');
+    expect(pause).toContain('ERP_REDIS_REPORT_EMAIL_ENABLED=false');
+    expect(pause).not.toContain('FLUSHALL');
+    expect(pause).not.toContain('prisma migrate');
+    expect(workflow).toContain('5e7b277517d1a516b23fd9d30ced6537c0d3677b');
   });
 
   it('accepts only a trusted completed latest-main ERP deployment and pinned operator', () => {
