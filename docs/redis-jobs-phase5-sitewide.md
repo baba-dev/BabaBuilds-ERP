@@ -44,23 +44,36 @@ No changes to PostgreSQL migrations, Redis ACLs or other applications.
 Existing one-workspace mode stays available only while the sitewide approval
 is not enabled.
 
-## One-operation VPS activation
+## Automatic one-operation production activation
 
-After the protected immutable ERP web deploy is verified on the merged commit,
-run a **single** root-owned operator to update only protected ERP app env and
-restart **ERP web then ERP worker**. It must fail closed if an unapproved
-config override is active, the current release differs, existing external
-CLAIMED/PENDING deliveries could get replayed, Redis/postgres/ERP/cohosted
-services are down, or existing flags were enabled outside this rollout.
+This PR ships a trusted GitHub Actions `workflow_run` hook. Only after the
+successful latest-main **ERP immutable Node 26 systemd release** has actually
+promoted the ERP web service, the hook verifies that the specific deployment
+job succeeded, checks the current main commit, copies hash-pinned root-owned
+activation and pause operators through the existing `erp-production` SSH
+credentials, then runs a **single** sitewide activation.
+
+The activator writes secret-free systemd overrides (not .env credentials)
+for **ERP web and ERP worker only** and restarts those two services. It stops
+before touching either service if the matching immutable release isn't active,
+an older PENDING/CLAIMED external delivery might be replayed, job Redis or
+PG17 is unhealthy, ENCRYPTION_KEY or VAPID is absent, or sibling services are
+unhealthy. It does not migrate PostgreSQL, send a test notification, invoke
+a global financial cron, or restart MenuMinute/ClubKeep. Verify the actual
+`ERP_PHASE5_SITEWIDE_EXTERNAL_DELIVERY_ENABLED` marker in the GitHub Actions
+logs before claiming live activation.
 
 Do not run global `/api/cron/alerts` to test; it initiates financial notices.
 The regular scheduled cron triggers newly due reports normally. Do not replay
 older provider-uncertain rows; use the existing superadmin Delivery Recovery
-page for explicitly approved provider evidence. A global kill switch is to
-set `ERP_REDIS_SITEWIDE_DELIVERY_APPROVED=false` and restart the ERP services,
-leaving ledger state intact. Turning it OFF routes subsequent eligible events
-to legacy synchronous sends; only after all queued sends are drained is that
-appropriate as a durable rollback.
+page for explicitly approved provider evidence. For an immediate operator-initiated pause after activation, use
+`sudo /usr/local/sbin/erp-phase5-sitewide-pause`. This trusted root-only
+helper switches OFF global approval and all three external-channel flags,
+then restarts **only ERP web and worker**, leaving the PostgreSQL ledger
+unchanged. Existing PENDING deliveries remain parked; do not blindly
+resume old queues. Future events take their legacy route while paused. An
+emergency pause must be followed by explicit operator reconciliation before
+re-enabling sitewide sends.
 
 After activation, inspect only redacted aggregates in
 `/admin/jobs/deliveries` and worker heartbeat. Never log email addresses,
