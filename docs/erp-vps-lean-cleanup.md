@@ -28,8 +28,10 @@ under those roots.
    nonblocking (same lock as the production release manager). GitHub also
    shares `erp-immutable-production` concurrency with systemd deployment.
 3. Resolve actual `/opt/bababuilds-erp/releases/current` target.
-   Never include the active release. Only prune prior release directories with
-   strictly validated SHA and timestamp names.
+   Never include the active release. Retain the latest three immutable releases
+   **by timestamp** as rollback candidates, plus the active release even if older.
+   A sitewide worker-release receipt mismatch blocks destructive cleanup.
+   Only prune other directories with strictly validated SHA and timestamp names.
 4. Remove **only** exact retired `cut1611b`, `dry1611a`, `cut1611a`
    cutover directories, disabled `20261116a` ERP staging checkout,
    the two named old Next build caches, two root npm caches,
@@ -56,3 +58,19 @@ If the cleanup gate fails, the operator stops instead of guessing. For
 MenuMinute incoming archives and ClubKeep releases, use those products'
 own retention policies after verifying current symlinks and pending jobs;
 do not delete their archives based only on this ERP inventory.
+
+## Phase 5 sign-off update (2026-11-19)
+
+The sitewide email, push and scheduled-report worker was activated by a
+verified latest-main immutable release at commit
+`8f5eab37a52498adccb5e506c83682579d0f4298`.
+The activation sign-off authorizes safe ERP-only pruning under this reviewed
+operator; it **does not** authorize deletion of PostgreSQL delivery ledger
+records, Redis 6387 queues, uncertain provider sends, encryption keys, backups,
+service overrides, or sibling application artifacts.
+
+The cleanup gate now requires the recorded Phase 5 worker release SHA to match
+the live ERP web release, and retains three recent immutable rollback releases.
+It is safe to report zero eligible space if earlier cleanup already reclaimed
+obsolete caches and cutover directories. Actual disk savings must come from the
+cleanup workflow's structured runtime output, not historical measurements.
