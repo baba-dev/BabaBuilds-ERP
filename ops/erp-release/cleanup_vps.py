@@ -38,6 +38,10 @@ CACHE_PATHS = (
     Path("/root/.cache/swc-native-0"),
 )
 REL_RE = re.compile(r"^sha-[a-f0-9]{40}-[0-9]{8}T[0-9]{6}Z$")
+# Retain three newest reviewed releases for web AND worker rollback.
+# The marker tracks the worker's last accepted matching immutable SHA.
+WORKER_RECEIPT = Path("/var/lib/bababuilds-erp/phase5/sitewide-activated.sha")
+KEEP_RECENT_RELEASES = 3
 
 def fail(reason):
     raise RuntimeError(reason)
@@ -157,11 +161,17 @@ def process_references(target):
     return False
 
 def candidates(current_runtime):
-    # Exact releases only. Preserve current even when multiple commits arrive.
-    for release in sorted(RELEASES.iterdir(), key=lambda p: p.name):
-        if not REL_RE.fullmatch(release.name):
-            continue
-        if release == current_runtime.parent:
+    # Preserve current and the three newest immutable releases. A second
+    # process (the Redis delivery worker) may have just changed release SHA.
+    # A CI clean is not permission to erase the only known-good rollback.
+    releases = sorted(
+        (p for p in RELEASES.iterdir() if REL_RE.fullmatch(p.name)),
+        key=lambda p: p.name,
+    )
+    keep = set(releases[-KEEP_RECENT_RELEASES:])
+    keep.add(current_runtime.parent)
+    for release in releases:
+        if release in keep:
             continue
         yield "obsolete_erp_release", release
     for name in OLD_CUTOVERS:
@@ -195,6 +205,18 @@ def check_target(category, path, current):
 
 def execute(apply):
     runtime = live_erp()
+    # Never prune while a newer ERP web has deployed but its externally-
+    # sending sitewide worker is still on the previous immutable code.
+    # This check is read-only and affects no existing delivery/Redis state.
+    if WORKER_RECEIPT.exists() or WORKER_RECEIPT.is_symlink():
+        if WORKER_RECEIPT.is_symlink() or not WORKER_RECEIPT.is_file():
+            fail("Sitewide worker receipt has unsafe file type")
+        st = WORKER_RECEIPT.stat()
+        if st.st_uid != 0 or (stat.S_IMODE(st.st_mode) != 0o600):
+            fail("Sitewide worker receipt owner/mode changed")
+        expected = runtime.parent.name[4:44]
+        if WORKER_RECEIPT.read_text().strip() != expected:
+            fail("ERP worker release sync pending: skip destructive cleanup")
     STATE.mkdir(parents=True, exist_ok=True, mode=0o700)
     lock = LOCK.open("a+")
     try:
