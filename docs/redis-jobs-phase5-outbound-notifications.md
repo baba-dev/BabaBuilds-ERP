@@ -1,5 +1,12 @@
 # Phase 5 C+D — gated outbound notifications over PostgreSQL and Redis 6387
 
+> **Historical rollout reference (superseded 2026-11-19).** The one-workspace
+> flags and separate staging handoff below describe the original canary plan.
+> Live production now uses the explicit sitewide override approved in PR #682;
+> see `docs/redis-jobs-phase5-sitewide.md` and
+> `docs/erp-phase5-post-cutover-closeout.md`. Do not run old canary commands.
+
+
 Tracking: #673. Adds provider-aware email and push delivery to the already
 deployed delivery ledger. No database migrations or production flag changes.
 
