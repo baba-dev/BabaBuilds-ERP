@@ -117,4 +117,15 @@ describe('Phase 5 E signed report worker delivery and ack recovery', () => {
     await finalizeReportOccurrence(pool, ws, occ);
     expect(statements.some((r) => r.sql.startsWith('UPDATE "ReportView"'))).toBe(true);
   });
+  it('claims reports in SITEWIDE mode using the delivery workspace for revalidation', async () => {
+    const { pool } = db();
+    await processReportDelivery(pool, id, 'SITEWIDE');
+    expect(m.fetch).toHaveBeenCalledOnce();
+    expect(m.send).toHaveBeenCalledOnce();
+    const claim = pool.query.mock.calls.find((a) => a[0].includes('RETURNING *'));
+    expect(claim?.[1]?.[4]).toBe('SITEWIDE');
+    const source = pool.query.mock.calls.find((a) => a[0].includes('FROM "ErpJobOutbox"'));
+    expect(source?.[1]?.[0]).toBe(ws);
+  });
+
 });
