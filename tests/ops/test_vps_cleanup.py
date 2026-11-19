@@ -99,7 +99,7 @@ class CleanUpContract(unittest.TestCase):
         self.assertIn("branches: [main]", workflow)
         self.assertIn("group: erp-immutable-production", workflow)
         self.assertIn("environment: erp-production", workflow)
-        self.assertIn("6404058f42bfbe68c0aadf7871129b669f360c31", workflow)
+        self.assertIn("bf12d4ef9bb223eef4b3f9c3517978d3b324e0bc", workflow)
         self.assertIn("--plan", workflow)
         self.assertIn("--apply --confirm-erp-only", workflow)
         self.assertNotIn("menuminute --stop", workflow)
