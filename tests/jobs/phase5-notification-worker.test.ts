@@ -108,4 +108,16 @@ describe('Phase 5 C+D worker no-blind-replay contract', () => {
     expect(updates.some((u) => u[2] === 'SUPPRESSED')).toBe(true);
     expect(pool.query.mock.calls.some((x) => x[0].startsWith('DELETE FROM "PushSubscription"'))).toBe(true);
   });
+  it('claims an exact per-kind recipient from a different workspace in sitewide mode', async () => {
+    const { pool, updates } = fakeDb('EMAIL');
+    await processNotificationDelivery(pool, 'cmdelivery000001', {
+      workspaceId: null, sitewide: true, email: true, push: true,
+    });
+    expect(mocks.sendMail).toHaveBeenCalledTimes(1);
+    expect(updates.some((u) => u[2] === 'PROVIDER_ACCEPTED')).toBe(true);
+    const claim = pool.query.mock.calls.find((a) => a[0].includes('RETURNING *'));
+    expect(claim?.[1]?.[4]).toBeNull();
+    expect(claim?.[0]).toContain('eventKind');
+  });
+
 });
