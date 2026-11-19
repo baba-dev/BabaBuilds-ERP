@@ -35,7 +35,7 @@ This module allows you to draft, send, track, and convert professional quotes an
 ## Converting to Revenue
 
 
-- **One-Click Conversion:** Once a client approves a quote, click "Convert to Invoice". The system will automatically generate a draft invoice matching the exact scope and pricing of the quote.
+- **One-Click Conversion:** Once a client approves a quote, click "Convert to Invoice". The system generates a numbered invoice and PDF from the accepted line items. Check the billing date and selected items before converting, then share the PDF with the client.
 - **Pipeline Tracking:** Quotes in the "Sent" status automatically update your Revenue Pipeline module.
 
 ## Best Practices

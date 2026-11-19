@@ -244,7 +244,7 @@ export default function ComparisonTable() {
                 className="rounded-xl border-orange-300 font-bold text-orange-800 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-200 dark:hover:bg-orange-950/40"
               >
                 <Link
-                  href="#features"
+                  href="/features"
                   onClick={() =>
                     emitMarketingAnalyticsEvent("marketing_cta_click", {
                       location: "comparison_strip",

@@ -1886,7 +1886,12 @@
     "optionalModules": {
       "title": "Extend with Optional Modules",
       "subtitle": "Tailor BabaBuilds to your exact needs by enabling powerful, specialized modules.",
+      "browseModules": "Browse all optional modules",
       "modules": {
+        "pos": {
+          "title": "Point of Sale",
+          "description": "Record walk-in sales, update inventory, and review cash at shift close."
+        },
         "taxAdvanced": {
           "title": "Advanced Tax & Compliance",
           "description": "Automated calculations, multi-region compliance, and audit-ready reporting."

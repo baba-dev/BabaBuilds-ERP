@@ -4,8 +4,9 @@ import Link from "next/link";
 import { Box, Mail, MapPin, ShieldCheck, FileText, LifeBuoy } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { personaNavigationLinks } from "@/components/landing/persona/persona-config";
+import { FEATURES_PATH } from "@/content/marketing/feature-paths";
 
-export default function LandingFooter() {
+export default function LandingFooter({ sectionPath = "" }: { sectionPath?: string }) {
   const t = useTranslations("LandingFooter");
   const tp = useTranslations("LandingPersona");
   const keyPersonaLinks = personaNavigationLinks.slice(0, 3);
@@ -14,9 +15,9 @@ export default function LandingFooter() {
     {
       title: t("sections.product"),
       links: [
-        { name: t("links.features"), href: "#features" },
-        { name: t("links.pricing"), href: "#pricing" },
-        { name: t("links.interactiveDemo"), href: "#demo-launcher" },
+        { name: t("links.features"), href: FEATURES_PATH },
+        { name: t("links.pricing"), href: `${sectionPath}#pricing` },
+        { name: t("links.interactiveDemo"), href: `${sectionPath}#demo-launcher` },
       ],
     },
     {
