@@ -75,7 +75,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          source: scripts/operations/erp-phase5-sitewide-activate.sh
+          source: scripts/operations/erp-phase5-sitewide-activate.sh,scripts/operations/erp-phase5-sitewide-pause.sh
           target: /tmp/erp-phase5-sitewide-${{ needs.provenance.outputs.sha }}
           strip_components: 2
       - name: Activate email, push and reports globally without touching sibling services
@@ -96,7 +96,14 @@ jobs:
             test "$(sudo -n git hash-object "$candidate")" = "059d5c150e675eaf4887897d19f8d6579593a133" || {
               echo ERP_PHASE5_SITEWIDE_OPERATOR_BLOB_MISMATCH; exit 1;
             }
+            pause="/tmp/erp-phase5-sitewide-$DEPLOY_SHA/erp-phase5-sitewide-pause.sh"
+            test -f "$pause"
+            test ! -L "$pause"
+            test "$(sudo -n git hash-object "$pause")" = "5e7b277517d1a516b23fd9d30ced6537c0d3677b" || {
+              echo ERP_PHASE5_SITEWIDE_PAUSE_OPERATOR_BLOB_MISMATCH; exit 1;
+            }
+            sudo -n install -o root -g root -m 0750 "$pause" /usr/local/sbin/erp-phase5-sitewide-pause
             sudo -n install -o root -g root -m 0750 "$candidate" /usr/local/sbin/erp-phase5-sitewide-activate
             sudo -n env DEPLOY_SHA="$DEPLOY_SHA" /usr/local/sbin/erp-phase5-sitewide-activate
-            rm -f -- "$candidate"
+            rm -f -- "$candidate" "$pause"
             rmdir -- "/tmp/erp-phase5-sitewide-$DEPLOY_SHA" 2>/dev/null || true
