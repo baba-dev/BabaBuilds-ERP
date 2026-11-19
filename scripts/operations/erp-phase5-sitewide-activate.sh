@@ -14,8 +14,9 @@ for file in erp-worker.mjs notification-delivery.mjs report-delivery.mjs; do
   [[ -s "$runtime/$file" && ! -L "$runtime/$file" ]] || stop 'worker component missing'
 done
 if [[ -e $marker ]]; then
-  [[ -f $marker && ! -L $marker && $(cat "$marker") == "$DEPLOY_SHA" ]] || stop 'another sitewide activation receipt exists'
-  echo "ERP_PHASE5_SITEWIDE_ALREADY_ACTIVE sha=$DEPLOY_SHA"; exit 0
+  [[ -f $marker && ! -L $marker && $(stat -c '%u:%a' "$marker") == 0:600 ]] ||
+    stop 'sitewide activation receipt invalid'
+  echo "ERP_PHASE5_SITEWIDE_ALREADY_ACTIVE reviewed_receipt_present"; exit 0
 fi
 
 for unit in bababuilds-erp.service bababuilds-erp-worker.service postgresql@17-main.service \
