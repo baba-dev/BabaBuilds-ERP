@@ -166,7 +166,8 @@ def candidates(current_runtime):
     # A CI clean is not permission to erase the only known-good rollback.
     releases = sorted(
         (p for p in RELEASES.iterdir() if REL_RE.fullmatch(p.name)),
-        key=lambda p: p.name,
+        # sha-HASH-TIMESTAMP: SHA order is unrelated to release recency.
+        key=lambda p: (p.name[45:], p.name[:44]),
     )
     keep = set(releases[-KEEP_RECENT_RELEASES:])
     keep.add(current_runtime.parent)
