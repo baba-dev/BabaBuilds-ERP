@@ -1,0 +1,109 @@
+name: ERP Phase 5 sitewide external delivery activation
+
+# One-time globally opted-in cutover only AFTER the protected ERP web
+# release finishes successfully on the latest main commit.
+on:
+  workflow_run:
+    workflows: ["ERP immutable Node 26 systemd release"]
+    types: [completed]
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: erp-phase5-sitewide-cutover
+  cancel-in-progress: false
+
+jobs:
+  provenance:
+    name: Verify latest deployed ERP release and reviewed promoter
+    if: >-
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+          github.event.workflow_run.head_branch == 'main' &&
+          github.event.workflow_run.head_repository.full_name == github.repository }}
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.verify.outputs.sha }}
+    steps:
+      - name: Check deploy provenance, promotion job and current main
+        uses: actions/github-script@v7
+        id: verify
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const run = context.payload.workflow_run;
+            const ref = await github.rest.git.getRef({ owner, repo, ref: "heads/main" });
+            if (run.head_sha !== ref.data.object.sha ||
+                run.head_branch !== "main" ||
+                run.head_repository.full_name !== owner + "/" + repo ||
+                run.conclusion !== "success") throw Error("Stale/untrusted ERP deployment");
+            const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+              owner, repo, run_id: run.id, per_page: 100
+            });
+            if (jobs.filter(j => j.name === "Deploy verified ARM64 release to ERP systemd" &&
+                j.conclusion === "success").length !== 1) {
+              throw Error("Successful ERP production promotion evidence missing");
+            }
+            core.setOutput("sha", run.head_sha);
+
+  activate:
+    name: One-pass sitewide ERP-only activation
+    needs: provenance
+    runs-on: ubuntu-24.04
+    environment: erp-production
+    timeout-minutes: 20
+    env:
+      DEPLOY_SHA: ${{ needs.provenance.outputs.sha }}
+    steps:
+      - name: Checkout reviewed sitewide operator from verified SHA
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.provenance.outputs.sha }}
+          persist-credentials: false
+      - name: Recheck that deployed release remains latest main
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const {owner, repo} = context.repo;
+            const ref = await github.rest.git.getRef({ owner, repo, ref: "heads/main" });
+            if (ref.data.object.sha !== process.env.DEPLOY_SHA)
+              throw Error("Main advanced; old release cannot activate sitewide sends");
+      - name: Copy reviewed one-shot operator to ERP host
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          source: scripts/operations/erp-phase5-sitewide-activate.sh,scripts/operations/erp-phase5-sitewide-pause.sh
+          target: /tmp/erp-phase5-sitewide-${{ needs.provenance.outputs.sha }}
+          strip_components: 2
+      - name: Activate email, push and reports globally without touching sibling services
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: DEPLOY_SHA
+          command_timeout: 15m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            [[ "$DEPLOY_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+            candidate="/tmp/erp-phase5-sitewide-$DEPLOY_SHA/erp-phase5-sitewide-activate.sh"
+            test -f "$candidate"
+            test ! -L "$candidate"
+            test "$(sudo -n git hash-object "$candidate")" = "059d5c150e675eaf4887897d19f8d6579593a133" || {
+              echo ERP_PHASE5_SITEWIDE_OPERATOR_BLOB_MISMATCH; exit 1;
+            }
+            pause="/tmp/erp-phase5-sitewide-$DEPLOY_SHA/erp-phase5-sitewide-pause.sh"
+            test -f "$pause"
+            test ! -L "$pause"
+            test "$(sudo -n git hash-object "$pause")" = "5e7b277517d1a516b23fd9d30ced6537c0d3677b" || {
+              echo ERP_PHASE5_SITEWIDE_PAUSE_OPERATOR_BLOB_MISMATCH; exit 1;
+            }
+            sudo -n install -o root -g root -m 0750 "$pause" /usr/local/sbin/erp-phase5-sitewide-pause
+            sudo -n install -o root -g root -m 0750 "$candidate" /usr/local/sbin/erp-phase5-sitewide-activate
+            sudo -n env DEPLOY_SHA="$DEPLOY_SHA" /usr/local/sbin/erp-phase5-sitewide-activate
+            rm -f -- "$candidate" "$pause"
+            rmdir -- "/tmp/erp-phase5-sitewide-$DEPLOY_SHA" 2>/dev/null || true

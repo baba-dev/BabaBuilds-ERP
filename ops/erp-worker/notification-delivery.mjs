@@ -15,12 +15,15 @@ const yes = (key) => process.env[key] === 'true';
 
 export function workerNotificationChannels() {
   const ws = process.env.ERP_REDIS_NOTIFICATION_WORKSPACE_IDS?.trim() || '';
-  const allowed = /^[A-Za-z0-9_-]{8,80}$/.test(ws);
+  const sitewide = process.env.ERP_REDIS_EXTERNAL_DELIVERY_SCOPE === 'sitewide' &&
+    yes('ERP_REDIS_SITEWIDE_DELIVERY_APPROVED');
+  const allowed = sitewide || /^[A-Za-z0-9_-]{8,80}$/.test(ws);
   const base = yes('ERP_REDIS_ENABLED') && yes('ERP_REDIS_JOBS_ENABLED') &&
     yes('ERP_REDIS_JOB_WORKER_ENABLED') && allowed &&
     process.env.ERP_STAGING_MODE !== '1';
   return {
-    workspaceId: base ? ws : null,
+    workspaceId: base && !sitewide ? ws : null,
+    sitewide: base && sitewide,
     email: base && yes('ERP_REDIS_NOTIFICATION_EMAIL_ENABLED'),
     push: base && yes('ERP_REDIS_NOTIFICATION_PUSH_ENABLED'),
   };
@@ -188,14 +191,19 @@ async function pushSend(recipient, payload) {
  * or the external-attempt marker never automatically replays it: F must review.
  */
 export async function processNotificationDelivery(pool, id, flags = workerNotificationChannels()) {
-  if (typeof id !== 'string' || !ID.test(id) || !flags.workspaceId) return;
+  if (typeof id !== 'string' || !ID.test(id) ||
+      (!flags.workspaceId && !flags.sitewide)) return;
   const claimed = await pool.query(
     'UPDATE "ErpJobDelivery" SET "status"=$2,"claimToken"=$3,' +
     '"leaseExpiresAt"=NOW()+INTERVAL \'120 seconds\',"attempts"="attempts"+1,' +
     '"updatedAt"=NOW() WHERE "id"=$1 AND "status"=$4 AND "nextAttemptAt"<=NOW() ' +
-    'AND "workspaceId"=$5 AND "channel" IN ($6,$7) RETURNING *',
-    [id, 'CLAIMED', randomUUID(), 'PENDING', flags.workspaceId,
-      flags.email ? 'EMAIL' : '__OFF_EMAIL__', flags.push ? 'PUSH' : '__OFF_PUSH__'],
+    'AND ($5::text IS NULL OR "workspaceId"=$5) ' +
+    'AND (("channel"=$6 AND "eventKind"=$8) OR ("channel"=$7 AND "eventKind"=$9)) RETURNING *',
+    [id, 'CLAIMED', randomUUID(), 'PENDING',
+      flags.sitewide ? null : flags.workspaceId,
+      flags.email ? 'EMAIL' : '__OFF_EMAIL__',
+      flags.push ? 'PUSH' : '__OFF_PUSH__',
+      'notification_email_v1', 'notification_push_v1'],
   );
   const delivery = claimed.rows[0];
   if (!delivery) return;

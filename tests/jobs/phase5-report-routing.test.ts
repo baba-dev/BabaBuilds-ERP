@@ -37,4 +37,24 @@ describe('Phase 5 E report routing isolation', () => {
     expect(canonicalReportRecipients('not-an-email')).toBeNull();
     expect(canonicalReportRecipients(Array.from({ length: 11 }, (_, i) => 'a' + i + '@example.com').join(','))).toBeNull();
   });
+  it('permits only explicit sitewide report routing, not wildcard or missing approval', () => {
+    const global = {
+      ...env,
+      ERP_REDIS_EXTERNAL_DELIVERY_SCOPE: 'sitewide',
+      ERP_REDIS_SITEWIDE_DELIVERY_APPROVED: 'true',
+      ERP_REDIS_REPORT_WORKSPACE_ID: '',
+    };
+    expect(reportQueueEnabled(workspace, global)).toBe(true);
+    expect(reportQueueEnabled('cmotherworkspace0001', global)).toBe(true);
+    expect(reportQueueEnabled('cmotherworkspace0001', {
+      ...global, ERP_REDIS_SITEWIDE_DELIVERY_APPROVED: 'false',
+    })).toBe(false);
+    expect(reportQueueEnabled('cmotherworkspace0001', {
+      ...global, ERP_REDIS_EXTERNAL_DELIVERY_SCOPE: '*',
+    })).toBe(false);
+    expect(reportQueueEnabled('cmotherworkspace0001', {
+      ...global, ERP_REDIS_REPORT_EMAIL_ENABLED: 'false',
+    })).toBe(false);
+  });
+
 });

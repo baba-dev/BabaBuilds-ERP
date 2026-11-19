@@ -1,7 +1,7 @@
 /**
  * Phase 5 E: scheduled report transport is independently gated and
- * restricted to ONE exact internal workspace. Missing, wildcard or CSV
- * selectors always retain the legacy schedule path.
+ * Supports previously approved single-workspace scope and separately
+ * authorized sitewide scope, both OFF until explicitly configured.
  */
 type Env = Record<string, string | undefined>;
 const WORKSPACE_ID = /^[A-Za-z0-9_-]{8,80}$/;
@@ -18,6 +18,13 @@ export function reportQueueWorkspace(env: Env = process.env): string | null {
 }
 
 export function reportQueueEnabled(workspaceId: string, env: Env = process.env): boolean {
+  if (!WORKSPACE_ID.test(workspaceId) ||
+      env.ERP_REDIS_ENABLED !== 'true' ||
+      env.ERP_REDIS_JOBS_ENABLED !== 'true' ||
+      env.ERP_REDIS_REPORT_EMAIL_ENABLED !== 'true' ||
+      env.ERP_STAGING_MODE === '1') return false;
+  if (env.ERP_REDIS_EXTERNAL_DELIVERY_SCOPE === 'sitewide' &&
+      env.ERP_REDIS_SITEWIDE_DELIVERY_APPROVED === 'true') return true;
   return reportQueueWorkspace(env) === workspaceId;
 }
 

@@ -43,4 +43,31 @@ describe('Phase 5 C+D channel flags and exact workspace isolation', () => {
     expect(notificationSourceOccurrence('PROPOSAL_VIEWED', 'proposal_firstview_001'))
       .toBe('notification_proposal_viewed_proposal_firstview_001');
   });
+  it('routes every valid workspace ONLY under explicitly approved sitewide scope', () => {
+    const global = {
+      ...enabled,
+      ERP_REDIS_EXTERNAL_DELIVERY_SCOPE: 'sitewide',
+      ERP_REDIS_SITEWIDE_DELIVERY_APPROVED: 'true',
+      ERP_REDIS_NOTIFICATION_WORKSPACE_IDS: '',
+    };
+    expect(notificationRoute(ws, 'PROPOSAL_VIEWED', 'proposal_firstview_001', global))
+      .toEqual({ email: true, push: true });
+    expect(notificationRoute('cmotherworkspace0001', 'PROPOSAL_VIEWED', 'proposal_firstview_002', global))
+      .toEqual({ email: true, push: true });
+    for (const guard of [
+      { ERP_REDIS_SITEWIDE_DELIVERY_APPROVED: 'false' },
+      { ERP_REDIS_EXTERNAL_DELIVERY_SCOPE: 'all' },
+      { ERP_STAGING_MODE: '1' },
+      { ERP_REDIS_JOBS_ENABLED: 'false' },
+    ]) {
+      expect(notificationRoute('cmotherworkspace0001', 'PROPOSAL_VIEWED', 'proposal_firstview_002', {
+        ...global, ...guard,
+      })).toEqual({ email: false, push: false });
+    }
+    expect(notificationRoute('cmotherworkspace0001', 'PAYMENT_REMINDER', 'billing_occurrence_001', global))
+      .toEqual({ email: false, push: false });
+    expect(notificationRoute('cmotherworkspace0001', 'LEAVE_APPROVED', undefined, global))
+      .toEqual({ email: false, push: false });
+  });
+
 });
