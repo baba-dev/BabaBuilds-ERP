@@ -84,10 +84,10 @@ let lastReportRepairAt = 0;
 async function publishReportPending() {
   if (!reportQueue || !reportWorkspace) return;
   const result = await pool.query(
-    'SELECT "id" FROM "ErpJobDelivery" WHERE "workspaceId"=$1 ' +
+    'SELECT "id" FROM "ErpJobDelivery" WHERE ($1::text=$5 OR "workspaceId"=$1) ' +
     'AND "eventKind"=$2 AND "channel"=$3 AND "status"=$4 ' +
     'AND "nextAttemptAt"<=NOW() ORDER BY "nextAttemptAt" ASC LIMIT 40',
-    [reportWorkspace, 'scheduled_report_email_v1', 'REPORT_EMAIL', 'PENDING'],
+    [reportWorkspace, 'scheduled_report_email_v1', 'REPORT_EMAIL', 'PENDING', 'SITEWIDE'],
   );
   for (const row of result.rows) {
     if (stopping) break;
@@ -129,14 +129,17 @@ const notificationWorker = notificationsActive ? new Worker(notificationQueueNam
 notificationWorker?.on('error', () => console.error('[erp-worker] NOTIFICATION_WORKER_ERROR'));
 
 async function publishNotificationPending() {
-  if (!notificationQueue || !notificationFlags.workspaceId) return;
+  if (!notificationQueue || (!notificationFlags.workspaceId && !notificationFlags.sitewide)) return;
   const rows = await pool.query(
-    'SELECT "id" FROM "ErpJobDelivery" WHERE "status"=$1 AND "workspaceId"=$2 ' +
-    'AND "nextAttemptAt"<=NOW() AND "channel" IN ($3,$4) ' +
+    'SELECT "id" FROM "ErpJobDelivery" WHERE "status"=$1 ' +
+    'AND ($2::text IS NULL OR "workspaceId"=$2) ' +
+    'AND "nextAttemptAt"<=NOW() ' +
+    'AND (("channel"=$3 AND "eventKind"=$6) OR ("channel"=$4 AND "eventKind"=$7)) ' +
     'ORDER BY "nextAttemptAt" ASC LIMIT $5',
-    ['PENDING', notificationFlags.workspaceId,
+    ['PENDING', notificationFlags.sitewide ? null : notificationFlags.workspaceId,
       notificationFlags.email ? 'EMAIL' : '__OFF_EMAIL__',
-      notificationFlags.push ? 'PUSH' : '__OFF_PUSH__', 50],
+      notificationFlags.push ? 'PUSH' : '__OFF_PUSH__', 50,
+      'notification_email_v1', 'notification_push_v1'],
   );
   for (const row of rows.rows) {
     if (stopping) break;
