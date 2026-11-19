@@ -39,8 +39,26 @@ class CleanUpContract(unittest.TestCase):
             with patch.object(cleanup, "RELEASES", releases):
                 entries = list(cleanup.candidates(current))
             obsolete = [path for kind, path in entries if kind == "obsolete_erp_release"]
-            self.assertEqual(obsolete, [one])
+            # Retain the current release and last three for safe rollback.
+            self.assertEqual(obsolete, [])
             self.assertNotIn(two, obsolete)
+
+    def test_release_retention_uses_timestamps_not_commit_hash_order(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            releases = Path(tmp)
+            releases.mkdir(exist_ok=True)
+            # SHA order and temporal order intentionally disagree.
+            shas = ["f", "e", "d", "c", "b"]
+            names = []
+            for i, sha in enumerate(shas):
+                p = releases / ("sha-" + sha * 40 + f"-20261117T0{i}0000Z")
+                (p / "runtime").mkdir(parents=True)
+                names.append(p)
+            with patch.object(cleanup, "RELEASES", releases):
+                entries = list(cleanup.candidates(names[-1] / "runtime"))
+            obsolete = [path for kind, path in entries if kind == "obsolete_erp_release"]
+            self.assertEqual(obsolete, names[:2])
+            self.assertNotIn(names[-1], obsolete)
 
     def test_symlinked_target_is_refused(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -65,6 +83,9 @@ class CleanUpContract(unittest.TestCase):
         self.assertIn("systemd-deploy.lock", content)
         self.assertIn("fcntl.flock", content)
         self.assertIn("process_references(path)", content)
+        self.assertIn("KEEP_RECENT_RELEASES = 3", content)
+        self.assertIn("ERP worker release sync pending", content)
+
 
     def test_apply_needs_explicit_flag(self):
         import sys
@@ -78,7 +99,7 @@ class CleanUpContract(unittest.TestCase):
         self.assertIn("branches: [main]", workflow)
         self.assertIn("group: erp-immutable-production", workflow)
         self.assertIn("environment: erp-production", workflow)
-        self.assertIn("6404058f42bfbe68c0aadf7871129b669f360c31", workflow)
+        self.assertIn("bf12d4ef9bb223eef4b3f9c3517978d3b324e0bc", workflow)
         self.assertIn("--plan", workflow)
         self.assertIn("--apply --confirm-erp-only", workflow)
         self.assertNotIn("menuminute --stop", workflow)

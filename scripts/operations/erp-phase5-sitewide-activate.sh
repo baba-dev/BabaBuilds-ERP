@@ -16,7 +16,12 @@ done
 if [[ -e $marker ]]; then
   [[ -f $marker && ! -L $marker && $(stat -c '%u:%a' "$marker") == 0:600 ]] ||
     stop 'sitewide activation receipt invalid'
-  echo "ERP_PHASE5_SITEWIDE_ALREADY_ACTIVE reviewed_receipt_present"; exit 0
+  # This production is already globally activated. A newer immutable web
+  # promotion changes the release pointer but does not restart the worker.
+  # Only handoff the worker after its existing deliveries drain.
+  [[ -x /usr/local/sbin/erp-phase5-worker-sync ]] ||
+    stop 'reviewed ERP worker-sync operator missing'
+  exec /usr/local/sbin/erp-phase5-worker-sync
 fi
 
 for unit in bababuilds-erp.service bababuilds-erp-worker.service postgresql@17-main.service \

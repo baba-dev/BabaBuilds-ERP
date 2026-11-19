@@ -1,6 +1,7 @@
-# Reviewed template; NOT installed or enabled by ERP web CI/CD.
+# Reviewed ERP-only worker service template. Activation and subsequent worker
+# synchronization are controlled by protected Phase 5 deployment workflow.
 [Unit]
-Description=BabaBuilds ERP Background Worker (Phase 4 opt-in)
+Description=BabaBuilds ERP Redis/PgSQL Background Worker
 Wants=network-online.target
 After=network-online.target postgresql@17-main.service bababuilds-erp-redis-job.service
 Requires=postgresql@17-main.service bababuilds-erp-redis-job.service

@@ -69,16 +69,16 @@ jobs:
             const ref = await github.rest.git.getRef({ owner, repo, ref: "heads/main" });
             if (ref.data.object.sha !== process.env.DEPLOY_SHA)
               throw Error("Main advanced; old release cannot activate sitewide sends");
-      - name: Copy reviewed one-shot operator to ERP host
+      - name: Copy reviewed activation, pause and worker-sync operators
         uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
-          source: scripts/operations/erp-phase5-sitewide-activate.sh,scripts/operations/erp-phase5-sitewide-pause.sh
+          source: scripts/operations/erp-phase5-sitewide-activate.sh,scripts/operations/erp-phase5-sitewide-pause.sh,scripts/operations/erp-phase5-worker-sync.sh
           target: /tmp/erp-phase5-sitewide-${{ needs.provenance.outputs.sha }}
           strip_components: 2
-      - name: Activate email, push and reports globally without touching sibling services
+      - name: Activate sitewide once or sync the matching ERP worker on subsequent deploys
         uses: appleboy/ssh-action@v1.2.5
         with:
           host: ${{ secrets.HOST }}
@@ -93,7 +93,7 @@ jobs:
             candidate="/tmp/erp-phase5-sitewide-$DEPLOY_SHA/erp-phase5-sitewide-activate.sh"
             test -f "$candidate"
             test ! -L "$candidate"
-            test "$(sudo -n git hash-object "$candidate")" = "059d5c150e675eaf4887897d19f8d6579593a133" || {
+            test "$(sudo -n git hash-object "$candidate")" = "d21f35bbf21f40a4170351d200c95d621fe755d2" || {
               echo ERP_PHASE5_SITEWIDE_OPERATOR_BLOB_MISMATCH; exit 1;
             }
             pause="/tmp/erp-phase5-sitewide-$DEPLOY_SHA/erp-phase5-sitewide-pause.sh"
@@ -102,8 +102,15 @@ jobs:
             test "$(sudo -n git hash-object "$pause")" = "5e7b277517d1a516b23fd9d30ced6537c0d3677b" || {
               echo ERP_PHASE5_SITEWIDE_PAUSE_OPERATOR_BLOB_MISMATCH; exit 1;
             }
+            sync="/tmp/erp-phase5-sitewide-$DEPLOY_SHA/erp-phase5-worker-sync.sh"
+            test -f "$sync"
+            test ! -L "$sync"
+            test "$(sudo -n git hash-object "$sync")" = "20a1dfd43023dc14668a1bd96ece38440544d5fd" || {
+              echo ERP_PHASE5_WORKER_SYNC_OPERATOR_BLOB_MISMATCH; exit 1;
+            }
+            sudo -n install -o root -g root -m 0750 "$sync" /usr/local/sbin/erp-phase5-worker-sync
             sudo -n install -o root -g root -m 0750 "$pause" /usr/local/sbin/erp-phase5-sitewide-pause
             sudo -n install -o root -g root -m 0750 "$candidate" /usr/local/sbin/erp-phase5-sitewide-activate
             sudo -n env DEPLOY_SHA="$DEPLOY_SHA" /usr/local/sbin/erp-phase5-sitewide-activate
-            rm -f -- "$candidate" "$pause"
+            rm -f -- "$candidate" "$pause" "$sync"
             rmdir -- "/tmp/erp-phase5-sitewide-$DEPLOY_SHA" 2>/dev/null || true
