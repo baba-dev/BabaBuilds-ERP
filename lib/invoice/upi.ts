@@ -32,3 +32,11 @@ export const buildUpiUri = (args: { vpa: string; payeeName?: string | null; amou
   if (note) parts.push(`tn=${encodeURIComponent(note)}`);
   return `upi://pay?${parts.join("&")}`;
 };
+
+/** For forms where the UPI ID is optional: empty means "nothing to save", a valid ID is normalised, anything else is rejected. */
+export const parseOptionalUpiVpa = (input: unknown): { ok: true; value: string | null } | { ok: false } => {
+  if (input === null || input === undefined) return { ok: true, value: null };
+  if (typeof input === "string" && input.trim() === "") return { ok: true, value: null };
+  const vpa = normalizeUpiVpa(input);
+  return vpa ? { ok: true, value: vpa } : { ok: false };
+};

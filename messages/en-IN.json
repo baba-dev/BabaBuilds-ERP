@@ -1222,7 +1222,9 @@
     "mod_payroll_path_linked_title": "Workforce-linked setup",
     "mod_payroll_path_linked_desc": "Derive payroll context from Workforce employees + attendance.",
     "mod_payroll_checklist": "Go-live readiness checklist",
-    "mod_payroll_score": "Readiness score: {score}% · Posting: {status}"
+    "mod_payroll_score": "Readiness score: {score}% · Posting: {status}",
+    "upi_id": "UPI ID (optional)",
+    "upi_hint": "Adds a scan-to-pay QR with the exact amount to your invoices. You can add QR images later in Settings, Bank account."
   },
   "Tax": {
     "title": "Wealth & Tax Planner",

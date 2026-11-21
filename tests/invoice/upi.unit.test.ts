@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildUpiUri, normalizePayeeName, normalizeUpiVpa } from "@/lib/invoice/upi";
+import { buildUpiUri, normalizePayeeName, normalizeUpiVpa, parseOptionalUpiVpa } from "@/lib/invoice/upi";
 
 describe("normalizeUpiVpa", () => {
   it("accepts handle@provider and lower-cases it", () => {
@@ -57,5 +57,16 @@ describe("buildUpiUri", () => {
   it("returns null for an invalid VPA", () => {
     expect(buildUpiUri({ vpa: "not a vpa" })).toBeNull();
     expect(buildUpiUri({ vpa: "javascript:alert(1)" })).toBeNull();
+  });
+});
+
+describe("parseOptionalUpiVpa", () => {
+  it("treats empty input as nothing to save", () => {
+    for (const empty of ["", "   ", null, undefined]) expect(parseOptionalUpiVpa(empty), String(empty)).toEqual({ ok: true, value: null });
+  });
+
+  it("normalises a valid ID and rejects anything else", () => {
+    expect(parseOptionalUpiVpa(" Shop@OKHDFC ")).toEqual({ ok: true, value: "shop@okhdfc" });
+    for (const bad of ["not a vpa", "javascript:alert(1)", 42, {}, "a".repeat(100)]) expect(parseOptionalUpiVpa(bad), String(bad)).toEqual({ ok: false });
   });
 });

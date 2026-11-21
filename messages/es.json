@@ -1139,7 +1139,9 @@
     "mod_payroll_path_linked_title": "Configuración vinculada a la Fuerza Laboral",
     "mod_payroll_path_linked_desc": "Derive el contexto de nómina de los empleados y asistencia de la Fuerza Laboral.",
     "mod_payroll_checklist": "Lista de preparación para salir en vivo",
-    "mod_payroll_score": "Puntuación de preparación: {score}% · Publicación: {status}"
+    "mod_payroll_score": "Puntuación de preparación: {score}% · Publicación: {status}",
+    "upi_id": "ID de UPI (opcional)",
+    "upi_hint": "Añade a tus facturas un QR de pago con el importe exacto. Puedes añadir imágenes QR más tarde en Ajustes, Cuenta bancaria."
   },
   "Tax": {
     "title": "Planificador Fiscal y Patrimonial",
