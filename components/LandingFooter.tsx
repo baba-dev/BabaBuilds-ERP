@@ -18,6 +18,7 @@ export default function LandingFooter({ sectionPath = "" }: { sectionPath?: stri
         { name: t("links.features"), href: FEATURES_PATH },
         { name: t("links.pricing"), href: `${sectionPath}#pricing` },
         { name: t("links.interactiveDemo"), href: `${sectionPath}#demo-launcher` },
+        { name: t("links.blog"), href: "/blog" },
       ],
     },
     {

@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-21T12:24:47.067Z",
+  "generatedAt": "2026-11-21T12:44:52.267Z",
   "summary": {
-    "knownRoutes": 138,
-    "checkedReferencedRoutes": 110,
+    "knownRoutes": 140,
+    "checkedReferencedRoutes": 112,
     "brokenReferencedRoutes": 0
   },
   "gate": {
@@ -27,6 +27,8 @@
         "app/api/settings/route.ts",
         "app/api/shop/[slug]/assets/[...asset]/route.ts",
         "app/api/user/profile/route.ts",
+        "app/blog/[slug]/page.tsx",
+        "app/blog/layout.tsx",
         "app/documents/[...path]/route.ts",
         "app/features/[slug]/page.tsx",
         "app/features/layout.tsx",
@@ -146,6 +148,16 @@
         "app/(dashboard)/settings/_components/sections/Automation.tsx",
         "components/dashboard/GuidedFlowsHub.tsx",
         "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/blog",
+      "exists": true,
+      "references": [
+        "app/blog/[slug]/page.tsx",
+        "app/blog/page.tsx",
+        "app/sitemap.ts",
+        "components/LandingFooter.tsx"
       ]
     },
     {
@@ -431,6 +443,13 @@
       "references": [
         "components/ComparisonTable.tsx",
         "content/marketing/feature-paths.ts"
+      ]
+    },
+    {
+      "route": "/features/invoice-designs",
+      "exists": true,
+      "references": [
+        "app/blog/[slug]/page.tsx"
       ]
     },
     {
@@ -1025,6 +1044,7 @@
       "route": "/signup",
       "exists": true,
       "references": [
+        "app/blog/[slug]/page.tsx",
         "app/reseller/reseller-landing-client.tsx",
         "app/sitemap.ts",
         "components/ComparisonTable.tsx",

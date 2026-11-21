@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 400" role="img" aria-labelledby="t d">
+  <title id="t">How TDS changes what your client pays</title>
+  <desc id="d">On a 1,00,000 rupee service with 18 percent GST, the invoice total is 1,18,000. TDS at 10 percent is taken on the 1,00,000 before GST, so the net payable is 1,08,000.</desc>
+  <rect width="960" height="400" rx="20" fill="#fff7ed"/>
+  <g font-family="Arial,Helvetica,sans-serif">
+    <text x="40" y="52" font-size="22" font-weight="700" fill="#1c1917">TDS is taken before GST, so GST is paid in full</text>
+    <text x="40" y="78" font-size="15" fill="#57534e">Example: ₹1,00,000 of services, 18% GST, 10% TDS under Section 194J</text>
+    <g transform="translate(40,110)">
+      <rect width="500" height="250" rx="16" fill="#fff" stroke="#e7e5e4" stroke-width="2"/>
+      <text x="24" y="44" font-size="16" fill="#57534e">Services (before GST)</text><text x="476" y="44" font-size="16" text-anchor="end" fill="#1c1917">₹1,00,000.00</text>
+      <text x="24" y="82" font-size="16" fill="#57534e">GST @ 18%</text><text x="476" y="82" font-size="16" text-anchor="end" fill="#1c1917">₹18,000.00</text>
+      <rect x="0" y="100" width="500" height="46" fill="#ffedd5"/>
+      <text x="24" y="130" font-size="17" font-weight="700" fill="#1c1917">Invoice total</text><text x="476" y="130" font-size="17" font-weight="700" text-anchor="end" fill="#1c1917">₹1,18,000.00</text>
+      <text x="24" y="176" font-size="16" fill="#be123c">Less: TDS @ 10% (Sec 194J) on ₹1,00,000</text><text x="476" y="176" font-size="16" text-anchor="end" fill="#be123c">−₹10,000.00</text>
+      <path d="M0 238v-40h500v40a14 14 0 0 1-14 14H14A14 14 0 0 1 0 238z" fill="#c2410c"/>
+      <text x="24" y="231" font-size="19" font-weight="700" fill="#fff">Net payable</text><text x="476" y="231" font-size="19" font-weight="700" text-anchor="end" fill="#fff">₹1,08,000.00</text>
+    </g>
+    <g transform="translate(580,110)">
+      <rect width="340" height="250" rx="16" fill="#fff" stroke="#fdba74" stroke-width="2"/>
+      <text x="24" y="40" font-size="16" font-weight="700" fill="#1c1917">The net amount flows everywhere</text>
+      <g font-size="15" fill="#44403c"><text x="48" y="82">Razorpay payment link</text><text x="48" y="116">UPI QR on Pay-Fast</text><text x="48" y="150">QR on the 80mm receipt</text><text x="48" y="184">Net payable line on every design</text></g>
+      <g fill="#15803d"><circle cx="30" cy="77" r="9"/><circle cx="30" cy="111" r="9"/><circle cx="30" cy="145" r="9"/><circle cx="30" cy="179" r="9"/></g>
+      <g fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M26 77l3 3 5-6"/><path d="M26 111l3 3 5-6"/><path d="M26 145l3 3 5-6"/><path d="M26 179l3 3 5-6"/></g>
+      <text x="24" y="226" font-size="13" fill="#57534e">Export invoices never get TDS.</text>
+    </g>
+  </g>
+</svg>

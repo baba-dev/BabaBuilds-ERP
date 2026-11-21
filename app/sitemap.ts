@@ -3,6 +3,7 @@ import path from 'node:path';
 import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 import { getAllDocs, groupDocsByCategory } from '@/lib/docs';
+import { getAllBlogPosts } from '@/lib/blog';
 import { erpFeatures } from '@/content/marketing/erp-features';
 import { featureHref, FEATURES_PATH } from '@/content/marketing/feature-paths';
 
@@ -26,6 +27,7 @@ const STATIC_ROUTES: Array<{
 }> = [
   { route: '', changeFrequency: 'weekly', priority: 1.0 },
   { route: '/help', changeFrequency: 'weekly', priority: 0.9 },
+  { route: '/blog', changeFrequency: 'weekly', priority: 0.8 },
   { route: '/login', changeFrequency: 'monthly', priority: 0.5 },
   { route: '/signup', changeFrequency: 'weekly', priority: 0.85 },
   { route: '/for-agencies', changeFrequency: 'weekly', priority: 0.88 },
@@ -87,6 +89,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  const blogRoutes: MetadataRoute.Sitemap = getAllBlogPosts().map((post) => ({
+    url: `${BASE_URL}/blog/${post.slug}`,
+    lastModified: new Date(post.dateModified),
+    changeFrequency: 'monthly',
+    priority: 0.7,
+  }));
+
   const categories = groupDocsByCategory(docs).map((g) => g.category.slug);
   const categoryRoutes: MetadataRoute.Sitemap = categories.map((categorySlug) => ({
     url: `${BASE_URL}/help/category/${categorySlug}`,
@@ -113,5 +122,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.8,
   }));
 
-  return [...staticRoutes, ...featureRoutes, ...categoryRoutes, ...docRoutes, ...shopRoutes] satisfies MetadataRoute.Sitemap;
+  return [...staticRoutes, ...featureRoutes, ...categoryRoutes, ...docRoutes, ...blogRoutes, ...shopRoutes] satisfies MetadataRoute.Sitemap;
 }

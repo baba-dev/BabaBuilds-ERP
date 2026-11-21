@@ -7,7 +7,7 @@ tags: ["Stripe", "Razorpay", "Payments", "Invoice payments", "gateway"]
 icon: "CreditCard"
 estimatedMinutes: 9
 isFeatured: true
-dateModified: "2026-04-21"
+dateModified: "2026-11-21"
 ---
 
 # Connecting Razorpay & Stripe
@@ -63,6 +63,10 @@ If you started from pricing, your signup path now keeps plan intent (`/signup?pl
 - Remove keys immediately if compromised
 
 ---
+
+## Payment links and TDS
+
+When a client deducts TDS, the invoice shows **Net payable** and the Razorpay or Stripe link asks for that net amount, not the full total. Pay-Fast and Receipt designs also show a QR from the link. If there is no link, they fall back to a UPI QR from your UPI ID. See [Invoice Designs](/help/invoice-designs).
 
 ## Verify payment-link output in invoice PDF
 

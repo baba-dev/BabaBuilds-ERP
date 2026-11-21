@@ -16,7 +16,7 @@ const nextConfig: NextConfig = {
   compress: false,      // Offload GZIP/Brotli compression to NGINX for CPU efficiency
   // Invoice PDF fonts are read from disk at runtime, so the standalone trace must ship them.
   outputFileTracingIncludes: {
-    '/*': ['./assets/invoice-fonts/**/*'],
+    '/*': ['./assets/invoice-fonts/**/*', './content/blog/**/*'],
     '/api/**': ['./assets/invoice-fonts/**/*'],
   },
   async headers() {
