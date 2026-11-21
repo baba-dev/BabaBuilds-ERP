@@ -7,7 +7,8 @@
       "namespace": "android_app",
       "package_name": "com.bababuilds.erp.twa",
       "sha256_cert_fingerprints": [
-        "FD:27:DF:46:E0:8E:B5:70:32:5D:9A:02:B0:73:45:73:16:CB:B3:5E:A9:2B:FE:AB:D9:26:86:0E:70:3B:88:79"
+        "FD:27:DF:46:E0:8E:B5:70:32:5D:9A:02:B0:73:45:73:16:CB:B3:5E:A9:2B:FE:AB:D9:26:86:0E:70:3B:88:79",
+        "D7:F7:2B:6A:75:C6:B1:DF:E3:31:69:42:8F:19:94:44:D7:02:79:D3:FC:04:31:E3:F5:B6:DC:BA:AB:EB:8B:C5"
       ]
     }
   }
