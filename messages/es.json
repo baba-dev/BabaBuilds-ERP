@@ -4083,7 +4083,9 @@
       "download": "Descargar PDF",
       "viewInvoices": "Ver en facturas",
       "another": "Crear otra"
-    }
+    },
+    "accent": "Color de la factura",
+    "accentHint": "Sustituye el color del cliente y del espacio de trabajo solo en esta factura."
   },
   "ProposalsHub": {
     "title": "Propuestas",
@@ -6676,7 +6678,9 @@
       "dueOnReceipt": "Al recibirla",
       "days": "{count} días",
       "termsNote": "Se aplica a las facturas nuevas. Las igualas y propuestas mantienen sus propios plazos.",
-      "dueExample": "Una factura con fecha {date} vencería el {due}."
+      "dueExample": "Una factura con fecha {date} vencería el {due}.",
+      "accent": "Color de la factura",
+      "accentHint": "Se usa en encabezados, totales y detalles de tus facturas. Déjalo vacío para usar el color propio de cada diseño."
     },
     "banking": {
       "title": "Datos bancarios en las facturas",
@@ -7194,7 +7198,9 @@
       "save": "Guardar cambios",
       "create": "Crear cliente",
       "duplicateTitle": "{name} parece ser el mismo cliente.",
-      "createAnyway": "Crear de todos modos"
+      "createAnyway": "Crear de todos modos",
+      "accent": "Color de factura para este cliente",
+      "accentHint": "Opcional. Sustituye el color de tu espacio de trabajo en las facturas de este cliente."
     },
     "errors": {
       "REQUIRED": "Este campo es obligatorio.",
@@ -10615,5 +10621,22 @@
       "recorded": "Pago registrado en {invoice}",
       "failed": "No se pudo registrar el pago. Inténtalo de nuevo."
     }
+  },
+  "InvoiceAccent": {
+    "swatch": "Usar el color {hex}",
+    "custom": "Elegir un color personalizado",
+    "hexLabel": "Código de color",
+    "invalid": "Introduce un color como #0B5FFF.",
+    "tooLight": "Este color es demasiado claro para leerse en papel, así que se usará un tono más oscuro.",
+    "useShade": "Usar el tono más oscuro",
+    "clear": "Usar el color heredado",
+    "clearPlain": "Quitar color",
+    "inherited": {
+      "client": "Se usa el color de este cliente.",
+      "workspace": "Se usa el color de tu espacio de trabajo.",
+      "design": "Se usa el color propio de cada diseño."
+    },
+    "preview": "Vista previa del color",
+    "previewTotal": "Total"
   }
 }

@@ -4054,7 +4054,9 @@
       "download": "Download PDF",
       "viewInvoices": "View in invoices",
       "another": "Create another"
-    }
+    },
+    "accent": "Invoice colour",
+    "accentHint": "Overrides the client and workspace colour for this invoice only."
   },
   "ProposalsHub": {
     "title": "Proposals",
@@ -6647,7 +6649,9 @@
       "dueOnReceipt": "On receipt",
       "days": "{count} days",
       "termsNote": "Applies to new invoices. Retainers and proposals keep their own terms.",
-      "dueExample": "An invoice dated {date} would be due on {due}."
+      "dueExample": "An invoice dated {date} would be due on {due}.",
+      "accent": "Invoice colour",
+      "accentHint": "Used for headers, totals and accents on your invoices. Leave it empty to use each design's own colour."
     },
     "banking": {
       "title": "Bank details on invoices",
@@ -7165,7 +7169,9 @@
       "save": "Save changes",
       "create": "Create client",
       "duplicateTitle": "{name} looks like the same client.",
-      "createAnyway": "Create anyway"
+      "createAnyway": "Create anyway",
+      "accent": "Invoice colour for this client",
+      "accentHint": "Optional. Overrides your workspace colour on this client's invoices."
     },
     "errors": {
       "REQUIRED": "This field is required.",
@@ -10586,5 +10592,22 @@
       "recorded": "Payment recorded on {invoice}",
       "failed": "Couldn’t record the payment. Try again."
     }
+  },
+  "InvoiceAccent": {
+    "swatch": "Use colour {hex}",
+    "custom": "Pick a custom colour",
+    "hexLabel": "Colour code",
+    "invalid": "Enter a colour like #0B5FFF.",
+    "tooLight": "This colour is too light to read on paper, so a darker shade will be used.",
+    "useShade": "Use the darker shade",
+    "clear": "Use inherited colour",
+    "clearPlain": "Remove colour",
+    "inherited": {
+      "client": "Using this client's colour.",
+      "workspace": "Using your workspace colour.",
+      "design": "Using each design's own colour."
+    },
+    "preview": "Colour preview",
+    "previewTotal": "Total"
   }
 }

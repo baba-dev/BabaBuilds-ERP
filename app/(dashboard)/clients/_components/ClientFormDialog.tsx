@@ -12,15 +12,16 @@ import { ResponsiveDialog } from "@/components/ResponsiveDialog";
 import { COUNTRY_CODES, countryName, matchCountry } from "@/lib/clients/country";
 import { GST_STATES } from "@/lib/gst/states";
 import { validateGstin } from "@/lib/gst/gstin";
+import { AccentColorField } from "@/components/invoice/AccentColorField";
 import { api, type ApiFail, type ClientRowData } from "./shared";
 
 type Form = {
   name: string; email: string; phone: string; website: string; industry: string; country: string; address: string; taxId: string;
   gstStateCode: string; gstSupplyOverride: string; gstReverseCharge: boolean; currency: string; paymentTermsDays: string; creditLimit: string;
-  tags: string; status: string; taxTreatment: "auto" | "export" | "domestic";
+  tags: string; status: string; taxTreatment: "auto" | "export" | "domestic"; invoiceAccentColor: string;
 };
 
-const EMPTY: Form = { name: "", email: "", phone: "", website: "", industry: "", country: "", address: "", taxId: "", gstStateCode: "", gstSupplyOverride: "", gstReverseCharge: false, currency: "", paymentTermsDays: "", creditLimit: "", tags: "", status: "ACTIVE", taxTreatment: "auto" };
+const EMPTY: Form = { name: "", email: "", phone: "", website: "", industry: "", country: "", address: "", taxId: "", gstStateCode: "", gstSupplyOverride: "", gstReverseCharge: false, currency: "", paymentTermsDays: "", creditLimit: "", tags: "", status: "ACTIVE", taxTreatment: "auto", invoiceAccentColor: "" };
 
 const fieldClass = "h-10";
 const selectClass = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -30,7 +31,7 @@ function fromClient(c: ClientRowData): Form {
     name: c.name, email: c.email ?? "", phone: c.phone ?? "", website: c.website ?? "", industry: c.industry ?? "", country: c.countryCode ?? c.country, address: c.address,
     taxId: c.taxId ?? "", gstStateCode: c.gstStateCode ?? "", gstSupplyOverride: c.gstSupplyOverride ?? "", gstReverseCharge: Boolean(c.gstReverseCharge),
     currency: c.currency ?? "", paymentTermsDays: c.paymentTermsDays === null ? "" : String(c.paymentTermsDays), creditLimit: c.creditLimit === null ? "" : String(c.creditLimit),
-    tags: c.tagList.join(", "), status: c.status, taxTreatment: "auto",
+    tags: c.tagList.join(", "), status: c.status, taxTreatment: "auto", invoiceAccentColor: c.invoiceAccentColor ?? "",
   };
 }
 
@@ -99,6 +100,7 @@ export function ClientFormDialog({ open, onOpenChange, client, workspaceCountry,
       name: form.name, email: form.email, phone: form.phone, website: form.website, industry: form.industry, country: form.country, address: form.address, taxId: form.taxId,
       currency: form.currency, paymentTermsDays: form.paymentTermsDays, creditLimit: form.creditLimit, tags: form.tags, status: form.status,
       gstStateCode: form.gstStateCode, gstSupplyOverride: form.gstSupplyOverride, gstReverseCharge: form.gstReverseCharge,
+      invoiceAccentColor: form.invoiceAccentColor,
     };
     if (form.taxTreatment !== "auto") payload.isExport = form.taxTreatment === "export";
     if (force) payload.force = true;
@@ -230,6 +232,11 @@ export function ClientFormDialog({ open, onOpenChange, client, workspaceCountry,
               </div>
             </>
           )}
+        </section>
+
+        <section className="space-y-2" aria-label={t("form.accent")}>
+          <AccentColorField label={t("form.accent")} hint={t("form.accentHint")} value={form.invoiceAccentColor || null} onChange={(hex) => set("invoiceAccentColor", hex ?? "")} inheritedFrom={{ source: "workspace" }} />
+          <FieldError message={msg("invoiceAccentColor")} />
         </section>
 
         <section className="grid gap-4 sm:grid-cols-2" aria-label={t("form.billing")}>

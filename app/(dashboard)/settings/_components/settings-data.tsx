@@ -7,7 +7,7 @@ export type SettingsData = {
   companyName?: string; proprietorName?: string; address?: string; email?: string; phone?: string | null; website?: string | null;
   panNumber?: string; gstin?: string | null; udyamNumber?: string | null; defaultSacCode?: string | null; defaultTaxRate?: number | null;
   taxLabel?: string; taxIdLabel?: string; routingLabel?: string;
-  invoiceTheme?: string; invoicePrefix?: string | null; invoiceTermsDays?: number;
+  invoiceTheme?: string; invoiceAccentColor?: string | null; invoicePrefix?: string | null; invoiceTermsDays?: number;
   bankName?: string; accountName?: string; ifscCode?: string; accountNumberDisplay?: string;
   primaryBankAccount?: { accountNumberDisplay?: string | null; maskedAccountNumber?: string | null } | null;
   logoUrl?: string | null; signatureUrl?: string | null; locale?: string; countryCode?: string;

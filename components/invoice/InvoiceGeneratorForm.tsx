@@ -22,6 +22,7 @@ import { SuccessPanel } from "@/components/invoice/composer/SuccessPanel";
 
 // MISSION CRITICAL: Globalization & Caching Imports
 import { useFormat } from "@/hooks/use-format";
+import { AccentColorField } from "@/components/invoice/AccentColorField";
 import { formatCurrency, getCurrencySymbol } from "@/lib/currency";
 import { InvoiceCurrencyField } from "@/components/invoice/InvoiceCurrencyField";
 import { useTranslations } from "next-intl";
@@ -45,6 +46,7 @@ type InvoiceCompanyConfirmation = {
   bankName?: string | null;
   accountName?: string | null;
   defaultGateway?: string | null;
+  invoiceAccentColor?: string | null;
   razorpayKeyId?: string | null;
   stripePublishableKey?: string | null;
   primaryBankAccount?: {
@@ -65,7 +67,7 @@ const unwrapList = <T,>(result: ApiList<T>): T[] => {
   return Array.isArray(result?.data) ? result.data : [];
 };
 
-type ClientRow = { id: string | number; name: string; country: string; email?: string | null };
+type ClientRow = { id: string | number; name: string; country: string; email?: string | null; invoiceAccentColor?: string | null };
 type SacValue = string | number | { code?: string; value?: string; label?: string } | null;
 type BillingMonthRow = { billingMonth?: string | null; clientId?: string | null };
 type ServiceRow = { id: string; name: string; description?: string | null; sacCode?: SacValue; defaultPrice?: number | string | null };
@@ -148,6 +150,8 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
   const currencySymbol = getCurrencySymbol(activeCurrency, locale);
   const isForeignCurrency = activeCurrency !== currency;
   const gstPayload = gstOverrides.placeOfSupply || gstOverrides.supplyOverride || gstOverrides.reverseCharge ? { gst: gstOverrides } : {};
+  const [invoiceAccent, setInvoiceAccent] = useState<string | null>(null);
+  const accentPayload = invoiceAccent ? { accentColor: invoiceAccent } : {};
   const currencyPayload = isForeignCurrency ? { currency: activeCurrency, exchangeRate: Number(exchangeRate) } : {};
 
   // App State
@@ -430,6 +434,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
         body: JSON.stringify({
           clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
           billingMonth,
           sacCode: smartSacCode,
           ...gstPayload,
@@ -466,6 +471,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
             body: JSON.stringify({
               clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
               billingMonth,
               sacCode: smartSacCode,
             ...gstPayload,
@@ -536,6 +542,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           payload: {
             clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
             billingMonth,
             sacCode: smartSacCode,
             ...gstPayload,
@@ -571,6 +578,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
         body: JSON.stringify({
           clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
           billingMonth,
           sacCode: smartSacCode,
           ...gstPayload,
@@ -598,6 +606,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
             body: JSON.stringify({
               clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
               billingMonth,
               sacCode: smartSacCode,
             ...gstPayload,
@@ -676,6 +685,7 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           payload: {
             clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
             billingMonth,
             sacCode: smartSacCode,
             ...gstPayload,
@@ -877,6 +887,22 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           </ComposerSection>
 
           <GstPreviewCard preview={gstView.preview} loading={gstView.loading} format={(n) => fCurrency(n)} overrides={gstOverrides} onOverridesChange={setGstOverrides} />
+
+          <section aria-label={tc("accent")} className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
+            <AccentColorField
+              label={tc("accent")}
+              hint={tc("accentHint")}
+              value={invoiceAccent}
+              onChange={setInvoiceAccent}
+              inheritedFrom={
+                selectedClient?.invoiceAccentColor
+                  ? { source: "client", hex: selectedClient.invoiceAccentColor }
+                  : companyConfirmation?.invoiceAccentColor
+                    ? { source: "workspace", hex: companyConfirmation.invoiceAccentColor }
+                    : { source: "design" }
+              }
+            />
+          </section>
 
           <ComposerSection step={3} title={tc("delivery.title")} hint={tc("delivery.hint")} done={checks.company} delay={0.12}>
             <div className="space-y-4">
