@@ -30,6 +30,9 @@ function DesignWireframe({ id }: { id: InvoiceDesignId }) {
   if (id === "DESIGN_4") {
     return <div className="space-y-1.5"><div className="flex gap-1.5"><div className="h-9 flex-1 rounded-sm bg-teal-700 p-1"><div className="h-1.5 w-8 rounded bg-white/70" /><div className="mt-1 h-3 w-14 rounded bg-white" /></div><div className="grid size-9 grid-cols-4 gap-px rounded-sm border border-teal-700 p-0.5">{Array.from({ length: 16 }, (_, i) => <div key={i} className={i % 3 === 0 || i % 5 === 0 ? "bg-zinc-800" : "bg-transparent"} />)}</div></div><div className="h-1.5 w-full rounded bg-zinc-200" /><div className="h-1.5 w-3/4 rounded bg-zinc-200" /></div>;
   }
+  if (id === "DESIGN_8") {
+    return <div className="mx-auto w-16 space-y-1.5"><div className="mx-auto h-2 w-10 rounded bg-zinc-800" /><div className="border-t border-dashed border-zinc-400" /><div className="flex justify-between"><div className="h-1.5 w-8 rounded bg-zinc-300" /><div className="h-1.5 w-4 rounded bg-zinc-400" /></div><div className="flex justify-between"><div className="h-1.5 w-6 rounded bg-zinc-300" /><div className="h-1.5 w-4 rounded bg-zinc-400" /></div><div className="border-t border-dashed border-zinc-400" /><div className="mx-auto grid size-6 grid-cols-3 gap-px border border-zinc-700 p-px">{Array.from({ length: 9 }, (_, i) => <div key={i} className={i % 2 === 0 ? "bg-zinc-800" : "bg-transparent"} />)}</div></div>;
+  }
   if (id === "DESIGN_7") {
     return <div className="space-y-2"><div className="flex items-end justify-between"><div><div className="h-1.5 w-6 rounded bg-zinc-300" /><div className="mt-1 h-3 w-14 rounded bg-zinc-800" /><div className="mt-1 h-0.5 w-5 bg-zinc-900" /></div><div className="h-4 w-12 rounded bg-zinc-800" /></div><div className="h-px w-full bg-zinc-300" /><div className="h-1.5 w-full rounded bg-zinc-100" /><div className="h-px w-full bg-zinc-200" /><div className="h-1.5 w-3/4 rounded bg-zinc-100" /></div>;
   }

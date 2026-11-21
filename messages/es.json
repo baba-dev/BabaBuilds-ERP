@@ -6660,7 +6660,8 @@
         "DESIGN_4": "Pay-Fast (cobro rápido)",
         "DESIGN_5": "Proyecto detallado",
         "DESIGN_6": "Estado de cuenta",
-        "DESIGN_7": "Minimal Pro"
+        "DESIGN_7": "Minimal Pro",
+        "DESIGN_8": "Recibo (80 mm)"
       },
       "designHint": {
         "DESIGN_1": "Encabezado blanco y líneas limpias. Muestra tu firma.",
@@ -6669,7 +6670,8 @@
         "DESIGN_4": "Importe pendiente bien visible y un QR para pagar al escanear, para cobrar antes.",
         "DESIGN_5": "Secciones con subtotales, cantidad × tarifa, descuentos y notas por línea, para que el cliente vea qué paga.",
         "DESIGN_6": "Muestra lo que el cliente aún debe: saldo anterior, pagos, créditos y el importe a pagar ahora.",
-        "DESIGN_7": "Sobrio y espacioso: un solo acento, líneas en vez de cajas, nada que sobre."
+        "DESIGN_7": "Sobrio y espacioso: un solo acento, líneas en vez de cajas, nada que sobre.",
+        "DESIGN_8": "Recibo estrecho para impresora térmica, con un pequeño QR de pago al final."
       },
       "numbering": "Números de factura",
       "numberingHint": "Los números siguen un orden dentro de cada ejercicio fiscal.",

@@ -6631,7 +6631,8 @@
         "DESIGN_4": "Pay-Fast",
         "DESIGN_5": "Itemised project",
         "DESIGN_6": "Statement",
-        "DESIGN_7": "Minimal Pro"
+        "DESIGN_7": "Minimal Pro",
+        "DESIGN_8": "Receipt (80mm)"
       },
       "designHint": {
         "DESIGN_1": "White header and clean lines. Shows your signature.",
@@ -6640,7 +6641,8 @@
         "DESIGN_4": "Big amount due and a scan-to-pay QR so clients pay sooner.",
         "DESIGN_5": "Sections with subtotals, quantity × rate, discounts and line notes, so clients see what they pay for.",
         "DESIGN_6": "Shows what the client still owes: previous balance, payments, credits and the amount due now.",
-        "DESIGN_7": "Quiet and spacious: one accent, rules instead of boxes, nothing you do not need."
+        "DESIGN_7": "Quiet and spacious: one accent, rules instead of boxes, nothing you do not need.",
+        "DESIGN_8": "A narrow thermal-printer receipt with a small payment QR at the end."
       },
       "numbering": "Invoice numbers",
       "numberingHint": "Numbers run in order within each financial year.",
