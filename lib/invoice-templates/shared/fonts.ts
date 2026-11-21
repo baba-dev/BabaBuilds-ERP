@@ -10,6 +10,9 @@ const FONT_DIR = path.join(process.cwd(), "assets", "invoice-fonts");
 
 type FontBytes = { regular: Uint8Array; bold: Uint8Array };
 
+// Standard ligatures (fi, fl) draw with a wrong advance in some viewers; Indic shaping features are unaffected.
+const NO_LIGATURES = { liga: false } as const;
+
 let cachedBytes: Promise<FontBytes> | null = null;
 
 /** Reads the bundled font files once per process; later renders reuse the bytes. */
@@ -26,12 +29,15 @@ export const loadInvoiceFontBytes = (): Promise<FontBytes> => {
   return cachedBytes;
 };
 
-/** Embeds subsetted Noto Sans (rupee sign included). There is no italic file, so `oblique` reuses regular. */
+/**
+ * Embeds the bundled Noto Sans files whole. They are pre-subset offline (see assets/invoice-fonts/README.md), because
+ * fontkit's own run-time subsetting drops glyph outlines for this font. There is no italic file, so `oblique` reuses regular.
+ */
 export const embedUnicodeFonts = async (pdfDoc: PDFDocument): Promise<PdfFonts> => {
   pdfDoc.registerFontkit(fontkit);
   const bytes = await loadInvoiceFontBytes();
-  const regular = await pdfDoc.embedFont(bytes.regular, { subset: true });
-  const bold = await pdfDoc.embedFont(bytes.bold, { subset: true });
+  const regular = await pdfDoc.embedFont(bytes.regular, { subset: false, features: NO_LIGATURES });
+  const bold = await pdfDoc.embedFont(bytes.bold, { subset: false, features: NO_LIGATURES });
   return { regular, bold, oblique: regular };
 };
 
