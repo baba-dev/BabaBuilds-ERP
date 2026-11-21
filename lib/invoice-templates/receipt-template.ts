@@ -7,7 +7,7 @@ import { buildAccentTokens, resolveAccent } from "@/lib/invoice-templates/shared
 import { safeText } from "@/lib/invoice-templates/shared/fonts";
 import { formatMoney } from "@/lib/invoice-templates/shared/format";
 import { drawTotalsBlock, measureTotalsBlock } from "@/lib/invoice-templates/shared/totals";
-import { drawQr, qrMatrix } from "@/lib/invoice-templates/shared/qr";
+import { drawPreparedQr, prepareQr, type PreparedQr } from "@/lib/invoice-templates/shared/qr-panel";
 
 const MARGIN = 12;
 const BOTTOM_MARGIN = 30;
@@ -127,24 +127,40 @@ const receiptTemplate: InvoiceTemplate = {
     }
     y += 4;
 
-    // Small QR at the end, only while there is something to pay.
+    // Small QR at the end, only while there is something to pay: the first source that can be drawn
+    // (payment link, then UPI, then an uploaded image).
     const due = vm.payment.kind === "PARTIAL" ? vm.payment.balanceDue : vm.netPayable;
-    const source = vm.paymentQrs[0];
-    const matrix = vm.payment.kind !== "PAID" && due > 0 && source ? qrMatrix(source.url) : [];
-    if (source && matrix.length > 0) {
+    let prepared: PreparedQr | null = null;
+    if (vm.payment.kind !== "PAID" && due > 0) {
+      for (const source of vm.paymentQrs) {
+        prepared = await prepareQr(pdfDoc, source);
+        if (prepared) break;
+      }
+    }
+    if (prepared) {
+      const { source } = prepared;
       rule();
-      const linkLines = wrapTextByWidth(fonts.regular, source.url, contentWidth, 6).slice(0, 3);
-      ensure(QR_SIZE + 38 + linkLines.length * 7.5);
-      drawQr(page, paperHeight, matrix, centerX - QR_SIZE / 2, y, QR_SIZE, rgb(0, 0, 0));
+      const linkLines = source.kind === "PAYMENT_LINK" ? wrapTextByWidth(fonts.regular, source.url, contentWidth, 6).slice(0, 3) : [];
+      ensure(QR_SIZE + 44 + linkLines.length * 7.5);
+      drawPreparedQr(page, prepared, centerX - QR_SIZE / 2, y, QR_SIZE);
       y += QR_SIZE + 6;
-      drawText(page, paperHeight, fonts, safeText(fonts.bold, `Scan to pay ${money(due)}`), centerX, y + 8, 8.5, { isBold: true, align: "center", color: INK });
+      const caption = source.kind === "STATIC_IMAGE" ? `Enter ${money(due)}` : `Scan to pay ${money(due)}`;
+      drawText(page, paperHeight, fonts, safeText(fonts.bold, caption), centerX, y + 8, 8.5, { isBold: true, align: "center", color: INK });
       y += 13;
-      const linkTop = y;
-      linkLines.forEach((text) => {
-        drawText(page, paperHeight, fonts, text, centerX, y + 6, 6, { align: "center", color: MUTED });
-        y += 7.5;
-      });
-      addLinkAnnotation(pdfDoc, page, MARGIN, paperHeight - (linkTop + linkLines.length * 7.5), contentWidth, linkLines.length * 7.5 + 2, source.url);
+      if (source.kind === "PAYMENT_LINK") {
+        const linkTop = y;
+        linkLines.forEach((text) => {
+          drawText(page, paperHeight, fonts, text, centerX, y + 6, 6, { align: "center", color: MUTED });
+          y += 7.5;
+        });
+        addLinkAnnotation(pdfDoc, page, MARGIN, paperHeight - (linkTop + linkLines.length * 7.5), contentWidth, linkLines.length * 7.5 + 2, source.url);
+      } else {
+        const detail = source.kind === "UPI" ? `UPI · ${source.vpa}` : `Scan, then type the amount · ref ${vm.invoiceNumber}`;
+        for (const text of wrapTextByWidth(fonts.regular, safeText(fonts.regular, detail), contentWidth, 6.5)) {
+          drawText(page, paperHeight, fonts, text, centerX, y + 6.5, 6.5, { align: "center", color: MUTED });
+          y += 8;
+        }
+      }
       y += 6;
     }
 

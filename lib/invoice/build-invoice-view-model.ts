@@ -7,6 +7,7 @@ import { normalizeInvoiceWatermark, type InvoiceWatermarkKind } from "@/lib/invo
 import { resolveInvoiceTemplateId } from "@/lib/invoice-templates/registry";
 import { buildGstBreakdown, type GstBreakdown, type GstInput } from "@/lib/invoice/gst-breakdown";
 import type { StatementInput } from "@/lib/invoice/statement";
+import { buildUpiUri, normalizeUpiVpa } from "@/lib/invoice/upi";
 import { amountInWords } from "@/lib/invoice-templates/shared/words";
 import { normalizeHexColor } from "@/lib/invoice-templates/shared/accent-color";
 
@@ -113,6 +114,10 @@ export interface PDFParams {
   tds?: { section?: string | null; ratePercent: number; amount: number } | null;
   /** Client history for the Statement design (built by lib/invoice/statement.ts). */
   statement?: StatementInput | null;
+  /** The workspace's UPI ID, shown as a pay-now QR with the exact amount (INR, unpaid invoices only). */
+  upi?: { vpa: string; payeeName?: string | null } | null;
+  /** Uploaded static QR images (no amount); at most three UPI/uploaded QRs are shown together. */
+  staticQrs?: Array<{ label: string; imagePath: string }>;
 }
 
 type InvoiceAddress = {
@@ -142,7 +147,13 @@ export type InvoicePaymentView = {
   balanceDue: number;
 };
 
-export type InvoiceQrSource = { kind: "PAYMENT_LINK"; url: string; label: string };
+export type InvoiceQrSource =
+  | { kind: "PAYMENT_LINK"; url: string; label: string }
+  | { kind: "UPI"; uri: string; label: string; vpa: string }
+  | { kind: "STATIC_IMAGE"; imagePath: string; label: string };
+
+/** UPI and uploaded QRs shown together, after the payment link. */
+export const MAX_UPI_AND_STATIC_QRS = 3;
 
 type InvoiceServiceView = {
   title: string;
@@ -283,6 +294,8 @@ export const buildInvoiceViewModel = ({
   payment: paymentArg,
   tds: tdsArg,
   statement: statementArg,
+  upi: upiArg,
+  staticQrs: staticQrsArg,
 }: PDFParams): InvoiceViewModel => {
   const billingSnapshot = {
     planTier: profile.workspace?.planTier,
@@ -356,6 +369,18 @@ export const buildInvoiceViewModel = ({
     amountPaid,
     balanceDue: Math.max(0, roundMoney(netPayable - amountPaid)),
   };
+  // Pay-now QRs: the payment link first (it reconciles itself), then UPI with the exact amount, then uploaded images.
+  const amountToCollect = payment.kind === "PARTIAL" ? payment.balanceDue : netPayable;
+  const canCollectInIndia = baseCurrency === "INR" && payment.kind !== "PAID" && amountToCollect > 0;
+  const upiVpa = normalizeUpiVpa(upiArg?.vpa);
+  const upiUri = canCollectInIndia && upiVpa ? buildUpiUri({ vpa: upiVpa, payeeName: upiArg?.payeeName, amount: amountToCollect, note: invoiceNumber }) : null;
+  const paymentQrs: InvoiceQrSource[] = [];
+  if (normalizedPaymentLink) paymentQrs.push({ kind: "PAYMENT_LINK", url: normalizedPaymentLink, label: "Pay online" });
+  if (upiUri && upiVpa) paymentQrs.push({ kind: "UPI", uri: upiUri, label: "UPI", vpa: upiVpa });
+  if (canCollectInIndia) {
+    const room = MAX_UPI_AND_STATIC_QRS - (upiUri ? 1 : 0);
+    for (const q of (staticQrsArg ?? []).slice(0, room)) paymentQrs.push({ kind: "STATIC_IMAGE", imagePath: q.imagePath, label: q.label });
+  }
   const resolvedTemplateId = resolveInvoiceTemplateId({
     requestedTemplateId: templateId,
     profileTheme: profile.invoiceTheme,
@@ -392,7 +417,7 @@ export const buildInvoiceViewModel = ({
     netPayable,
     statement: statementArg ? { ...statementArg, amountDueNow: roundMoney(Math.max(0, statementArg.previousBalance) + (watermarkKind === "PAID" ? 0 : payment.balanceDue)) } : null,
     amountInWords: amountInWords(totals.total, baseCurrency),
-    paymentQrs: normalizedPaymentLink ? [{ kind: "PAYMENT_LINK", url: normalizedPaymentLink, label: "Pay online" }] : [],
+    paymentQrs,
     totals,
     formattedTotal,
     baseCurrency,

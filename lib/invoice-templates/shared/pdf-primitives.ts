@@ -1,5 +1,5 @@
 import fs from "fs";
-import type { Color, PDFArray, PDFDocument, PDFPage } from "pdf-lib";
+import type { Color, PDFArray, PDFDocument, PDFImage, PDFPage } from "pdf-lib";
 import { PDFName, PDFString } from "pdf-lib";
 import { buildPrivatePath } from "@/lib/uploads/private-storage";
 import type { PdfFonts } from "@/lib/invoice-templates/types";
@@ -132,6 +132,43 @@ export const addLinkAnnotation = (
   }
 };
 
+/** Reads a private upload (logo, signature, payment QR) by its URL and embeds it. Null when it is missing or unreadable; never throws. */
+export const loadPrivateImage = async (pdfDoc: PDFDocument, url: string | null | undefined): Promise<PDFImage | null> => {
+  if (!url) return null;
+
+  try {
+    let cleanUrl = url.split("?")[0];
+    if (cleanUrl.includes("://")) {
+      try {
+        cleanUrl = new URL(cleanUrl).pathname;
+      } catch {
+        // Fallback to original url splitting if parsing fails
+      }
+    }
+    const relativePath = cleanUrl.startsWith("/") ? cleanUrl.substring(1) : cleanUrl;
+    const parts = relativePath.split("/").filter(Boolean);
+    const kind = parts.shift();
+    if (!kind) return null;
+    const fullPath = buildPrivatePath(kind as never, parts);
+    if (!fs.existsSync(fullPath)) {
+      console.warn("[invoice-logo] File not found for image path", { url, relativePath, fullPath });
+      return null;
+    }
+
+    const imageData = fs.readFileSync(fullPath);
+    const lowerPath = cleanUrl.toLowerCase();
+    if (lowerPath.endsWith(".png")) return await pdfDoc.embedPng(imageData);
+    if (lowerPath.endsWith(".webp")) {
+      const sharp = (await import("sharp")).default;
+      return await pdfDoc.embedPng(await sharp(imageData).png().toBuffer());
+    }
+    return await pdfDoc.embedJpg(imageData);
+  } catch (error) {
+    console.warn("[invoice-logo] Image load failed", { url, error: error instanceof Error ? error.message : String(error) });
+    return null;
+  }
+};
+
 export const loadLogo = async (
   pdfDoc: PDFDocument,
   page: PDFPage,
@@ -143,59 +180,15 @@ export const loadLogo = async (
   maxHeight: number,
   align: "left" | "right" = "left",
 ) => {
-  if (!logoUrl) return false;
-
-  try {
-    let cleanUrl = logoUrl.split("?")[0];
-    if (cleanUrl.includes("://")) {
-      try {
-        cleanUrl = new URL(cleanUrl).pathname;
-      } catch {
-        // Fallback to original url splitting if parsing fails
-      }
-    }
-    const relativeLogoPath = cleanUrl.startsWith("/") ? cleanUrl.substring(1) : cleanUrl;
-    const parts = relativeLogoPath.split("/").filter(Boolean);
-    const kind = parts.shift();
-    if (!kind) return false;
-    const fullPath = buildPrivatePath(kind as never, parts);
-    const fileExists = fs.existsSync(fullPath);
-    if (!fileExists) {
-      console.warn("[invoice-logo] File not found for logo path", {
-        logoUrl,
-        relativeLogoPath,
-        fullPath,
-      });
-      return false;
-    }
-
-    const imageData = fs.readFileSync(fullPath);
-    let image;
-    const lowerPath = cleanUrl.toLowerCase();
-    if (lowerPath.endsWith(".png")) {
-      image = await pdfDoc.embedPng(imageData);
-    } else if (lowerPath.endsWith(".webp")) {
-      const sharp = (await import("sharp")).default;
-      const pngData = await sharp(imageData).png().toBuffer();
-      image = await pdfDoc.embedPng(pngData);
-    } else {
-      image = await pdfDoc.embedJpg(imageData);
-    }
-
-    const dims = image.scaleToFit(maxWidth, maxHeight);
-    const drawX = align === "right" ? x - dims.width : x;
-    page.drawImage(image, {
-      x: drawX,
-      y: pageHeight - yFromTop - dims.height,
-      width: dims.width,
-      height: dims.height,
-    });
-    return true;
-  } catch (error) {
-    console.warn("[invoice-logo] Logo load failed", {
-      logoUrl,
-      error: error instanceof Error ? error.message : String(error),
-    });
-    return false;
-  }
+  const image = await loadPrivateImage(pdfDoc, logoUrl);
+  if (!image) return false;
+  const dims = image.scaleToFit(maxWidth, maxHeight);
+  const drawX = align === "right" ? x - dims.width : x;
+  page.drawImage(image, {
+    x: drawX,
+    y: pageHeight - yFromTop - dims.height,
+    width: dims.width,
+    height: dims.height,
+  });
+  return true;
 };

@@ -11,7 +11,7 @@ import { drawTotalsBlock, measureTotalsBlock } from "@/lib/invoice-templates/sha
 import { drawPartyBlock } from "@/lib/invoice-templates/shared/party-blocks";
 import { drawPaymentStamp } from "@/lib/invoice-templates/shared/stamp";
 import { CONTINUATION_TOP, installPageChrome } from "@/lib/invoice-templates/shared/page-chrome";
-import { SCAN_PANEL_HEIGHT, drawScanToPay, scanPanelMode } from "@/lib/invoice-templates/shared/qr-panel";
+import { SCAN_PANEL_HEIGHT, drawMoreWaysToPay, drawScanToPay, scanPanelMode } from "@/lib/invoice-templates/shared/qr-panel";
 
 const MARGIN = 40;
 const PANEL_WIDTH = 235;
@@ -72,11 +72,13 @@ const payFastTemplate: InvoiceTemplate = {
     const dueLine = paid && vm.payment.paidOn ? `Paid ${date(vm.payment.paidOn)}` : paid ? "Thank you for your payment" : nothingDue ? "No payment required" : `Due ${date(vm.dueDate)}`;
     drawText(page, height, fonts, dueLine, MARGIN + 20, heroY + 128, 12, { isBold: true, color: tokens.onAccent });
     if (vm.billingMonth) drawText(page, height, fonts, safeText(fonts.regular, `For ${vm.billingMonth}`), MARGIN + 20, heroY + 144, 8.5, { color: tokens.onAccent });
-    drawScanToPay({ page, pdfDoc, fonts, tokens, vm, x: right - PANEL_WIDTH, yFromTop: heroY, width: PANEL_WIDTH });
+    await drawScanToPay({ page, pdfDoc, fonts, tokens, vm, x: right - PANEL_WIDTH, yFromTop: heroY, width: PANEL_WIDTH });
 
     // Parties.
     const colWidth = (contentWidth - 24) / 2;
     let y = heroY + SCAN_PANEL_HEIGHT + 22;
+    const moreBottom = await drawMoreWaysToPay({ page, pdfDoc, fonts, tokens, vm, x: MARGIN, yFromTop: y });
+    if (moreBottom > y) y = moreBottom + 14;
     const supplierBottom = drawPartyBlock({ page, fonts, tokens, title: "From", name: vm.profile.companyName, lines: [...vm.profileAddress.lines, [vm.profile.email, vm.profile.phone].filter(Boolean).join("  ·  ")].filter(Boolean), taxId: vm.profile.gstin ? { label: vm.safeTaxIdLabel, value: vm.profile.gstin } : undefined, x: MARGIN, yFromTop: y, width: colWidth });
     const clientBottom = drawPartyBlock({ page, fonts, tokens, title: "Billed to", name: vm.clientRaw.name, lines: vm.clientAddress.lines, taxId: vm.clientRaw.taxId ? { label: vm.safeTaxIdLabel, value: vm.clientRaw.taxId } : undefined, x: MARGIN + colWidth + 24, yFromTop: y, width: colWidth });
     y = Math.max(supplierBottom, clientBottom) + 18;

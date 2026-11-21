@@ -102,6 +102,11 @@ const gstLines: PDFLine[] = [
 
 const day = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
+/** Static QR images used by the payment-QR fixtures. The files are created by the tests that render them. */
+export const FIXTURE_QR_DIR_WORKSPACE = "fixture-ws";
+const fixtureQr = (name: string) => ({ label: name, imagePath: `/payment-qr/${FIXTURE_QR_DIR_WORKSPACE}/${name.toLowerCase()}.png` });
+const fixtureUpi = { vpa: "shop@okhdfc", payeeName: "Baba & Sons" };
+
 const statementHistory: StatementInput = {
   previousBalance: 3500,
   openItems: [
@@ -250,4 +255,13 @@ export const SAMPLE_INVOICES: Record<string, PDFParams> = {
   statementFirst: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, statement: { previousBalance: 0, openItems: [], hiddenOpenItems: 0, payments: [], credits: [], sinceDate: null } }),
   statementManyOpen: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, statement: statementManyOpen }),
   statementPaid: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, status: "PAID", payment: { paidOn: day("2026-04-30") }, statement: statementHistory }),
+  upiOnly: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, upi: fixtureUpi }),
+  linkUpiStatic: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, paymentLink: "https://rzp.io/i/lus123", upi: fixtureUpi, staticQrs: [fixtureQr("Paytm"), fixtureQr("GPay")] }),
+  staticOnly: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, staticQrs: [fixtureQr("Paytm")] }),
+  manyStatic: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, upi: fixtureUpi, staticQrs: [fixtureQr("Paytm"), fixtureQr("GPay"), fixtureQr("PhonePe"), fixtureQr("Bank")] }),
+  tdsUpi: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, tds: { section: "194J", ratePercent: 10, amount: 1600 }, upi: fixtureUpi }),
+  paidUpi: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, status: "PAID", payment: { paidOn: day("2026-04-30") }, upi: fixtureUpi, staticQrs: [fixtureQr("Paytm")] }),
+  usdUpi: makeParams({ client: { ...baseClient, country: "United States", isExport: true, taxId: null }, baseCurrency: "USD", userLocale: "en-US", upi: fixtureUpi, staticQrs: [fixtureQr("Paytm")] }, 2, true),
+  invalidUpi: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, upi: { vpa: "not a vpa" } }),
+  missingStaticFile: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, staticQrs: [{ label: "Ghost", imagePath: "/payment-qr/fixture-ws/does-not-exist.png" }] }),
 };
