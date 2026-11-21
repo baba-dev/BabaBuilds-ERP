@@ -17,6 +17,7 @@ import { snapshotGstFields } from "@/lib/gst/source";
 import { getFinancialYear, getNextInvoiceNumber } from "@/lib/document-numbering";
 import { supplierChargesGst } from "@/lib/msme/threshold";
 import { getClientRecipients } from "@/lib/clients/service";
+import { toPdfGst, toPdfLines } from "@/lib/invoice/pdf-params";
 
 type DraftPaymentLink = {
   url: string | null;
@@ -89,6 +90,8 @@ export async function finalizeInvoiceFromDraft(params: {
           taxId: client.taxId,
           isExport: client.isExport,
           logoUrl: client.logoUrl,
+          invoiceAccentColor: client.invoiceAccentColor,
+          gstStateCode: client.gstStateCode,
         },
         invoiceNumber,
         date: invoiceDate,
@@ -100,6 +103,9 @@ export async function finalizeInvoiceFromDraft(params: {
           nicDetails: "",
           amount: s.amount,
         })),
+        lines: toPdfLines(sanitizedServices, sanitizedSacCode || profile.defaultSacCode || null),
+        gst: toPdfGst(client, draftInput.gst),
+        accentColor,
         totals,
         formattedTotal,
         baseCurrency,

@@ -104,6 +104,7 @@ function buildRequestHash(payload: unknown): string {
 
 import { GenerateInvoiceSchema } from '@/lib/invoice/generate-schema';
 import { snapshotGstFields } from '@/lib/gst/source';
+import { toPdfGst, toPdfLines } from '@/lib/invoice/pdf-params';
 import { supplierChargesGst } from "@/lib/msme/threshold";
 import { getClientRecipients } from '@/lib/clients/service';
 
@@ -561,6 +562,8 @@ export async function POST(request: Request) {
             taxId: client.taxId,
             isExport: client.isExport,
             logoUrl: client.logoUrl,
+            invoiceAccentColor: client.invoiceAccentColor,
+            gstStateCode: client.gstStateCode,
           },
           invoiceNumber,
           date: invoiceDate,
@@ -573,6 +576,9 @@ export async function POST(request: Request) {
             amount: s.amount,
             sacCode: s.sacCode || sacCode || profile.defaultSacCode || null,
           })),
+          lines: toPdfLines(sanitizedServices, (typeof sacCode === 'string' ? sacCode : null) || profile.defaultSacCode || null),
+          gst: toPdfGst(client, body.gst),
+          accentColor: body.accentColor ?? null,
           totals,
           formattedTotal,
           baseCurrency,
