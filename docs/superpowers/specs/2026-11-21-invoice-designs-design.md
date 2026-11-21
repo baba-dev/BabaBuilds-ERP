@@ -19,20 +19,21 @@ BabaBuilds ERP issues invoices as PDFs drawn with `pdf-lib` through a template r
 | DESIGN_7 | Minimal Pro | Wants a clean one-pager, whitespace, a single accent | A4 |
 | DESIGN_8 | Receipt | Counter sales: narrow format, small UPI QR at the end | 80mm thermal |
 
-2. Brand accent colour per workspace.
+2. Brand accent colour: workspace default, with optional per-client and per-invoice overrides.
 3. TDS / withholding shown on the invoice, with net payable.
-4. Razorpay payment QR and UPI QRs on invoices.
+4. Razorpay payment-link QR, Razorpay dynamic (fixed-amount) UPI QR, and UPI / static QRs on invoices.
 5. Optional UPI ID and static QR collection in settings and in onboarding.
 6. PAID / PARTIAL stamps supported by every new design.
 7. A page showing the user's latest invoice in all 8 designs as tiles, with a full-screen view and a "use this design" action.
+8. Redis (the existing, flag-gated integration) used wherever it measurably helps, with everything still working when Redis is off.
+9. All new UI is top-grade, aesthetic and mobile-first.
 
 ## Non-goals and anti-goals
 
 - No headless browser, no HTML-to-PDF, no server-side PDF rasterising (the VPS is ARM and small). Rendering stays `pdf-lib`; thumbnails are drawn client-side.
 - No change to the existing Classic and Modern look or the `invoiceTheme` values `DESIGN_1` / `DESIGN_2`. Unknown theme values keep falling back to `DESIGN_1`.
-- No per-client or per-invoice accent colour.
-- No Razorpay dynamic QR API (fixed-amount, expiring QR with its own webhook). Deferred.
-- Anti-goal: a QR on the invoice for an amount that is not what the client should pay (see TDS), or a pay-now QR on an already paid invoice.
+- No Redis dependency for correctness: every cache, lock and limit degrades to in-process or no-op behaviour when Redis is disabled or unhealthy.
+- Anti-goal: a QR on the invoice for an amount that is not what the client should pay (see TDS), a pay-now QR on an already paid invoice, or a dead QR on an invoice that is paid late (see dynamic QR).
 - Anti-goal: a pale accent that makes a header or table unreadable or unprintable.
 - Anti-goal: the designs differing only by colour. Each must have its own layout.
 
@@ -43,6 +44,7 @@ BabaBuilds ERP issues invoices as PDFs drawn with `pdf-lib` through a template r
 - Every `schema.prisma` change needs a migration (`prisma/migrations/README.md`; `npm run check:migrations`). Applied migrations are never rewritten.
 - Run `npm run ci:fast` before pushing. Add no new lint warnings (no `any`, no sync `setState` in effects, no components defined inside components).
 - Android conventions in AGENTS.md apply to new UI (`min-h-app`, safe areas, touch visibility). PDFs cannot be shown in iframes reliably in Android WebViews and TWAs.
+- Redis is the existing `lib/redis` integration: opt-in via `ERP_REDIS_*` flags, fail-fast (1.5s timeouts), namespaced keys, three purposes (cache, queue, dataCache). New code uses it only through that layer, never opens its own connections, and treats `null` / errors as "not available".
 - Paid entitlements fail closed; payment-link and QR features keep the existing guards (INR only, Pro only).
 - AGENTS.md notes that Next.js in this repo has breaking changes: read the relevant guide in `node_modules/next/dist/docs/` before writing routes or pages.
 
@@ -71,7 +73,11 @@ Add, without breaking existing fields: `lines[]` (description, quantity, unit pr
 
 ### Brand accent colour
 
-One new nullable column on the business profile: `invoiceAccentColor` (hex). Set in Settings, Invoicing, next to the design picker. `tokens.ts` derives tints and a readable text colour from it by luminance. The picker rejects colours that fail a minimum contrast against white. No colour set: each design uses its own default accent. Every design must stay legible in black and white.
+- Resolution order, first match wins: **invoice override, client override, workspace default, the design's own default**.
+- Storage: nullable `invoiceAccentColor` on the business profile (workspace default), on `Client`, and on `Invoice`. The invoice override is stored on the invoice so a regenerated or re-sent PDF always matches the original.
+- UI: workspace default in Settings, Invoicing, beside the design picker. Client override on the client's edit form ("Invoice colour for this client", with a clear-to-inherit action). Invoice override in the composer, a compact swatch control that shows which level the current colour is inherited from.
+- `tokens.ts` derives tints and a readable text colour from the hex by luminance. The picker rejects colours that fail a minimum contrast against white and suggests the nearest accessible shade. Every design stays legible in black and white.
+- The comparison page's accent control sets the workspace default only, and says so.
 
 ### TDS / withholding
 
@@ -86,12 +92,23 @@ One new nullable column on the business profile: `invoiceAccentColor` (hex). Set
 
 Rendered at PDF time from the invoice's existing payment link (`vm.paymentLink`, the Razorpay short URL). It is a pure function of a URL string. No link available (not INR, not Pro, gateway not configured): the panel falls back to bank details; never a broken or empty QR. Shown in the Pay-Fast "Scan to pay" panel. A paid invoice never shows a pay-now QR (see stamps).
 
+### Razorpay dynamic QR (fixed-amount UPI QR)
+
+- New `lib/razorpay-qr.ts`, mirroring the safety contract of `lib/razorpay-links.ts`: never throws, 8s timeout, INR and Pro only, uses the tenant's own keys, returns `null` on any failure, and the invoice still generates without it.
+- Uses the Razorpay SDK's `qrCode.create`: type `upi_qr`, fixed amount = net payable (in paise), single use, notes carrying the invoice id, and the GST `tax_invoice` block (invoice number, date, customer name, business GSTIN, GST amount, supply type) so the payment stays on the GST-compliant UPI flow. The builder verifies the exact fields against the installed SDK types and current Razorpay docs.
+- The PDF draws the QR itself, as vector modules from the UPI string the API returns (`image_content`), so no image is fetched at render time. The QR id and its expiry are stored on the invoice.
+- **Expiry problem:** a dynamic QR closes at its `close_by`, and invoices are very often paid late. So `close_by` is set as far out as Razorpay allows (builder confirms the limit), the PDF prints "valid until DD MMM", and the payment-link QR / link stays on the invoice as the fallback that never expires with the QR. The public invoice page (`/invoices/public/[token]`) shows a live QR and regenerates an expired one on demand.
+- **Partial payments:** the QR amount is the balance due when it is created. Recording a partial payment closes the old QR; a new one is created lazily the next time one is needed.
+- **Webhook:** the existing `/api/webhooks/razorpay` handler gains QR events (the builder confirms which events fire for QR payments and how to link them to the invoice via notes). It must verify the signature as it does today, be idempotent, and go through the same payment-recording logic as other payments. This is money-touching code and gets its own stage, tests and review.
+- Failure modes tested: QR creation fails, QR closed or expired, duplicate webhook delivery, payment on a QR for a voided invoice.
+- Entitlement and setup: needs QR Codes enabled on the tenant's Razorpay account; when it is not, creation fails quietly and the panel uses the payment-link QR and UPI QRs.
+
 ### UPI and static QRs
 
 - Fields: `upiVpa` (and optional payee name) on the business profile; up to 3 uploaded static QR images in a small new table (`PaymentQrImage`: workspace, label, private file path, sort order). Images are stored privately like signatures (workspace-namespaced, served by an authenticated route) and normalised with `sharp` (type and size checks, re-encoded PNG).
 - A UPI ID generates a standard `upi://pay` QR with payee, amount (net payable), and the invoice number as the note. This is recommended; works in every UPI app and the amount is included.
 - Uploaded static QRs (Paytm, GPay and similar) do not carry an amount: the design prints "Enter amount X, reference INV-123" beneath them, and they cannot be reconciled automatically.
-- Pay-Fast shows the Razorpay QR plus up to 3 UPI/static QRs via one shared `QrPanel`. Receipt (DESIGN_8) shows a single small QR at the end of the receipt (UPI QR if a UPI ID is set, otherwise the first uploaded QR; none if neither).
+- Pay-Fast shows, in priority order, the Razorpay dynamic QR (or the payment-link QR when there is none) plus up to 3 UPI/static QRs, via one shared `QrPanel`. Receipt (DESIGN_8) shows a single small QR at the end of the receipt (UPI QR if a UPI ID is set, otherwise the first uploaded QR; none if neither).
 
 ### Where these are collected (optional everywhere)
 
@@ -116,26 +133,47 @@ Rendered at PDF time from the invoice's existing payment link (`vm.paymentLink`,
 
 - Route `/settings/invoice-designs`, linked from the Invoicing section ("Compare all designs").
 - Data: the user's most recent non-void invoice. With no invoices, a labelled sample fixture.
-- A preview endpoint renders any design for any of the workspace's invoices. No side effects: it never creates a payment link, never writes files, and reuses the stored link. Workspace-scoped and authenticated. Results are cached (key: invoice id, design, accent, TDS flag, updated-at) and concurrent renders are capped, so eight tiles do not stampede the VPS.
+- A preview endpoint renders any design for any of the workspace's invoices. No side effects: it never creates a payment link, never writes files, and reuses the stored link. Workspace-scoped and authenticated. Results are cached through Redis (see the Redis section) and concurrent renders are deduplicated and capped, so eight tiles do not stampede the VPS.
 - Grid of 8 tiles, each showing page 1 drawn by `pdfjs-dist` onto a canvas, lazily as the tile scrolls into view. Click a tile for a large view with zoom, a "Use this design" button (writes `invoiceTheme` through the existing settings API), and "Download sample PDF".
 - Accent picker and TDS on/off toggle on the page re-render the tiles (debounced).
 - Follows the Android/mobile conventions in AGENTS.md.
 
+### Redis (existing integration, used where it earns its keep)
+
+All of it is optional, namespaced under the existing `erp:*` prefix, and falls back safely when Redis is off.
+
+- **Preview render cache:** rendered preview PDF bytes in the `dataCache` purpose, key = workspace, invoice id and updated-at, design, accent, TDS flag, a template version. Short TTL (minutes), small entries (tens of KB). Workspace data-cache invalidation (`invalidateWorkspaceDataCache`) is called when the invoice, client, profile, accent or QR settings change. This needs a new data-cache kind alongside `dashboard` and `report`. With Redis off, a small in-process LRU is used.
+- **Single-flight render lock:** `SET NX` with a short expiry so eight tiles, several tabs and multiple PM2 workers render a given preview once; the others wait for the cached result.
+- **Rate limiting:** the preview endpoint and the QR upload endpoint go through the existing `enforceRouteRateLimit` (already Redis-backed with a fallback).
+- **Idempotent QR creation:** a short lock keyed by invoice, so a double click or retry does not create two Razorpay QR codes (alongside the existing idempotency table).
+- **Jobs (only if `ERP_REDIS_JOBS_ENABLED`):** a BullMQ job to close expired or superseded Razorpay QR codes. Without the jobs flag the lazy path described above is used.
+- **Not Redis:** the font bytes (local file, cached in process memory), and issued invoice PDFs (already stored by `lib/invoice/pdf-storage.ts`).
+- ARM VPS budget: previews are small, TTLs short, tiles render lazily, and the render cap bounds concurrent CPU work.
+
+### UI quality bar (applies to every new screen)
+
+- Surfaces: Settings Invoicing (picker + accent), Settings Banking (UPI & QR card), setup wizard UPI & QR block, client form colour field, composer accent and TDS controls, and the comparison page.
+- Design: built with the `frontend-design` skill, using the repo's tokens and typography roles (`pageTitle`, `sectionHeader`, `cardTitle`, `bodyCopy`, `cardBody`) and the PR template's style gates (visible focus rings, contrast, distinct hover/active, disabled / error / warning / success / loading / empty states, `/admin/style-gallery` parity if component visuals change). Light and dark themes, reduced-motion respected, all copy translated (en-IN, hi, es, ar).
+- Mobile first: tiles reflow from one to several columns; tiles use the true paper aspect (A4 portrait, tall narrow for the receipt); skeleton shimmer while rendering; full-screen view supports pinch-zoom and swipe between designs; controls move into a bottom sheet on phones with a sticky action bar above the bottom nav (`bottom-above-nav`, `pb-safe`, `pointer-coarse:` sizing, no `min-h-screen` inside the shell); the full-screen route is added to `FOCUS_ROUTE_PATTERNS` if it hides the tab bar.
+- Delight without noise: a live preview that updates as the accent changes, an inheritance hint on the accent control ("from client"), friendly empty states (no invoices yet: sample shown and labelled), QR upload with an in-place preview and crop-safe validation.
+- The PDFs are held to the same bar: each rendered design is converted to images (`pdftoppm` is available) and reviewed by eye at A4 and thermal sizes before a stage is called done. UI is verified in a browser at phone width.
+
 ### Migration
 
-One migration: `invoiceAccentColor`, `upiVpa` (+ optional payee name), `Client.tdsSection`/`tdsRatePercent`, `PaymentQrImage`, plus any expected-TDS fields the builder decides on.
+One migration per stage as needed: `invoiceAccentColor` on the business profile, `Client` and `Invoice`; `upiVpa` (+ optional payee name); `Client.tdsSection`/`tdsRatePercent`; `PaymentQrImage`; any expected-TDS fields the builder decides on; and the Razorpay dynamic QR fields on the invoice (QR id, UPI string, expiry, status).
 
 ## Staging
 
-1. Shared kit, fonts, view-model extension, stamp, migration, settings plumbing. Tax Invoice (DESIGN_3), Pay-Fast (DESIGN_4), Itemised (DESIGN_5).
-2. Statement (DESIGN_6), Minimal Pro (DESIGN_7), Receipt (DESIGN_8).
-3. Settings UPI & QR card, onboarding block, comparison page, picker driven by registry.
+1. Shared kit, fonts, view-model extension, stamp, accent resolution (workspace, client, invoice), migration, settings plumbing. Tax Invoice (DESIGN_3), Pay-Fast (DESIGN_4), Itemised (DESIGN_5).
+2. Statement (DESIGN_6), Minimal Pro (DESIGN_7), Receipt (DESIGN_8). TDS on the invoice and in the composer.
+3. UPI ID / static QR settings and onboarding, comparison page with the Redis preview cache and render lock, picker driven by the registry.
+4. Razorpay dynamic QR, its webhook handling, expiry and partial-payment behaviour. Separate stage because it touches payments.
 
-Each stage ships with tests and sample PDFs checked by eye.
+Each stage ships with tests, sample PDFs checked by eye, and (for UI) a phone-width browser check.
 
 ## Testing
 
-Render each design against the fixtures: many-page invoice, export invoice, TDS invoice, no-payment-link invoice, PAID, PARTIAL, long descriptions and long names, no logo, no signature. Assert key text appears and page counts are sane. Unit tests for accent contrast, TDS base calculation, UPI URI building, amount in words, QR matrix drawing. Route tests for the preview endpoint (auth, workspace scoping). Existing Classic and Modern outputs must not change. Mocks of shared modules spread `importOriginal()`.
+Render each design against the fixtures: many-page invoice, export invoice, TDS invoice, no-payment-link invoice, PAID, PARTIAL, long descriptions and long names, no logo, no signature. Assert key text appears and page counts are sane. Unit tests for accent contrast, TDS base calculation, UPI URI building, amount in words, QR matrix drawing. Route tests for the preview endpoint (auth, workspace scoping, rate limit). Accent resolution order. Redis on and off paths for the preview cache and render lock (mock the Redis layer; behaviour identical when disabled). Dynamic QR: creation failure, expiry, duplicate webhook, voided invoice, partial payment, signature verification. Mobile layout checks under `tests/mobile` conventions, and Playwright screenshots at phone width. Existing Classic and Modern outputs must not change. Mocks of shared modules spread `importOriginal()`.
 
 ## Left to the builder
 
