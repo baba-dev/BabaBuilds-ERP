@@ -7171,7 +7171,11 @@
       "duplicateTitle": "{name} looks like the same client.",
       "createAnyway": "Create anyway",
       "accent": "Invoice colour for this client",
-      "accentHint": "Optional. Overrides your workspace colour on this client's invoices."
+      "accentHint": "Optional. Overrides your workspace colour on this client's invoices.",
+      "tds": "TDS this client deducts",
+      "tdsHint": "Optional. Prefills new invoices for this client.",
+      "tdsSection": "Section",
+      "tdsRate": "Rate (%)"
     },
     "errors": {
       "REQUIRED": "This field is required.",
@@ -10609,5 +10613,18 @@
     },
     "preview": "Colour preview",
     "previewTotal": "Total"
+  },
+  "InvoiceTds": {
+    "title": "Client deducts TDS",
+    "hint": "Show TDS on the invoice and collect only the net amount.",
+    "exportOff": "TDS does not apply to export invoices.",
+    "section": "Section",
+    "rate": "Rate (%)",
+    "invalidSection": "Use a code like 194J.",
+    "invalidRate": "Enter a rate between 0 and 100.",
+    "fromClient": "Prefilled from this client.",
+    "tdsLine": "Less: TDS @ {rate}%",
+    "net": "Net payable",
+    "estimate": "An estimate on the amount before GST. The invoice shows the exact figure."
   }
 }

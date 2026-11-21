@@ -7200,7 +7200,11 @@
       "duplicateTitle": "{name} parece ser el mismo cliente.",
       "createAnyway": "Crear de todos modos",
       "accent": "Color de factura para este cliente",
-      "accentHint": "Opcional. Sustituye el color de tu espacio de trabajo en las facturas de este cliente."
+      "accentHint": "Opcional. Sustituye el color de tu espacio de trabajo en las facturas de este cliente.",
+      "tds": "TDS que retiene este cliente",
+      "tdsHint": "Opcional. Rellena las facturas nuevas de este cliente.",
+      "tdsSection": "Sección",
+      "tdsRate": "Tasa (%)"
     },
     "errors": {
       "REQUIRED": "Este campo es obligatorio.",
@@ -10638,5 +10642,18 @@
     },
     "preview": "Vista previa del color",
     "previewTotal": "Total"
+  },
+  "InvoiceTds": {
+    "title": "El cliente retiene TDS",
+    "hint": "Muestra el TDS en la factura y cobra solo el importe neto.",
+    "exportOff": "El TDS no se aplica a las facturas de exportación.",
+    "section": "Sección",
+    "rate": "Tasa (%)",
+    "invalidSection": "Usa un código como 194J.",
+    "invalidRate": "Introduce una tasa entre 0 y 100.",
+    "fromClient": "Rellenado desde este cliente.",
+    "tdsLine": "Menos: TDS @ {rate}%",
+    "net": "Neto a pagar",
+    "estimate": "Una estimación sobre el importe antes de GST. La factura muestra la cifra exacta."
   }
 }
