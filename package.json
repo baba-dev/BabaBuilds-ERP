@@ -113,6 +113,7 @@
     "react-markdown": "^10.1.0",
     "react-plaid-link": "^5.0.0",
     "recharts": "^3.10.1",
+    "regenerator-runtime": "0.14.1",
     "remark-gfm": "^4.0.1",
     "server-only": "^0.0.1",
     "serwist": "^9.5.7",

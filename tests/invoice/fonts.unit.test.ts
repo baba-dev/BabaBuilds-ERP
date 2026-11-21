@@ -22,6 +22,15 @@ describe("unicode invoice fonts", () => {
     expect(safeText(fonts.regular, "Plain ₹ 100")).toBe("Plain ₹ 100");
   });
 
+  it("measures and draws Devanagari text (Indic shaping must not crash)", async () => {
+    const doc = await PDFDocument.create();
+    const fonts = await embedUnicodeFonts(doc);
+    expect(fonts.regular.widthOfTextAtSize("शर्मा ट्रेडर्स", 12)).toBeGreaterThan(0);
+    const page = doc.addPage([300, 200]);
+    page.drawText("शर्मा ट्रेडर्स", { x: 20, y: 100, size: 14, font: fonts.regular });
+    expect((await PDFDocument.load(await doc.save())).getPageCount()).toBe(1);
+  });
+
   it("draws the rupee sign and produces a reopenable PDF", async () => {
     const doc = await PDFDocument.create();
     const fonts = await embedUnicodeFonts(doc);

@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+// fontkit's bundled Indic (Devanagari) shaper needs a global regeneratorRuntime; without it Hindi text throws.
+import "regenerator-runtime/runtime";
 import fontkit from "@pdf-lib/fontkit";
 import type { PDFDocument, PDFFont } from "pdf-lib";
 import type { PdfFonts } from "@/lib/invoice-templates/types";
