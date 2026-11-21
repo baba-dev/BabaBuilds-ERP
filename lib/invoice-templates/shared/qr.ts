@@ -29,9 +29,9 @@ export const drawQr = (
 ): void => {
   const n = matrix.length;
   if (n === 0) return;
-  const module = size / n;
+  const cell = size / n;
   // A hairline overlap hides seams that some viewers show between adjacent rectangles.
-  const bleed = module * 0.04;
+  const bleed = cell * 0.04;
   for (let r = 0; r < n; r += 1) {
     let c = 0;
     while (c < n) {
@@ -42,10 +42,10 @@ export const drawQr = (
       const start = c;
       while (c < n && matrix[r][c]) c += 1;
       page.drawRectangle({
-        x: x + start * module,
-        y: pageHeight - yFromTop - (r + 1) * module - bleed,
-        width: (c - start) * module,
-        height: module + bleed,
+        x: x + start * cell,
+        y: pageHeight - yFromTop - (r + 1) * cell - bleed,
+        width: (c - start) * cell,
+        height: cell + bleed,
         color,
         borderWidth: 0,
       });
