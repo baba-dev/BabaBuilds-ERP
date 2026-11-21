@@ -114,3 +114,11 @@ describe("Play Store requirements", () => {
     for (const s of twa.shortcuts) expect(s.chosenIconUrl, s.name).toMatch(/^https:\/\//);
   });
 });
+
+describe("responsive dialog on phones", () => {
+  it("lets a long form scroll inside the bottom sheet, so every field and the footer stay reachable", () => {
+    const src = read("components/ResponsiveDialog.tsx");
+    const mobile = src.slice(src.indexOf("<Drawer open"));
+    expect(mobile).toMatch(/className="[^"]*\bmin-h-0\b[^"]*\bflex-1\b[^"]*\boverflow-y-auto\b[^"]*"/);
+  });
+});

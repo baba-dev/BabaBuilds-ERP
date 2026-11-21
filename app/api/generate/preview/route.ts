@@ -97,7 +97,7 @@ export async function POST(request: Request) {
     }
 
     const paymentLinkResult = await generateTenantPaymentLink({
-      amount: toDecimal(context.totals.total).toNumber(),
+      amount: toDecimal(context.netPayable).toNumber(),
       currency: context.baseCurrency,
       description: `Invoice preview for ${context.client.name}`,
       invoiceDueDate: context.dueDate,

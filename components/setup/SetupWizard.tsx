@@ -58,6 +58,7 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
     proprietorName: "",
     email: "",
     address: "",
+    upiVpa: "",
     smtpHost: "",
     smtpPort: 465,
     smtpUser: "",
@@ -515,6 +516,19 @@ export default function SetupWizard({ isModal = false, onComplete }: SetupWizard
                     });
                   }} placeholder={t('ph_address')} className="h-12 dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
                   {fieldErrors.address && <p className="text-xs text-red-500">{fieldErrors.address}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="setup-upi" className="dark:text-zinc-300">{t('upi_id')}</Label>
+                  <Input id="setup-upi" value={form.upiVpa} inputMode="email" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={80} onChange={e => {
+                    setForm({...form, upiVpa: e.target.value});
+                    setFieldErrors(prev => {
+                      const next = { ...prev };
+                      delete next.upiVpa;
+                      return next;
+                    });
+                  }} placeholder="yourname@bank" className="h-12 font-mono dark:bg-zinc-950 dark:border-zinc-800 dark:text-zinc-100" />
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">{t('upi_hint')}</p>
+                  {fieldErrors.upiVpa && <p className="text-xs text-red-500">{fieldErrors.upiVpa}</p>}
                 </div>
               </CardContent>
             </div>

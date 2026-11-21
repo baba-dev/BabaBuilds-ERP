@@ -17,6 +17,9 @@ import { snapshotGstFields } from "@/lib/gst/source";
 import { getFinancialYear, getNextInvoiceNumber } from "@/lib/document-numbering";
 import { supplierChargesGst } from "@/lib/msme/threshold";
 import { getClientRecipients } from "@/lib/clients/service";
+import { designUsesPaymentQrs, toPdfGst, toPdfLines, toPdfPaymentQrs } from "@/lib/invoice/pdf-params";
+import { loadPaymentQrImages } from "@/lib/invoice/payment-qr-loader";
+import { loadClientStatement } from "@/lib/invoice/statement-loader";
 
 type DraftPaymentLink = {
   url: string | null;
@@ -49,6 +52,8 @@ export async function finalizeInvoiceFromDraft(params: {
     userLocale,
     baseCurrency,
     exchangeRate,
+    accentColor,
+    tds,
   } = context;
 
   const formattedTotal = totals.total.toLocaleString(userLocale, {
@@ -57,6 +62,11 @@ export async function finalizeInvoiceFromDraft(params: {
   });
 
   const fy = getFinancialYear(invoiceDate);
+
+  // Only the Statement design shows client history, so only it pays for the query.
+  const statement = profile.invoiceTheme === "DESIGN_6" ? await loadClientStatement(workspaceId, client.id, invoiceDate, baseCurrency) : undefined;
+
+  const paymentQrs = designUsesPaymentQrs(profile.invoiceTheme) ? toPdfPaymentQrs(profile, await loadPaymentQrImages(workspaceId)) : {};
 
   let generatedPdfPath = "";
   let newInvoice: Awaited<ReturnType<typeof prisma.invoice.create>> | null = null;
@@ -88,6 +98,8 @@ export async function finalizeInvoiceFromDraft(params: {
           taxId: client.taxId,
           isExport: client.isExport,
           logoUrl: client.logoUrl,
+          invoiceAccentColor: client.invoiceAccentColor,
+          gstStateCode: client.gstStateCode,
         },
         invoiceNumber,
         date: invoiceDate,
@@ -99,6 +111,12 @@ export async function finalizeInvoiceFromDraft(params: {
           nicDetails: "",
           amount: s.amount,
         })),
+        lines: toPdfLines(sanitizedServices, sanitizedSacCode || profile.defaultSacCode || null),
+        gst: toPdfGst(client, draftInput.gst),
+        accentColor,
+        tds,
+        statement,
+        ...paymentQrs,
         totals,
         formattedTotal,
         baseCurrency,
@@ -119,6 +137,10 @@ export async function finalizeInvoiceFromDraft(params: {
             billingMonth: billingMonthValue,
             invoiceDate,
             dueDate,
+            accentColor,
+            tdsSection: tds?.section ?? null,
+            tdsRatePercent: tds?.ratePercent ?? null,
+            tdsAmount: tds ? toDecimal(tds.amount).toDecimalPlaces(2) : null,
             clientName: client.name,
             clientId: client.id,
             sacCode: sanitizedSacCode,

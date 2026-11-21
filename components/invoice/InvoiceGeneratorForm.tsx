@@ -22,6 +22,8 @@ import { SuccessPanel } from "@/components/invoice/composer/SuccessPanel";
 
 // MISSION CRITICAL: Globalization & Caching Imports
 import { useFormat } from "@/hooks/use-format";
+import { AccentColorField } from "@/components/invoice/AccentColorField";
+import { TdsField, type TdsState } from "@/components/invoice/TdsField";
 import { formatCurrency, getCurrencySymbol } from "@/lib/currency";
 import { InvoiceCurrencyField } from "@/components/invoice/InvoiceCurrencyField";
 import { useTranslations } from "next-intl";
@@ -45,6 +47,7 @@ type InvoiceCompanyConfirmation = {
   bankName?: string | null;
   accountName?: string | null;
   defaultGateway?: string | null;
+  invoiceAccentColor?: string | null;
   razorpayKeyId?: string | null;
   stripePublishableKey?: string | null;
   primaryBankAccount?: {
@@ -65,7 +68,7 @@ const unwrapList = <T,>(result: ApiList<T>): T[] => {
   return Array.isArray(result?.data) ? result.data : [];
 };
 
-type ClientRow = { id: string | number; name: string; country: string; email?: string | null };
+type ClientRow = { id: string | number; name: string; country: string; email?: string | null; invoiceAccentColor?: string | null; isExport?: boolean; tdsSection?: string | null; tdsRatePercent?: number | null };
 type SacValue = string | number | { code?: string; value?: string; label?: string } | null;
 type BillingMonthRow = { billingMonth?: string | null; clientId?: string | null };
 type ServiceRow = { id: string; name: string; description?: string | null; sacCode?: SacValue; defaultPrice?: number | string | null };
@@ -98,6 +101,7 @@ interface InvoiceGeneratorFormProps {
 export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorFormProps) {
   const t = useTranslations("Invoice");
   const tc = useTranslations("InvoiceComposer");
+  const tdsT = useTranslations("InvoiceTds");
   const reduceMotion = useReducedMotion();
   const searchParams = useSearchParams();
   const presetServiceId = searchParams.get("service");
@@ -148,6 +152,9 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
   const currencySymbol = getCurrencySymbol(activeCurrency, locale);
   const isForeignCurrency = activeCurrency !== currency;
   const gstPayload = gstOverrides.placeOfSupply || gstOverrides.supplyOverride || gstOverrides.reverseCharge ? { gst: gstOverrides } : {};
+  const [invoiceAccent, setInvoiceAccent] = useState<string | null>(null);
+  const [tdsOverride, setTdsOverride] = useState<(TdsState & { clientId: string }) | null>(null);
+  const accentPayload = invoiceAccent ? { accentColor: invoiceAccent } : {};
   const currencyPayload = isForeignCurrency ? { currency: activeCurrency, exchangeRate: Number(exchangeRate) } : {};
 
   // App State
@@ -287,6 +294,14 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
 
   // --- COMPONENT LOGIC ---
   const selectedClient = useMemo(() => clients.find((c) => c.id.toString() === selectedClientId), [clients, selectedClientId]);
+  // TDS follows the selected client's default until the user changes it for this invoice; switching client resets it.
+  const clientTds: TdsState = { on: Boolean(selectedClient?.tdsRatePercent), section: selectedClient?.tdsSection ?? "", rate: selectedClient?.tdsRatePercent ? String(selectedClient.tdsRatePercent) : "" };
+  const tdsState: TdsState = tdsOverride && tdsOverride.clientId === selectedClientId ? tdsOverride : clientTds;
+  const tdsApplies = Boolean(selectedClient) && !selectedClient?.isExport;
+  const tdsRateNumber = Number(tdsState.rate);
+  const tdsPayload = tdsApplies && tdsState.on && Number.isFinite(tdsRateNumber) && tdsRateNumber > 0 && tdsRateNumber <= 100
+    ? { tds: { section: tdsState.section.trim() || null, ratePercent: tdsRateNumber } }
+    : {};
   const companyTaxId = companyConfirmation?.gstin || companyConfirmation?.panNumber || "Not configured";
   const bankIdentity = companyConfirmation?.primaryBankAccount
     ? [companyConfirmation.primaryBankAccount.bankName, companyConfirmation.primaryBankAccount.accountName, companyConfirmation.primaryBankAccount.maskedAccountNumber || companyConfirmation.primaryBankAccount.accountNumberMasked, companyConfirmation.primaryBankAccount.ifscCode].filter(Boolean).join(" · ")
@@ -430,6 +445,8 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
         body: JSON.stringify({
           clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
+          ...tdsPayload,
           billingMonth,
           sacCode: smartSacCode,
           ...gstPayload,
@@ -466,6 +483,8 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
             body: JSON.stringify({
               clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
+          ...tdsPayload,
               billingMonth,
               sacCode: smartSacCode,
             ...gstPayload,
@@ -536,6 +555,8 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           payload: {
             clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
+          ...tdsPayload,
             billingMonth,
             sacCode: smartSacCode,
             ...gstPayload,
@@ -571,6 +592,8 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
         body: JSON.stringify({
           clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
+          ...tdsPayload,
           billingMonth,
           sacCode: smartSacCode,
           ...gstPayload,
@@ -598,6 +621,8 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
             body: JSON.stringify({
               clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
+          ...tdsPayload,
               billingMonth,
               sacCode: smartSacCode,
             ...gstPayload,
@@ -676,6 +701,8 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           payload: {
             clientId: selectedClientId,
           ...billablePayload,
+          ...accentPayload,
+          ...tdsPayload,
             billingMonth,
             sacCode: smartSacCode,
             ...gstPayload,
@@ -877,6 +904,35 @@ export default function InvoiceGeneratorForm({ onSuccess }: InvoiceGeneratorForm
           </ComposerSection>
 
           <GstPreviewCard preview={gstView.preview} loading={gstView.loading} format={(n) => fCurrency(n)} overrides={gstOverrides} onOverridesChange={setGstOverrides} />
+
+          <section aria-label={tc("accent")} className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
+            <AccentColorField
+              label={tc("accent")}
+              hint={tc("accentHint")}
+              value={invoiceAccent}
+              onChange={setInvoiceAccent}
+              inheritedFrom={
+                selectedClient?.invoiceAccentColor
+                  ? { source: "client", hex: selectedClient.invoiceAccentColor }
+                  : companyConfirmation?.invoiceAccentColor
+                    ? { source: "workspace", hex: companyConfirmation.invoiceAccentColor }
+                    : { source: "design" }
+              }
+            />
+          </section>
+
+          {selectedClient && !selectedClient.isExport ? (
+            <section aria-label={tdsT("title")} className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
+              <TdsField
+                value={tdsState}
+                onChange={(next) => setTdsOverride({ ...next, clientId: selectedClientId })}
+                subtotal={previewLines.reduce((sum, l) => sum + (Number.isFinite(l.amount) ? l.amount : 0), 0)}
+                total={Number(totalAmount) || 0}
+                format={money}
+                prefilled={Boolean(selectedClient.tdsRatePercent) && !tdsOverride}
+              />
+            </section>
+          ) : null}
 
           <ComposerSection step={3} title={tc("delivery.title")} hint={tc("delivery.hint")} done={checks.company} delay={0.12}>
             <div className="space-y-4">

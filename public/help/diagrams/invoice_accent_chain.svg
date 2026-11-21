@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 360" role="img" aria-labelledby="t d">
+  <title id="t">How BabaBuilds ERP picks the accent colour of an invoice</title>
+  <desc id="d">Four levels are checked in order: this invoice, the client, your workspace, then the design's own colour. The first one that is set wins.</desc>
+  <rect width="960" height="360" rx="20" fill="#fff7ed"/>
+  <text x="40" y="52" font-family="Arial,Helvetica,sans-serif" font-size="22" font-weight="700" fill="#1c1917">Which colour does the invoice use?</text>
+  <text x="40" y="78" font-family="Arial,Helvetica,sans-serif" font-size="15" fill="#57534e">The first level that has a colour set wins. Anything too light to read on paper is nudged darker.</text>
+  <g font-family="Arial,Helvetica,sans-serif">
+    <g transform="translate(40,110)"><rect width="200" height="150" rx="14" fill="#fff" stroke="#fdba74" stroke-width="2"/><circle cx="36" cy="40" r="16" fill="#be123c"/><text x="64" y="46" font-size="16" font-weight="700" fill="#1c1917">1. This invoice</text><text x="20" y="86" font-size="14" fill="#57534e">One-off colour for a</text><text x="20" y="106" font-size="14" fill="#57534e">single invoice</text><text x="20" y="132" font-size="12" font-weight="700" fill="#c2410c">HIGHEST PRIORITY</text></g>
+    <g transform="translate(276,110)"><rect width="200" height="150" rx="14" fill="#fff" stroke="#e7e5e4" stroke-width="2"/><circle cx="36" cy="40" r="16" fill="#0f766e"/><text x="64" y="46" font-size="16" font-weight="700" fill="#1c1917">2. The client</text><text x="20" y="86" font-size="14" fill="#57534e">Each client always gets</text><text x="20" y="106" font-size="14" fill="#57534e">their own colour</text></g>
+    <g transform="translate(512,110)"><rect width="200" height="150" rx="14" fill="#fff" stroke="#e7e5e4" stroke-width="2"/><circle cx="36" cy="40" r="16" fill="#4f46e5"/><text x="64" y="46" font-size="16" font-weight="700" fill="#1c1917">3. Workspace</text><text x="20" y="86" font-size="14" fill="#57534e">Your brand colour in</text><text x="20" y="106" font-size="14" fill="#57534e">Settings → Invoicing</text></g>
+    <g transform="translate(748,110)"><rect width="172" height="150" rx="14" fill="#fff" stroke="#e7e5e4" stroke-width="2"/><circle cx="36" cy="40" r="16" fill="#0b3d91"/><text x="64" y="46" font-size="16" font-weight="700" fill="#1c1917">4. The design</text><text x="20" y="86" font-size="14" fill="#57534e">Its built-in colour</text><text x="20" y="106" font-size="14" fill="#57534e">if none is set</text></g>
+    <g fill="none" stroke="#c2410c" stroke-width="2.5" stroke-linecap="round"><path d="M246 185h24"/><path d="M482 185h24"/><path d="M718 185h24"/></g>
+    <g fill="#c2410c"><path d="M270 179l8 6-8 6z"/><path d="M506 179l8 6-8 6z"/><path d="M742 179l8 6-8 6z"/></g>
+  </g>
+  <rect x="40" y="290" width="880" height="48" rx="12" fill="#fff" stroke="#fdba74"/>
+  <text x="60" y="320" font-family="Arial,Helvetica,sans-serif" font-size="15" fill="#1c1917">Tip: set your workspace colour once, then override only the clients or invoices that need something different.</text>
+</svg>

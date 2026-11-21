@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Field, Panel, ReadOnlyBanner, SaveBar, useSectionForm } from "../form-kit";
 import type { SectionProps } from "./types";
+import { UpiQrCard } from "./UpiQrCard";
+import { useSettingsData } from "../settings-data";
 
 const IFSC = /^[A-Z]{4}0[A-Z0-9]{6}$/;
 
@@ -16,12 +18,13 @@ export function BankingSection({ data, canManage }: SectionProps) {
   const india = (data.countryCode ?? "IN") === "IN";
   const masked = data.primaryBankAccount?.accountNumberDisplay || data.primaryBankAccount?.maskedAccountNumber || "";
   const [changing, setChanging] = useState(!masked);
+  const { reload } = useSettingsData();
   const form = useSectionForm({
     section: "banking",
     prefill: "banking",
-    initial: { bankName: data.bankName ?? "", accountName: data.accountName ?? "", accountNumber: "", ifscCode: data.ifscCode ?? "", routingLabel: data.routingLabel ?? "" },
+    initial: { bankName: data.bankName ?? "", accountName: data.accountName ?? "", accountNumber: "", ifscCode: data.ifscCode ?? "", routingLabel: data.routingLabel ?? "", upiVpa: data.upiVpa ?? "", upiPayeeName: data.upiPayeeName ?? "" },
     // The masked number is never posted back; a number is sent only when the user typed one.
-    toPayload: (v) => ({ ...v, accountNumber: v.accountNumber.trim() || null }),
+    toPayload: (v) => ({ ...v, accountNumber: v.accountNumber.trim() || null, upiVpa: v.upiVpa.trim() || null, upiPayeeName: v.upiPayeeName.trim() || null }),
   });
   const { values: v, set, errors } = form;
   const ifscBad = india && v.ifscCode.trim() !== "" && !IFSC.test(v.ifscCode.trim().toUpperCase());
@@ -45,6 +48,7 @@ export function BankingSection({ data, canManage }: SectionProps) {
         </div>
         <p className="mt-4 text-xs text-muted-foreground">{t("printed")}</p>
       </Panel>
+      <UpiQrCard vpa={v.upiVpa} payee={v.upiPayeeName} onVpa={(x) => set("upiVpa", x)} onPayee={(x) => set("upiPayeeName", x)} errors={errors} qrs={data.paymentQrs ?? []} canManage={canManage} onChanged={reload} />
       <Panel>
         <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-muted-foreground">{t("moreAccounts")}</p><Link href="/reconciliation" className="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300">{t("openReconciliation")}<ArrowUpRight className="size-3.5 rtl:-scale-x-100" aria-hidden /></Link></div>
       </Panel>

@@ -7,7 +7,7 @@ tags: ["onboarding", "setup", "workspace", "first invoice", "demo"]
 estimatedMinutes: 8
 isFeatured: true
 icon: "Rocket"
-dateModified: "2026-11-17"
+dateModified: "2026-11-21"
 ---
 
 # Getting Started with BabaBuilds ERP
@@ -31,8 +31,8 @@ Then open **Settings** and add the minimum details needed for a professional doc
 - Legal or trading name
 - Business address and contact details
 - Tax registration details that apply to you
-- Primary bank or remittance details
-- Logo and document preferences
+- Primary bank or remittance details (and, optionally, your UPI ID for scan-to-pay QR codes)
+- Logo and document preferences, including your invoice design and brand colour ([compare the eight designs](/help/invoice-designs))
 
 Save each section before moving on. Payment gateways, outbound email, storefront settings, and advanced tax options can wait until you need them.
 

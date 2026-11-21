@@ -120,8 +120,8 @@ cannot grant access. Cancelling is only possible in Google Play (the web Cancel 
 | `GOOGLE_PLAY_RTDN_SECRET` | Shared secret in the Pub/Sub push URL (long random string) |
 | `GOOGLE_PLAY_ALLOW_TEST_PURCHASES` | `true` only while testing on production data |
 
-**Database**: new table `PlayPurchase` (migration `20261201100000_play_billing`). Apply the reviewed migration with
-`npx prisma migrate deploy`; `Workspace.billingProvider` gains the value `GOOGLE_PLAY`. Never use `db push` on production.
+**Database**: table `PlayPurchase` is part of the PostgreSQL baseline migration (`20261116000000_postgresql_baseline`), so
+`npx prisma migrate deploy` already creates it; `Workspace.billingProvider` gains the value `GOOGLE_PLAY`. Never use `db push` on production.
 
 **Behaviour to know**
 - A workspace already paid through Razorpay/Stripe that then buys on Play keeps the *longer* of the two end

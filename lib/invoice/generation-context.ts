@@ -10,6 +10,8 @@ import {
   type WorkspaceBillingSnapshot,
 } from "@/lib/entitlements";
 import { supplierChargesGst } from "@/lib/msme/threshold";
+import { normalizeHexColor } from "@/lib/invoice-templates/shared/accent-color";
+import { computeTds, netPayable as netPayableOf, normalizeTdsSection } from "@/lib/invoice/tds";
 
 export type ServiceInput = {
   title?: string;
@@ -56,6 +58,10 @@ export type InvoiceGenerationInput = {
   gst?: { placeOfSupply?: string | null; supplyOverride?: string | null; reverseCharge?: boolean | null };
   /** Billable expenses added to this invoice; they are marked billed with it. */
   billableExpenseIds?: string[];
+  /** Per-invoice brand colour override, #RRGGBB. */
+  accentColor?: string | null;
+  /** TDS the client will deduct. The amount is computed here, never trusted from the client. */
+  tds?: { section?: string | null; ratePercent?: number | null };
 };
 
 export type InvoiceGenerationContext = {
@@ -85,6 +91,12 @@ export type InvoiceGenerationContext = {
   billingSnapshot: WorkspaceBillingSnapshot;
   paidFeatures: boolean;
   shouldSendEmail: boolean;
+  /** Normalised per-invoice accent override, or null. */
+  accentColor: string | null;
+  /** Expected TDS on the pre-GST subtotal, or null. */
+  tds: { section: string | null; ratePercent: number; amount: number } | null;
+  /** Invoice total less expected TDS: what the client pays, and what payment links and QRs collect. */
+  netPayable: number;
 };
 
 export class InvoiceValidationError extends Error {
@@ -319,6 +331,8 @@ export async function buildInvoiceGenerationContext(
     });
   }
 
+  const tdsResult = computeTds({ subtotal: totals.subtotal, ratePercent: input.tds?.ratePercent, isExport: Boolean(client.isExport) });
+
   return {
     workspaceId,
     client,
@@ -343,5 +357,8 @@ export async function buildInvoiceGenerationContext(
     billingSnapshot,
     paidFeatures,
     shouldSendEmail: Boolean(shouldSendEmail),
+    accentColor: normalizeHexColor(input.accentColor),
+    tds: tdsResult ? { section: normalizeTdsSection(input.tds?.section), ratePercent: tdsResult.ratePercent, amount: tdsResult.amount } : null,
+    netPayable: netPayableOf(totals.total, tdsResult?.amount),
   };
 }

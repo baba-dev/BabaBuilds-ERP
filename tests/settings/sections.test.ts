@@ -104,6 +104,7 @@ describe("settings map", () => {
     expect(new Set(NAV.map((n) => n.key)).size).toBe(NAV.length);
     expect(activeKey("/settings", "tax")).toBe("tax");
     expect(activeKey("/settings", "nonsense")).toBe("overview");
+    expect(activeKey("/settings/invoice-designs", null)).toBe("invoicing");
     expect(activeKey("/settings/team", null)).toBe("team");
   });
 

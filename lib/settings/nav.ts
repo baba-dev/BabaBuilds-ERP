@@ -50,6 +50,7 @@ export const HASH_TO_SECTION: Record<string, SectionKey> = {
 
 /** Active nav key for a URL. */
 export function activeKey(pathname: string, section: string | null): string {
+  if (pathname.startsWith("/settings/invoice-designs")) return "invoicing";
   if (pathname.startsWith("/settings/")) return pathname.split("/")[2] ?? "business";
   return isSectionKey(section) ? section : "overview";
 }

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-17T16:47:59.272Z",
+  "generatedAt": "2026-11-21T12:38:32.399Z",
   "shots": {
     "landing": {
       "relPath": "assets/screenshots/landing.png",
@@ -315,6 +315,21 @@
       "relPath": "assets/screenshots/settings_billing.png",
       "title": "Billing",
       "section": "overview"
+    },
+    "settings_invoicing": {
+      "relPath": "assets/screenshots/settings_invoicing.png",
+      "title": "Invoice design settings",
+      "section": "sales"
+    },
+    "settings_banking": {
+      "relPath": "assets/screenshots/settings_banking.png",
+      "title": "Bank account, UPI ID and QR codes",
+      "section": "sales"
+    },
+    "invoice_designs": {
+      "relPath": "assets/screenshots/invoice_designs.png",
+      "title": "Compare invoice designs",
+      "section": "sales"
     },
     "settings_shop": {
       "relPath": "assets/screenshots/settings_shop.png",

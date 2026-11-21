@@ -1,0 +1,66 @@
+{
+ "DESIGN_1:basic": {
+  "pages": 1,
+  "sha": "13eb33508c7c3f2d02168f2bf855fa793f48275e"
+ },
+ "DESIGN_1:taxExemptExport": {
+  "pages": 1,
+  "sha": "a3a2b1040bae788e289d0d2bae15ccbaf753db49"
+ },
+ "DESIGN_1:longStrings": {
+  "pages": 1,
+  "sha": "29251d6409cbcc8e16cdb640cccde5fceea82db4"
+ },
+ "DESIGN_1:manyItems": {
+  "pages": 5,
+  "sha": "17e2a397d78e7df6fe502210f9e799dcf1c1eeff"
+ },
+ "DESIGN_1:missingLogo": {
+  "pages": 1,
+  "sha": "13eb33508c7c3f2d02168f2bf855fa793f48275e"
+ },
+ "DESIGN_1:missingBankDetails": {
+  "pages": 1,
+  "sha": "98b4c20362d61ed5dea70e133aaac8f620db0829"
+ },
+ "DESIGN_1:paid": {
+  "pages": 1,
+  "sha": "68a6819030f63df8b6ee6ce63ea8aad908364359"
+ },
+ "DESIGN_1:partiallyPaid": {
+  "pages": 1,
+  "sha": "4decbe92ecde781e898eeff206a6e3afec7d035d"
+ },
+ "DESIGN_2:basic": {
+  "pages": 1,
+  "sha": "39036278ce2d291379be8e1df33183385797bd63"
+ },
+ "DESIGN_2:taxExemptExport": {
+  "pages": 1,
+  "sha": "330a68506ee62c5f5a51c2fff2ecec6b20c6f6c0"
+ },
+ "DESIGN_2:longStrings": {
+  "pages": 1,
+  "sha": "9d2d5f5f138da441f2209f322f12ca5ce9f1c42a"
+ },
+ "DESIGN_2:manyItems": {
+  "pages": 5,
+  "sha": "28b789eb5e1fa8a74858e179d185edf6519d9d56"
+ },
+ "DESIGN_2:missingLogo": {
+  "pages": 1,
+  "sha": "39036278ce2d291379be8e1df33183385797bd63"
+ },
+ "DESIGN_2:missingBankDetails": {
+  "pages": 1,
+  "sha": "d830a9ca5effdaa9524f5ff81bb85344c5546981"
+ },
+ "DESIGN_2:paid": {
+  "pages": 1,
+  "sha": "39036278ce2d291379be8e1df33183385797bd63"
+ },
+ "DESIGN_2:partiallyPaid": {
+  "pages": 1,
+  "sha": "39036278ce2d291379be8e1df33183385797bd63"
+ }
+}

@@ -5,7 +5,7 @@ order: 33
 category: "General"
 tags: ["screenshots", "gallery", "help center", "product tour"]
 estimatedMinutes: 5
-dateModified: "2026-11-17"
+dateModified: "2026-11-21"
 isFeatured: true
 ---
 
@@ -34,6 +34,9 @@ The captures use a 1440×900 desktop workspace. Choose the theme that is easiest
 | Point of sale | `/pos` | [View](/product-images/light/pos.png) | [View](/product-images/dark/pos.png) |
 | Retainers | `/retainers` | [View](/product-images/light/retainers.png) | [View](/product-images/dark/retainers.png) |
 | Invoices and earnings | `/income` | [View](/product-images/light/income.png) | [View](/product-images/dark/income.png) |
+| New invoice (colour and TDS) | `/income/new` | [View](/product-images/light/invoice_new.png) | [View](/product-images/dark/invoice_new.png) |
+| Compare invoice designs | `/settings/invoice-designs` | [View](/product-images/light/invoice_designs.png) | [View](/product-images/dark/invoice_designs.png) |
+| Full-screen design preview | `/settings/invoice-designs` | [View](/product-images/light/invoice_design_viewer.png) | [View](/product-images/dark/invoice_design_viewer.png) |
 
 ## Control cash and compliance
 
@@ -64,6 +67,8 @@ The captures use a 1440×900 desktop workspace. Choose the theme that is easiest
 | Profile | `/settings/profile` | [View](/product-images/light/settings_profile.png) | [View](/product-images/dark/settings_profile.png) |
 | Security | `/settings/security` | [View](/product-images/light/settings_security.png) | [View](/product-images/dark/settings_security.png) |
 | Team and seats | `/settings/team` | [View](/product-images/light/settings_team.png) | [View](/product-images/dark/settings_team.png) |
+| Invoice design settings | `/settings?section=invoicing` | [View](/product-images/light/settings_invoicing.png) | [View](/product-images/dark/settings_invoicing.png) |
+| Bank account, UPI ID and QR codes | `/settings?section=banking` | [View](/product-images/light/settings_banking.png) | [View](/product-images/dark/settings_banking.png) |
 | Shop settings | `/settings/shop` | [View](/product-images/light/settings_shop.png) | [View](/product-images/dark/settings_shop.png) |
 
 ## If your screen looks different

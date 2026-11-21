@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-17T16:47:59.272Z",
+  "generatedAt": "2026-11-21T12:38:32.399Z",
   "viewport": {
     "width": 1440,
     "height": 900
@@ -571,6 +571,33 @@
       "title": "Billing",
       "section": "overview",
       "route": "/settings/billing"
+    },
+    "settings_invoicing": {
+      "paths": {
+        "light": "screenshots/light/settings_invoicing.png",
+        "dark": "screenshots/dark/settings_invoicing.png"
+      },
+      "title": "Invoice design settings",
+      "section": "sales",
+      "route": "/settings?section=invoicing"
+    },
+    "settings_banking": {
+      "paths": {
+        "light": "screenshots/light/settings_banking.png",
+        "dark": "screenshots/dark/settings_banking.png"
+      },
+      "title": "Bank account, UPI ID and QR codes",
+      "section": "sales",
+      "route": "/settings?section=banking"
+    },
+    "invoice_designs": {
+      "paths": {
+        "light": "screenshots/light/invoice_designs.png",
+        "dark": "screenshots/dark/invoice_designs.png"
+      },
+      "title": "Compare invoice designs",
+      "section": "sales",
+      "route": "/settings/invoice-designs"
     },
     "settings_shop": {
       "paths": {

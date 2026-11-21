@@ -7,7 +7,7 @@ tags: ["invoice", "pdf", "email", "smtp", "numbering"]
 estimatedMinutes: 10
 isFeatured: true
 icon: "ReceiptText"
-dateModified: "2026-11-17"
+dateModified: "2026-11-21"
 ---
 
 # Generating, Sending, and Collecting Invoices
@@ -16,7 +16,7 @@ This guide covers the complete invoice lifecycle: draft, validate, generate, sen
 
 <HelpImage src="/help/diagrams/invoice_workflow.svg" alt="Invoice lifecycle from draft to paid status" caption="Use this lifecycle as your standard invoicing process." />
 
-<HelpImage src="/product-images/light/invoice_new.png" alt="Current new invoice workspace" caption="Confirm the client, line items, taxes, totals, and remittance details before generating the customer PDF." />
+<HelpImage src="/product-images/light/invoice_new.png" alt="New invoice form with the invoice colour field and the Client deducts TDS switch showing net payable" caption="Confirm the client, line items, taxes, totals, TDS and remittance details before generating the customer PDF." />
 
 ## Before you start
 
@@ -52,6 +52,17 @@ Ensure these prerequisites are done:
 
 ---
 
+## Choose how the invoice looks
+
+Your invoice uses the design set in **Settings → Invoicing**. There are eight, from a GST tax invoice to an 80mm receipt, and you can preview them all on your own invoice with **Compare all designs**. In the new invoice form you can also:
+
+- Override the **Invoice colour** for this one invoice.
+- Switch on **Client deducts TDS** so the invoice shows **Net payable** and the payment link collects that amount.
+
+Add a UPI ID in **Settings → Bank account** and the Pay-Fast and Receipt designs show a scan-to-pay QR. See [Invoice Designs](/help/invoice-designs) for the full guide.
+
+---
+
 ## Invoice numbering logic
 
 Format: `INV/FY/SEQ`
@@ -77,7 +88,7 @@ Enable **Send Invoice via Email** before generating, or re-send from invoice his
 
 ## Accept online payments from invoice
 
-When Stripe/Razorpay is active, PDF includes a clickable payment link.
+When Stripe/Razorpay is active, PDF includes a clickable payment link. If the client deducts TDS, the link asks for the net payable amount. Pay-Fast and Receipt also show a QR from the payment link, or from your UPI ID if there is no link.
 
 Client flow:
 
@@ -115,6 +126,8 @@ Before sending, verify:
 - Bank details on PDF
 - Line item descriptions are specific
 - Payment terms are clear
+- TDS section and rate, if the client deducts tax at source
+- The design and colour look right (use **Compare all designs** if unsure)
 
 ---
 
@@ -146,6 +159,7 @@ Before sending, verify:
 ## Related guides
 
 - [Configuring Your Business Profile & Workspace Settings](/help/settings-guide)
+- [Invoice Designs: Eight Layouts, Brand Colour, TDS and UPI QR](/help/invoice-designs)
 - [Connecting Razorpay & Stripe](/help/payment-gateways)
 - [Optional Module: AR Aging + Collections Centre](/help/optional-sub-system-ar-collections)
 
@@ -153,7 +167,7 @@ Before sending, verify:
 
 ## Article details
 
-- **Last reviewed:** 2026-11-17
+- **Last reviewed:** 2026-11-21
 - **Owner:** Finance Operations Docs
 - **Audience:** Founders, Finance Ops, Billing Managers
 
