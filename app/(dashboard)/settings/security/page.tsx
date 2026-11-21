@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { startRegistration } from "@simplewebauthn/browser";
 import { KeyRound, Lock, ShieldCheck, Smartphone, Trash2, Chrome, RefreshCw, Pencil } from "lucide-react";
@@ -185,6 +186,12 @@ export default function AccountSecurityPage() {
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" />Active sessions</CardTitle><CardDescription>This app uses {data?.sessions.strategy.toUpperCase() || "JWT"} sessions. Database session rows are shown when available.</CardDescription></CardHeader>
         <CardContent>{data?.sessions.activeDatabaseSessions.length ? <ul className="space-y-2 text-sm">{data.sessions.activeDatabaseSessions.map((session) => <li key={session.id}>Session expires {formatDate(session.expires)}</li>)}</ul> : <p className="text-sm text-muted-foreground">No database-backed sessions are active for this JWT session configuration.</p>}</CardContent>
+      </Card>
+      <Card id="delete-account">
+        <CardHeader><CardTitle className="flex items-center gap-2 text-destructive"><Trash2 className="h-5 w-5" />Delete account</CardTitle><CardDescription>Request permanent deletion of your account and workspace data. See what is deleted and what we must retain by law.</CardDescription></CardHeader>
+        <CardContent>
+          <Button asChild variant="destructive" className="w-full sm:w-auto"><Link href="/delete-account" data-testid="delete-account-link">Request account deletion</Link></Button>
+        </CardContent>
       </Card>
     </main>
   );

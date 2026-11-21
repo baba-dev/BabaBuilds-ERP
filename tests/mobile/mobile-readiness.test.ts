@@ -102,6 +102,19 @@ describe("viewport + layout guards", () => {
   });
 });
 
+describe("Play Store requirements", () => {
+  it("settings/security links to the public /delete-account page (in-app deletion entry point)", () => {
+    const src = read("app/(dashboard)/settings/security/page.tsx");
+    expect(src).toContain('href="/delete-account"');
+  });
+
+  it("twa-manifest minSdkVersion satisfies androidbrowserhelper 2.x (24) and shortcuts carry chosenIconUrl", () => {
+    const twa = JSON.parse(read("android/twa-manifest.json"));
+    expect(twa.minSdkVersion).toBeGreaterThanOrEqual(24);
+    for (const s of twa.shortcuts) expect(s.chosenIconUrl, s.name).toMatch(/^https:\/\//);
+  });
+});
+
 describe("responsive dialog on phones", () => {
   it("lets a long form scroll inside the bottom sheet, so every field and the footer stay reachable", () => {
     const src = read("components/ResponsiveDialog.tsx");

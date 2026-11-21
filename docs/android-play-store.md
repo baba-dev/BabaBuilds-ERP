@@ -120,8 +120,8 @@ cannot grant access. Cancelling is only possible in Google Play (the web Cancel 
 | `GOOGLE_PLAY_RTDN_SECRET` | Shared secret in the Pub/Sub push URL (long random string) |
 | `GOOGLE_PLAY_ALLOW_TEST_PURCHASES` | `true` only while testing on production data |
 
-**Database**: new table `PlayPurchase` (migration `20261201100000_play_billing`). Apply the reviewed migration with
-`npx prisma migrate deploy`; `Workspace.billingProvider` gains the value `GOOGLE_PLAY`. Never use `db push` on production.
+**Database**: table `PlayPurchase` is part of the PostgreSQL baseline migration (`20261116000000_postgresql_baseline`), so
+`npx prisma migrate deploy` already creates it; `Workspace.billingProvider` gains the value `GOOGLE_PLAY`. Never use `db push` on production.
 
 **Behaviour to know**
 - A workspace already paid through Razorpay/Stripe that then buys on Play keeps the *longer* of the two end
@@ -132,6 +132,35 @@ cannot grant access. Cancelling is only possible in Google Play (the web Cancel 
 - **Not verified against real Google services from this repo** (no credentials were available): the request
   shapes follow Google's documented `androidpublisher v3` API and are unit-tested with mocks. Run the §5 test
   plan with a license tester before launch.
+
+## 3b. First upload, then automated releases
+
+**Creating the app in Play Console (once).** The first bundle must be uploaded by hand.
+1. Play Console → *Create app* → name `BabaBuilds ERP`, default language, *App*, *Free* (subscriptions are sold through Play Billing, §3a), accept the declarations.
+2. *Test and release → Testing → Internal testing → Create new release*. Keep **Play App Signing** on (default) and upload `app-release-bundle.aab` (version name `1.0.0`, code `1`, package `com.bababuilds.erp.twa`, minSdk 24). The bundle is signed with the *upload* key; Google re-signs it with the app-signing key.
+3. Add testers (an email list), save, review and roll out. Then follow §3.4 to copy the **App signing key SHA-256** into `assetlinks.json` (the upload-key fingerprint is already there for sideloaded APKs).
+4. Complete the §4 checklist (store listing, App content, Data safety).
+
+**Keystore.** Keep `android.keystore` and its passwords in a password manager; never commit them (git-ignored). If it is lost, Play support can reset the upload key. For CI, store it as a secret: `base64 -w0 android.keystore`.
+
+**Automated releases: `.github/workflows/android-release.yml`.** Manual (`workflow_dispatch`), `main` only, GitHub-hosted, never on pull requests. It validates inputs, builds a signed AAB with Bubblewrap, checks the signature and uploads to the chosen Play track (default `internal`). Promoting to production is a deliberate input or a Play Console action.
+
+Setup:
+1. GitHub → *Settings → Environments → New environment* `google-play` (optionally require reviewers).
+2. Add these secrets **to that environment**:
+
+| Secret | Value |
+|---|---|
+| `ANDROID_KEYSTORE_BASE64` | `base64 -w0 android.keystore` |
+| `ANDROID_KEYSTORE_PASSWORD` | keystore password |
+| `ANDROID_KEY_ALIAS` | `bababuilds-upload` |
+| `ANDROID_KEY_PASSWORD` | key password |
+| `PLAY_SERVICE_ACCOUNT_JSON` | JSON key of a service account invited in *Play Console → Users and permissions* with *Release to production, exclude devices, and use Play App Signing* (or at least *Release apps to testing tracks*) |
+
+3. *Actions → Android release (Google Play) → Run workflow*: give `version_name` (e.g. `1.0.1`) and an integer `version_code` **greater than** `appVersionCode` in `android/twa-manifest.json`. Use `status: draft` while the app has never been released.
+4. After a successful run, bump `appVersionName`/`appVersionCode` in `android/twa-manifest.json` in a PR so the next validation floor is correct.
+
+A new TWA bundle is only needed when the shell changes (icon, shortcuts, target SDK, package settings): web changes ship through the normal deploy.
 
 ## 4. Play Console checklist
 
@@ -200,5 +229,6 @@ without changing the visuals, so existing icon buttons don't need edits.
   a pointer/height-aware breakpoint everywhere; deliberately not done here.
 - Many older screens still use dense desktop tables with horizontal scroll rather than card lists
   (Invoices, Proposals and Retainers already have mobile card views).
-- In-app account deletion, a feature graphic, tablet screenshots and
-  on-device QA are required before production (see §2, §4, §5).
+- Settings → Security now has a *Delete account* card linking to `/delete-account` (email-based process). A feature
+  graphic, tablet screenshots and on-device QA are still required before production (see §2, §4, §5).
+- `tests/mobile-viewports.spec.ts` (Playwright) fails on horizontal overflow at 360/390/412px across the main routes.
