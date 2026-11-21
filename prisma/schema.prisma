@@ -1497,7 +1497,8 @@ model BusinessProfile {
   phone          String?
   website        String?
 
-  invoiceTheme  String  @default("DESIGN_1") // "DESIGN_1" or "DESIGN_2"
+  invoiceTheme  String  @default("DESIGN_1") // DESIGN_1..DESIGN_5 (see lib/invoice-templates/catalog.ts)
+  invoiceAccentColor String? // workspace default brand colour for invoices, #RRGGBB
   invoicePrefix String? @default("INV")
   invoiceTermsDays Int @default(7) // default payment terms: due date = invoice date + this many days
 
@@ -1595,6 +1596,7 @@ model Client {
   email   String?
   phone   String?
   logoUrl String?
+  invoiceAccentColor String? // per-client invoice colour override, #RRGGBB
 
   status String @default("ACTIVE") // "ACTIVE", "INACTIVE", "VIP"
 
@@ -1665,6 +1667,7 @@ model Invoice {
   billingMonth        String    @default("Unknown")
   invoiceDate         DateTime
   dueDate             DateTime?
+  accentColor         String? // per-invoice colour override, #RRGGBB (kept so re-sent PDFs match)
   paymentTermsDays    Int?
   expectedPaymentDate DateTime?
   collectionRiskScore Float?

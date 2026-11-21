@@ -602,6 +602,7 @@ export async function POST(request: Request) {
               financialYear: fy,
               billingMonth: billingMonthValue,
               invoiceDate,
+              accentColor: body.accentColor ?? null,
               clientName: client.name,
               clientId: client.id,
               sacCode: typeof sacCode === 'string' ? sacCode : JSON.stringify(sacCode),

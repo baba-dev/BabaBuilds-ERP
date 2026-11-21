@@ -1,6 +1,7 @@
 import { parseClientGstInput } from "@/lib/gst/client-state";
 import { countryName, isForeignTo, matchCountry } from "./country";
 import { serializeTags } from "./tags";
+import { normalizeHexColor } from "@/lib/invoice-templates/shared/accent-color";
 
 export const CLIENT_STATUSES = ["ACTIVE", "VIP", "INACTIVE"] as const;
 export type ClientStatus = (typeof CLIENT_STATUSES)[number];
@@ -9,7 +10,7 @@ export type FieldIssue = { field: string; code: string };
 
 export type ClientColumns = {
   name: string; address: string; country: string; countryCode: string | null; taxId: string | null;
-  gstStateCode: string | null; gstSupplyOverride: "SEZ_WP" | "SEZ_WOP" | null; gstReverseCharge: boolean;
+  invoiceAccentColor: string | null; gstStateCode: string | null; gstSupplyOverride: "SEZ_WP" | "SEZ_WOP" | null; gstReverseCharge: boolean;
   email: string | null; phone: string | null; website: string | null; industry: string | null; currency: string | null;
   paymentTermsDays: number | null; creditLimit: number | null; tags: string; status: ClientStatus; ownerUserId: string | null; isExport: boolean;
 };
@@ -129,6 +130,11 @@ export function normalizeClientInput(raw: Raw, opts: { workspaceCountry: string;
   if (has(raw, "status")) {
     const s = (str(raw.status) ?? "").toUpperCase();
     if (!(CLIENT_STATUSES as readonly string[]).includes(s)) issues.push({ field: "status", code: "STATUS" }); else out.status = s as ClientStatus;
+  }
+  if (has(raw, "invoiceAccentColor")) {
+    const c = (str(raw.invoiceAccentColor) ?? "").trim();
+    if (!c) out.invoiceAccentColor = null;
+    else { const hex = normalizeHexColor(c); if (!hex) issues.push({ field: "invoiceAccentColor", code: "INVALID" }); else out.invoiceAccentColor = hex; }
   }
   if (has(raw, "ownerUserId")) out.ownerUserId = (str(raw.ownerUserId) ?? "").trim() || null;
 

@@ -1,5 +1,6 @@
 /** Request schema for POST /api/generate (kept out of the route file so it can be unit-tested). */
 import { z } from "zod";
+import { accentColorField } from "@/lib/invoice-templates/shared/accent-color";
 
 export const ServiceSchema = z.object({
   title: z.string().trim().min(1, "Service title is required").max(200, "Service title is too long"),
@@ -40,6 +41,8 @@ export const GenerateInvoiceSchema = z.object({
   exchangeRate: z.coerce.number().positive().finite().max(1_000_000).optional(),
   source: z.enum(['MANUAL', 'API']).optional(),
   gst: GstOverridesSchema.optional(),
+  /** Per-invoice brand colour override (#RRGGBB); empty clears it. */
+  accentColor: accentColorField,
   /** Billable expenses added to this invoice as lines; they are marked billed with the invoice. */
   billableExpenseIds: z.array(z.string().min(1)).max(50).optional(),
 });

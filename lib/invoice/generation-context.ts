@@ -10,6 +10,7 @@ import {
   type WorkspaceBillingSnapshot,
 } from "@/lib/entitlements";
 import { supplierChargesGst } from "@/lib/msme/threshold";
+import { normalizeHexColor } from "@/lib/invoice-templates/shared/accent-color";
 
 export type ServiceInput = {
   title?: string;
@@ -56,6 +57,8 @@ export type InvoiceGenerationInput = {
   gst?: { placeOfSupply?: string | null; supplyOverride?: string | null; reverseCharge?: boolean | null };
   /** Billable expenses added to this invoice; they are marked billed with it. */
   billableExpenseIds?: string[];
+  /** Per-invoice brand colour override, #RRGGBB. */
+  accentColor?: string | null;
 };
 
 export type InvoiceGenerationContext = {
@@ -85,6 +88,8 @@ export type InvoiceGenerationContext = {
   billingSnapshot: WorkspaceBillingSnapshot;
   paidFeatures: boolean;
   shouldSendEmail: boolean;
+  /** Normalised per-invoice accent override, or null. */
+  accentColor: string | null;
 };
 
 export class InvoiceValidationError extends Error {
@@ -343,5 +348,6 @@ export async function buildInvoiceGenerationContext(
     billingSnapshot,
     paidFeatures,
     shouldSendEmail: Boolean(shouldSendEmail),
+    accentColor: normalizeHexColor(input.accentColor),
   };
 }

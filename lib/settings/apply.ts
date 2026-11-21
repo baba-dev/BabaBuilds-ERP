@@ -46,6 +46,7 @@ export function buildSectionUpdate(section: SettingsSectionKey, v: Values, exist
     }
     case "invoicing":
       set("invoiceTheme", v.invoiceTheme);
+      if (has("invoiceAccentColor")) set("invoiceAccentColor", (v.invoiceAccentColor as string | null) ?? null);
       set("invoicePrefix", (v.invoicePrefix as string) || "INV");
       set("invoiceTermsDays", v.invoiceTermsDays);
       break;

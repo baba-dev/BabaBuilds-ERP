@@ -49,6 +49,7 @@ export async function finalizeInvoiceFromDraft(params: {
     userLocale,
     baseCurrency,
     exchangeRate,
+    accentColor,
   } = context;
 
   const formattedTotal = totals.total.toLocaleString(userLocale, {
@@ -119,6 +120,7 @@ export async function finalizeInvoiceFromDraft(params: {
             billingMonth: billingMonthValue,
             invoiceDate,
             dueDate,
+            accentColor,
             clientName: client.name,
             clientId: client.id,
             sacCode: sanitizedSacCode,
