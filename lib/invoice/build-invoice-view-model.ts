@@ -6,6 +6,7 @@ import type { NormalizedPrimaryRemittanceAccount } from "@/lib/banking/types";
 import { normalizeInvoiceWatermark, type InvoiceWatermarkKind } from "@/lib/invoice-templates/shared/watermark";
 import { resolveInvoiceTemplateId } from "@/lib/invoice-templates/registry";
 import { buildGstBreakdown, type GstBreakdown, type GstInput } from "@/lib/invoice/gst-breakdown";
+import type { StatementInput } from "@/lib/invoice/statement";
 import { amountInWords } from "@/lib/invoice-templates/shared/words";
 import { normalizeHexColor } from "@/lib/invoice-templates/shared/accent-color";
 
@@ -110,6 +111,8 @@ export interface PDFParams {
   payment?: { paidOn?: Date | null; amountPaid?: number };
   /** Expected TDS the client will deduct (amount computed by the server on the pre-GST subtotal). */
   tds?: { section?: string | null; ratePercent: number; amount: number } | null;
+  /** Client history for the Statement design (built by lib/invoice/statement.ts). */
+  statement?: StatementInput | null;
 }
 
 type InvoiceAddress = {
@@ -167,6 +170,8 @@ export interface InvoiceViewModel {
   tds: { section: string | null; ratePercent: number; amount: number; sectionLabel: string } | null;
   /** Total less expected TDS: what the client pays. Equals the total when there is no TDS. */
   netPayable: number;
+  /** Client statement with what is due now, or null when none was supplied. */
+  statement: (StatementInput & { amountDueNow: number }) | null;
   amountInWords: string | null;
   paymentQrs: InvoiceQrSource[];
   totals: InvoiceTotals;
@@ -277,6 +282,7 @@ export const buildInvoiceViewModel = ({
   accentColor,
   payment: paymentArg,
   tds: tdsArg,
+  statement: statementArg,
 }: PDFParams): InvoiceViewModel => {
   const billingSnapshot = {
     planTier: profile.workspace?.planTier,
@@ -384,6 +390,7 @@ export const buildInvoiceViewModel = ({
     payment,
     tds,
     netPayable,
+    statement: statementArg ? { ...statementArg, amountDueNow: roundMoney(Math.max(0, statementArg.previousBalance) + (watermarkKind === "PAID" ? 0 : payment.balanceDue)) } : null,
     amountInWords: amountInWords(totals.total, baseCurrency),
     paymentQrs: normalizedPaymentLink ? [{ kind: "PAYMENT_LINK", url: normalizedPaymentLink, label: "Pay online" }] : [],
     totals,

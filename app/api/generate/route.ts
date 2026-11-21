@@ -105,6 +105,7 @@ function buildRequestHash(payload: unknown): string {
 import { GenerateInvoiceSchema } from '@/lib/invoice/generate-schema';
 import { snapshotGstFields } from '@/lib/gst/source';
 import { toPdfGst, toPdfLines } from '@/lib/invoice/pdf-params';
+import { loadClientStatement } from '@/lib/invoice/statement-loader';
 import { computeTds, netPayable as netPayableOf, normalizeTdsSection } from '@/lib/invoice/tds';
 import { supplierChargesGst } from "@/lib/msme/threshold";
 import { getClientRecipients } from '@/lib/clients/service';
@@ -556,6 +557,8 @@ export async function POST(request: Request) {
         // ──────────────────────────────────────────────────────────────────────
 
         // --- PDF GENERATION ENGINE ---
+        // Only the Statement design shows client history, so only it pays for the query.
+        const statement = profile.invoiceTheme === 'DESIGN_6' ? await loadClientStatement(workspaceId, client.id, invoiceDate, baseCurrency) : undefined;
         const pdfBytes = await generateInvoicePDF({
           profile,
           client: {
@@ -584,6 +587,7 @@ export async function POST(request: Request) {
           gst: toPdfGst(client, body.gst),
           accentColor: body.accentColor ?? null,
           tds: tdsResult ? { section: normalizeTdsSection(body.tds?.section), ratePercent: tdsResult.ratePercent, amount: tdsResult.amount } : null,
+          statement,
           totals,
           formattedTotal,
           baseCurrency,

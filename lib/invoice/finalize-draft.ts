@@ -18,6 +18,7 @@ import { getFinancialYear, getNextInvoiceNumber } from "@/lib/document-numbering
 import { supplierChargesGst } from "@/lib/msme/threshold";
 import { getClientRecipients } from "@/lib/clients/service";
 import { toPdfGst, toPdfLines } from "@/lib/invoice/pdf-params";
+import { loadClientStatement } from "@/lib/invoice/statement-loader";
 
 type DraftPaymentLink = {
   url: string | null;
@@ -60,6 +61,9 @@ export async function finalizeInvoiceFromDraft(params: {
   });
 
   const fy = getFinancialYear(invoiceDate);
+
+  // Only the Statement design shows client history, so only it pays for the query.
+  const statement = profile.invoiceTheme === "DESIGN_6" ? await loadClientStatement(workspaceId, client.id, invoiceDate, baseCurrency) : undefined;
 
   let generatedPdfPath = "";
   let newInvoice: Awaited<ReturnType<typeof prisma.invoice.create>> | null = null;
@@ -108,6 +112,7 @@ export async function finalizeInvoiceFromDraft(params: {
         gst: toPdfGst(client, draftInput.gst),
         accentColor,
         tds,
+        statement,
         totals,
         formattedTotal,
         baseCurrency,
