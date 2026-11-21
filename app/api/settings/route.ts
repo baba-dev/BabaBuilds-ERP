@@ -1,3 +1,4 @@
+import { listPaymentQrs } from '@/lib/settings/payment-qr-service';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
@@ -105,6 +106,7 @@ export async function GET() {
     return NextResponse.json({
       ...safeProfile,
       primaryBankAccount: profile ? resolvePrimaryRemittanceFromProfile(profile) : null,
+      paymentQrs: await listPaymentQrs(workspaceId),
       locale,
       planTier,
       subscriptionStatus: workspace?.subscriptionStatus ?? "FREE",

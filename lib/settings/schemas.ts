@@ -4,6 +4,7 @@ import { validateUdyam } from "@/lib/msme/udyam";
 import { isSupportedLocale } from "@/i18n/locales";
 import { accentColorField } from "@/lib/invoice-templates/shared/accent-color";
 import { INVOICE_DESIGN_IDS } from "@/lib/invoice-templates/catalog";
+import { normalizePayeeName, normalizeUpiVpa } from "@/lib/invoice/upi";
 
 /**
  * Settings are saved one section at a time. Each section has its own schema, so a bad value in one place never blocks
@@ -53,7 +54,44 @@ export const invoicingSchema = z.object({
   invoiceTermsDays: z.number().int().min(0).max(365),
 });
 
+/** A UPI ID: "" / null clear it, a valid ID is stored lower-cased, anything else is rejected. */
+const upiVpaField = z
+  .string()
+  .trim()
+  .max(80)
+  .nullable()
+  .optional()
+  .transform((v, ctx) => {
+    if (v === undefined) return undefined;
+    if (v === null || v === "") return null;
+    const vpa = normalizeUpiVpa(v);
+    if (!vpa) {
+      ctx.addIssue({ code: "custom", message: "UPI" });
+      return z.NEVER;
+    }
+    return vpa;
+  });
+
+const upiPayeeField = z
+  .string()
+  .trim()
+  .max(80)
+  .nullable()
+  .optional()
+  .transform((v, ctx) => {
+    if (v === undefined) return undefined;
+    if (v === null || v === "") return null;
+    const name = normalizePayeeName(v);
+    if (!name) {
+      ctx.addIssue({ code: "custom", message: "PAYEE" });
+      return z.NEVER;
+    }
+    return name;
+  });
+
 export const bankingSchema = z.object({
+  upiVpa: upiVpaField,
+  upiPayeeName: upiPayeeField,
   bankName: required(120),
   accountName: required(120),
   /** Only sent when the user typed a new number; the masked value is never posted back. */

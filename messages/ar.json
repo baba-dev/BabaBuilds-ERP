@@ -6564,7 +6564,9 @@
       "INVALID": "هذه القيمة غير صالحة.",
       "PAID_PLAN_REQUIRED": "يتطلب خطة Pro أو Team نشطة.",
       "TEST_KEY_BLOCKED": "مفاتيح الاختبار محظورة في الإنتاج.",
-      "PROFILE_REQUIRED": "احفظ ملف الأعمال أولًا."
+      "PROFILE_REQUIRED": "احفظ ملف الأعمال أولًا.",
+      "UPI": "معرّف UPI يبدو هكذا: name@bank بدون مسافات.",
+      "PAYEE": "استخدم حتى 60 حرفًا للاسم."
     },
     "secret": {
       "configured": "محفوظ ومشفّر",
@@ -6711,7 +6713,25 @@
       "routingLabelHint": "مثل SWIFT أو Sort Code أو ABA.",
       "printed": "تُطبع هذه البيانات على الفواتير ويراها فريقك.",
       "moreAccounts": "تتبّع عدة حسابات مصرفية وطابق كشوف الحساب.",
-      "openReconciliation": "فتح المطابقة"
+      "openReconciliation": "فتح المطابقة",
+      "upiTitle": "UPI ورموز QR",
+      "upiHint": "اعرض رمز QR للدفع بالمسح في فواتيرك. اختياري.",
+      "upiId": "معرّف UPI",
+      "upiIdHint": "يُنشئ معرّف UPI رمزًا بالمبلغ الدقيق ورقم الفاتورة ويعمل في كل تطبيقات UPI.",
+      "upiPayee": "الاسم الذي يراه الدافع",
+      "upiPayeeHint": "اختياري. عادةً اسم نشاطك.",
+      "upiTest": "امسح للتحقق",
+      "qrTitle": "رموز QR المرفوعة",
+      "qrHint": "من Paytm أو GPay أو PhonePe أو مصرفك. لا تتضمن المبلغ، لذا تطلب الفاتورة من الدافع كتابته.",
+      "qrLabel": "التسمية",
+      "qrLabelPlaceholder": "Paytm",
+      "qrChoose": "اختر صورة",
+      "qrRemove": "إزالة",
+      "qrAdded": "تمت إضافة QR.",
+      "qrRemoved": "تمت إزالة QR.",
+      "qrLimit": "أضفت الحد الأقصى وهو 3 صور QR.",
+      "qrFailed": "تعذر تحديث صور QR.",
+      "qrAlt": "رمز QR للدفع من {label}"
     },
     "email": {
       "server": "خادم البريد",

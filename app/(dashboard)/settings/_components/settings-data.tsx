@@ -9,6 +9,7 @@ export type SettingsData = {
   taxLabel?: string; taxIdLabel?: string; routingLabel?: string;
   invoiceTheme?: string; invoiceAccentColor?: string | null; invoicePrefix?: string | null; invoiceTermsDays?: number;
   bankName?: string; accountName?: string; ifscCode?: string; accountNumberDisplay?: string;
+  upiVpa?: string | null; upiPayeeName?: string | null; paymentQrs?: Array<{ id: string; label: string; imageUrl: string }>;
   primaryBankAccount?: { accountNumberDisplay?: string | null; maskedAccountNumber?: string | null } | null;
   logoUrl?: string | null; signatureUrl?: string | null; locale?: string; countryCode?: string;
   smtpHost?: string | null; smtpPort?: number | null; smtpUser?: string | null; smtpFromEmail?: string | null; hasSmtpPassword?: boolean;

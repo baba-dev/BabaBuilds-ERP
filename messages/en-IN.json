@@ -6530,7 +6530,9 @@
       "INVALID": "This value is not valid.",
       "PAID_PLAN_REQUIRED": "This needs an active Pro or Team plan.",
       "TEST_KEY_BLOCKED": "Test keys are blocked in production.",
-      "PROFILE_REQUIRED": "Save your business profile first."
+      "PROFILE_REQUIRED": "Save your business profile first.",
+      "UPI": "A UPI ID looks like name@bank, with no spaces.",
+      "PAYEE": "Use up to 60 characters for the name."
     },
     "secret": {
       "configured": "Saved and encrypted",
@@ -6677,7 +6679,25 @@
       "routingLabelHint": "For example SWIFT, Sort Code or ABA.",
       "printed": "These details are printed on invoices and visible to your team.",
       "moreAccounts": "Track several bank accounts and reconcile statements.",
-      "openReconciliation": "Open reconciliation"
+      "openReconciliation": "Open reconciliation",
+      "upiTitle": "UPI and QR codes",
+      "upiHint": "Show a scan-to-pay QR on your invoices. Optional.",
+      "upiId": "UPI ID",
+      "upiIdHint": "A UPI ID makes a QR with the exact amount and invoice number, and works in every UPI app.",
+      "upiPayee": "Name shown to the payer",
+      "upiPayeeHint": "Optional. Usually your business name.",
+      "upiTest": "Scan to check",
+      "qrTitle": "Uploaded QR codes",
+      "qrHint": "From Paytm, GPay, PhonePe or your bank. These do not include the amount, so invoices ask the payer to type it.",
+      "qrLabel": "Label",
+      "qrLabelPlaceholder": "Paytm",
+      "qrChoose": "Choose image",
+      "qrRemove": "Remove",
+      "qrAdded": "QR added.",
+      "qrRemoved": "QR removed.",
+      "qrLimit": "You have added the maximum of 3 QR images.",
+      "qrFailed": "Could not update the QR images.",
+      "qrAlt": "{label} payment QR"
     },
     "email": {
       "server": "Mail server",

@@ -6559,7 +6559,9 @@
       "INVALID": "Este valor no es válido.",
       "PAID_PLAN_REQUIRED": "Requiere un plan Pro o Team activo.",
       "TEST_KEY_BLOCKED": "Las claves de prueba están bloqueadas en producción.",
-      "PROFILE_REQUIRED": "Guarda primero el perfil del negocio."
+      "PROFILE_REQUIRED": "Guarda primero el perfil del negocio.",
+      "UPI": "Un ID de UPI tiene el formato nombre@banco, sin espacios.",
+      "PAYEE": "Usa hasta 60 caracteres para el nombre."
     },
     "secret": {
       "configured": "Guardado y cifrado",
@@ -6706,7 +6708,25 @@
       "routingLabelHint": "Por ejemplo SWIFT, Sort Code o ABA.",
       "printed": "Estos datos se imprimen en las facturas y los ve tu equipo.",
       "moreAccounts": "Gestiona varias cuentas bancarias y concilia extractos.",
-      "openReconciliation": "Abrir conciliación"
+      "openReconciliation": "Abrir conciliación",
+      "upiTitle": "UPI y códigos QR",
+      "upiHint": "Muestra un QR para pagar al escanear en tus facturas. Opcional.",
+      "upiId": "ID de UPI",
+      "upiIdHint": "Un ID de UPI crea un QR con el importe exacto y el número de factura, y funciona en todas las apps UPI.",
+      "upiPayee": "Nombre que ve quien paga",
+      "upiPayeeHint": "Opcional. Normalmente el nombre de tu negocio.",
+      "upiTest": "Escanea para comprobar",
+      "qrTitle": "Códigos QR subidos",
+      "qrHint": "De Paytm, GPay, PhonePe o tu banco. No incluyen el importe, así que la factura pide a quien paga que lo escriba.",
+      "qrLabel": "Etiqueta",
+      "qrLabelPlaceholder": "Paytm",
+      "qrChoose": "Elegir imagen",
+      "qrRemove": "Quitar",
+      "qrAdded": "QR añadido.",
+      "qrRemoved": "QR quitado.",
+      "qrLimit": "Ya has añadido el máximo de 3 imágenes QR.",
+      "qrFailed": "No se pudieron actualizar las imágenes QR.",
+      "qrAlt": "QR de pago de {label}"
     },
     "email": {
       "server": "Servidor de correo",
