@@ -1,5 +1,5 @@
 import { rgb } from "pdf-lib";
-import type { PDFPage } from "pdf-lib";
+import type { Color, PDFPage } from "pdf-lib";
 import type { InvoiceLineView } from "@/lib/invoice/build-invoice-view-model";
 import type { Paginator, PdfFonts } from "@/lib/invoice-templates/types";
 import type { AccentTokens } from "@/lib/invoice-templates/shared/tokens";
@@ -114,7 +114,7 @@ export const drawLineTable = (args: {
   const colX = (index: number) => x + columns.slice(0, index).reduce((sum, c) => sum + c.width, 0);
   const pageHeight = () => page.getSize().height;
 
-  const textInCell = (text: string, index: number, baselineYFromTop: number, opts: { bold?: boolean; color?: ReturnType<typeof rgb>; size?: number }) => {
+  const textInCell = (text: string, index: number, baselineYFromTop: number, opts: { bold?: boolean; color?: Color; size?: number }) => {
     const col = columns[index];
     const font = opts.bold ? fonts.bold : fonts.regular;
     const safe = safeText(font, text);
@@ -146,7 +146,7 @@ export const drawLineTable = (args: {
   drawHeader();
 
   if (items.length === 0) {
-    startNewPageIfNeeded(y + EMPTY_H) && drawHeader();
+    if (startNewPageIfNeeded(y + EMPTY_H)) drawHeader();
     textInCell(emptyLabel, 0, y + 22, { color: MUTED });
     y += EMPTY_H;
     rule(y);
