@@ -30,6 +30,9 @@ function DesignWireframe({ id }: { id: InvoiceDesignId }) {
   if (id === "DESIGN_4") {
     return <div className="space-y-1.5"><div className="flex gap-1.5"><div className="h-9 flex-1 rounded-sm bg-teal-700 p-1"><div className="h-1.5 w-8 rounded bg-white/70" /><div className="mt-1 h-3 w-14 rounded bg-white" /></div><div className="grid size-9 grid-cols-4 gap-px rounded-sm border border-teal-700 p-0.5">{Array.from({ length: 16 }, (_, i) => <div key={i} className={i % 3 === 0 || i % 5 === 0 ? "bg-zinc-800" : "bg-transparent"} />)}</div></div><div className="h-1.5 w-full rounded bg-zinc-200" /><div className="h-1.5 w-3/4 rounded bg-zinc-200" /></div>;
   }
+  if (id === "DESIGN_7") {
+    return <div className="space-y-2"><div className="flex items-end justify-between"><div><div className="h-1.5 w-6 rounded bg-zinc-300" /><div className="mt-1 h-3 w-14 rounded bg-zinc-800" /><div className="mt-1 h-0.5 w-5 bg-zinc-900" /></div><div className="h-4 w-12 rounded bg-zinc-800" /></div><div className="h-px w-full bg-zinc-300" /><div className="h-1.5 w-full rounded bg-zinc-100" /><div className="h-px w-full bg-zinc-200" /><div className="h-1.5 w-3/4 rounded bg-zinc-100" /></div>;
+  }
   if (id === "DESIGN_6") {
     return <div className="space-y-1.5"><div className="flex h-8 items-center justify-between rounded-sm bg-violet-600 px-2"><div className="h-3 w-14 rounded bg-white" /><div className="h-1.5 w-8 rounded bg-white/70" /></div><div className="grid grid-cols-4 gap-1 rounded-sm bg-violet-50 p-1">{Array.from({ length: 4 }, (_, i) => <div key={i} className="h-2 rounded bg-violet-300" />)}</div><div className="h-1.5 w-full rounded bg-zinc-200" /><div className="h-1.5 w-4/5 rounded bg-zinc-200" /></div>;
   }

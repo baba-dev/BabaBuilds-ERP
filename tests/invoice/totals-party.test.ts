@@ -9,6 +9,7 @@ import { drawPartyBlock } from "@/lib/invoice-templates/shared/party-blocks";
 import { drawTotalsBlock, measureTotalsBlock } from "@/lib/invoice-templates/shared/totals";
 import { buildAccentTokens } from "@/lib/invoice-templates/shared/tokens";
 import { extractPdfText, extractTextItems } from "./helpers/pdf-text";
+import { countRects } from "./helpers/pdf-content";
 
 const tokens = buildAccentTokens("#0B3D91");
 
@@ -81,6 +82,27 @@ describe("drawTotalsBlock", () => {
   it("handles a zero-total invoice", async () => {
     const { text } = await renderTotals("zeroTotal", { showGstSplit: true, showAmountInWords: true });
     expect(text).toContain("₹0.00");
+  });
+});
+
+describe("drawTotalsBlock plain style", () => {
+  const draw = async (style: "filled" | "plain") => {
+    const vm = buildInvoiceViewModel(SAMPLE_INVOICES.tdsInvoice);
+    const doc = await PDFDocument.create();
+    const fonts = await embedUnicodeFonts(doc);
+    const page = doc.addPage([595.28, 841.89]);
+    const bottom = drawTotalsBlock({ page, fonts, tokens, vm, x: 330, yFromTop: 300, width: 225, showGstSplit: true, showAmountInWords: true, style });
+    const bytes = await doc.save();
+    return { bottom, bytes, text: (await extractPdfText(bytes))[0], vm };
+  };
+
+  it("draws no filled bars but the same rows and the same height", async () => {
+    const filled = await draw("filled");
+    const plain = await draw("plain");
+    expect(await countRects(filled.bytes)).toBeGreaterThan(0);
+    expect(await countRects(plain.bytes)).toBe(0);
+    for (const word of ["Subtotal", "CGST", "Total", "Less: TDS @ 10% (Sec 194J)", "Net payable", "₹17,280.00", "Rupees"]) expect(plain.text).toContain(word);
+    expect(plain.bottom).toBeCloseTo(filled.bottom, 1);
   });
 });
 

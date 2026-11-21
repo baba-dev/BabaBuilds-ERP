@@ -81,8 +81,11 @@ export const drawTotalsBlock = (args: BlockOptions & {
   x: number;
   yFromTop: number;
   width: number;
+  /** "filled" (default): accent bars for the total and net payable. "plain": text and rules only. */
+  style?: "filled" | "plain";
 }): number => {
   const { page, fonts, tokens, vm, x, width } = args;
+  const plain = args.style === "plain";
   const pageHeight = page.getSize().height;
   let y = args.yFromTop;
 
@@ -90,14 +93,19 @@ export const drawTotalsBlock = (args: BlockOptions & {
     const label = safeText(fonts.regular, row.label);
     const value = safeText(fonts.bold, row.value);
     if (row.style === "total") {
-      drawRect(page, pageHeight, x, y, width, TOTAL_H, tokens.accent);
-      drawText(page, pageHeight, fonts, label, x + 10, y + 19.5, 11, { isBold: true, color: tokens.onAccent });
-      drawText(page, pageHeight, fonts, value, x + width - 10, y + 19.5, 12.5, { isBold: true, align: "right", color: tokens.onAccent });
+      if (plain) {
+        page.drawLine({ start: { x, y: pageHeight - y - 2 }, end: { x: x + width, y: pageHeight - y - 2 }, thickness: 0.9, color: INK });
+      } else {
+        drawRect(page, pageHeight, x, y, width, TOTAL_H, tokens.accent);
+      }
+      const ink = plain ? INK : tokens.onAccent;
+      drawText(page, pageHeight, fonts, label, x + 10, y + 19.5, 11, { isBold: true, color: ink });
+      drawText(page, pageHeight, fonts, value, x + width - 10, y + 19.5, 12.5, { isBold: true, align: "right", color: ink });
       y += TOTAL_H;
     } else if (row.style === "net") {
-      drawRect(page, pageHeight, x, y, width, NET_H, tokens.accentTintStrong);
-      drawText(page, pageHeight, fonts, label, x + 10, y + 18, 10.5, { isBold: true, color: tokens.accentDark });
-      drawText(page, pageHeight, fonts, value, x + width - 10, y + 18, 11.5, { isBold: true, align: "right", color: tokens.accentDark });
+      if (!plain) drawRect(page, pageHeight, x, y, width, NET_H, tokens.accentTintStrong);
+      drawText(page, pageHeight, fonts, label, x + 10, y + 18, 10.5, { isBold: true, color: plain ? INK : tokens.accentDark });
+      drawText(page, pageHeight, fonts, value, x + width - 10, y + 18, 11.5, { isBold: true, align: "right", color: plain ? INK : tokens.accentDark });
       y += NET_H;
     } else if (row.style === "note") {
       drawText(page, pageHeight, fonts, label, x + 10, y + 11, 7.5, { color: MUTED });
