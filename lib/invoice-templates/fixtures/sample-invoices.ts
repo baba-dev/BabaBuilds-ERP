@@ -99,6 +99,13 @@ const gstLines: PDFLine[] = [
   { description: "Annual support", note: "Priority email and phone support", quantity: 1, unitPrice: 12000, discountAmount: 1000, amount: 11000, taxRate: 0.18, sacCode: "998313" },
 ];
 
+const projectLines: PDFLine[] = [
+  { description: "Discovery workshop", note: "Two-day on-site session with stakeholders", quantity: 1, unitPrice: 4000, amount: 4000, taxRate: 0.18, sacCode: "998313", section: "Phase 1: Discovery" },
+  { description: "Requirements document", quantity: 1, unitPrice: 6500, discountAmount: 500, amount: 6000, taxRate: 0.18, sacCode: "998313", section: "Phase 1: Discovery" },
+  { description: "Development", note: "Hourly, as per timesheet", quantity: 40, unitPrice: 150, amount: 6000, taxRate: 0.18, sacCode: "998314", section: "Phase 2: Build" },
+  { description: "QA and handover", quantity: 1, unitPrice: 2000, amount: 2000, taxRate: 0.18, sacCode: "998314", section: "Phase 2: Build" },
+];
+
 const mixedRateLines: PDFLine[] = [
   { description: "Consulting", quantity: 1, unitPrice: 100.01, amount: 100.01, taxRate: 0.18, sacCode: "998311" },
   { description: "Printed manuals", quantity: 3, unitPrice: 16.677, amount: 50.03, taxRate: 0.05, sacCode: "4901" },
@@ -210,4 +217,5 @@ export const SAMPLE_INVOICES: Record<string, PDFParams> = {
   unpaidWithLink: makeLineParams(gstLines, { paymentLink: "https://rzp.io/i/unpaid789", gst: { placeOfSupply: "29" } }),
   accentInvoice: makeLineParams(gstLines, { accentColor: "#0B5FFF", gst: { placeOfSupply: "29" } }),
   accentClient: makeLineParams(gstLines, { client: { ...baseClient, invoiceAccentColor: "#B45309" }, gst: { placeOfSupply: "29" } }),
+  sectionedProject: makeLineParams(projectLines, { billingMonth: "Customer portal, Q2 2026", gst: { placeOfSupply: "29" } }),
 };
