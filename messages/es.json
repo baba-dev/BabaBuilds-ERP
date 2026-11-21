@@ -1139,7 +1139,9 @@
     "mod_payroll_path_linked_title": "Configuración vinculada a la Fuerza Laboral",
     "mod_payroll_path_linked_desc": "Derive el contexto de nómina de los empleados y asistencia de la Fuerza Laboral.",
     "mod_payroll_checklist": "Lista de preparación para salir en vivo",
-    "mod_payroll_score": "Puntuación de preparación: {score}% · Publicación: {status}"
+    "mod_payroll_score": "Puntuación de preparación: {score}% · Publicación: {status}",
+    "upi_id": "ID de UPI (opcional)",
+    "upi_hint": "Añade a tus facturas un QR de pago con el importe exacto. Puedes añadir imágenes QR más tarde en Ajustes, Cuenta bancaria."
   },
   "Tax": {
     "title": "Planificador Fiscal y Patrimonial",
@@ -4083,7 +4085,9 @@
       "download": "Descargar PDF",
       "viewInvoices": "Ver en facturas",
       "another": "Crear otra"
-    }
+    },
+    "accent": "Color de la factura",
+    "accentHint": "Sustituye el color del cliente y del espacio de trabajo solo en esta factura."
   },
   "ProposalsHub": {
     "title": "Propuestas",
@@ -6557,7 +6561,9 @@
       "INVALID": "Este valor no es válido.",
       "PAID_PLAN_REQUIRED": "Requiere un plan Pro o Team activo.",
       "TEST_KEY_BLOCKED": "Las claves de prueba están bloqueadas en producción.",
-      "PROFILE_REQUIRED": "Guarda primero el perfil del negocio."
+      "PROFILE_REQUIRED": "Guarda primero el perfil del negocio.",
+      "UPI": "Un ID de UPI tiene el formato nombre@banco, sin espacios.",
+      "PAYEE": "Usa hasta 60 caracteres para el nombre."
     },
     "secret": {
       "configured": "Guardado y cifrado",
@@ -6653,11 +6659,23 @@
       "themeHint": "El aspecto de cada PDF que envías.",
       "design": {
         "DESIGN_1": "Clásico",
-        "DESIGN_2": "Agencia moderna"
+        "DESIGN_2": "Agencia moderna",
+        "DESIGN_3": "Factura fiscal (GST)",
+        "DESIGN_4": "Pay-Fast (cobro rápido)",
+        "DESIGN_5": "Proyecto detallado",
+        "DESIGN_6": "Estado de cuenta",
+        "DESIGN_7": "Minimal Pro",
+        "DESIGN_8": "Recibo (80 mm)"
       },
       "designHint": {
         "DESIGN_1": "Encabezado blanco y líneas limpias. Muestra tu firma.",
-        "DESIGN_2": "Encabezado oscuro llamativo. No muestra firma."
+        "DESIGN_2": "Encabezado oscuro llamativo. No muestra firma.",
+        "DESIGN_3": "Lista para GST: HSN/SAC, desglose CGST/SGST/IGST, lugar de suministro, IRN e importe en letras.",
+        "DESIGN_4": "Importe pendiente bien visible y un QR para pagar al escanear, para cobrar antes.",
+        "DESIGN_5": "Secciones con subtotales, cantidad × tarifa, descuentos y notas por línea, para que el cliente vea qué paga.",
+        "DESIGN_6": "Muestra lo que el cliente aún debe: saldo anterior, pagos, créditos y el importe a pagar ahora.",
+        "DESIGN_7": "Sobrio y espacioso: un solo acento, líneas en vez de cajas, nada que sobre.",
+        "DESIGN_8": "Recibo estrecho para impresora térmica, con un pequeño QR de pago al final."
       },
       "numbering": "Números de factura",
       "numberingHint": "Los números siguen un orden dentro de cada ejercicio fiscal.",
@@ -6670,7 +6688,11 @@
       "dueOnReceipt": "Al recibirla",
       "days": "{count} días",
       "termsNote": "Se aplica a las facturas nuevas. Las igualas y propuestas mantienen sus propios plazos.",
-      "dueExample": "Una factura con fecha {date} vencería el {due}."
+      "dueExample": "Una factura con fecha {date} vencería el {due}.",
+      "accent": "Color de la factura",
+      "accentHint": "Se usa en encabezados, totales y detalles de tus facturas. Déjalo vacío para usar el color propio de cada diseño.",
+      "compareLink": "Comparar todos los diseños",
+      "compareHint": "Mira tu última factura en todos."
     },
     "banking": {
       "title": "Datos bancarios en las facturas",
@@ -6690,7 +6712,25 @@
       "routingLabelHint": "Por ejemplo SWIFT, Sort Code o ABA.",
       "printed": "Estos datos se imprimen en las facturas y los ve tu equipo.",
       "moreAccounts": "Gestiona varias cuentas bancarias y concilia extractos.",
-      "openReconciliation": "Abrir conciliación"
+      "openReconciliation": "Abrir conciliación",
+      "upiTitle": "UPI y códigos QR",
+      "upiHint": "Muestra un QR para pagar al escanear en tus facturas. Opcional.",
+      "upiId": "ID de UPI",
+      "upiIdHint": "Un ID de UPI crea un QR con el importe exacto y el número de factura, y funciona en todas las apps UPI.",
+      "upiPayee": "Nombre que ve quien paga",
+      "upiPayeeHint": "Opcional. Normalmente el nombre de tu negocio.",
+      "upiTest": "Escanea para comprobar",
+      "qrTitle": "Códigos QR subidos",
+      "qrHint": "De Paytm, GPay, PhonePe o tu banco. No incluyen el importe, así que la factura pide a quien paga que lo escriba.",
+      "qrLabel": "Etiqueta",
+      "qrLabelPlaceholder": "Paytm",
+      "qrChoose": "Elegir imagen",
+      "qrRemove": "Quitar",
+      "qrAdded": "QR añadido.",
+      "qrRemoved": "QR quitado.",
+      "qrLimit": "Ya has añadido el máximo de 3 imágenes QR.",
+      "qrFailed": "No se pudieron actualizar las imágenes QR.",
+      "qrAlt": "QR de pago de {label}"
     },
     "email": {
       "server": "Servidor de correo",
@@ -7188,7 +7228,13 @@
       "save": "Guardar cambios",
       "create": "Crear cliente",
       "duplicateTitle": "{name} parece ser el mismo cliente.",
-      "createAnyway": "Crear de todos modos"
+      "createAnyway": "Crear de todos modos",
+      "accent": "Color de factura para este cliente",
+      "accentHint": "Opcional. Sustituye el color de tu espacio de trabajo en las facturas de este cliente.",
+      "tds": "TDS que retiene este cliente",
+      "tdsHint": "Opcional. Rellena las facturas nuevas de este cliente.",
+      "tdsSection": "Sección",
+      "tdsRate": "Tasa (%)"
     },
     "errors": {
       "REQUIRED": "Este campo es obligatorio.",
@@ -10609,5 +10655,68 @@
       "recorded": "Pago registrado en {invoice}",
       "failed": "No se pudo registrar el pago. Inténtalo de nuevo."
     }
+  },
+  "InvoiceAccent": {
+    "swatch": "Usar el color {hex}",
+    "custom": "Elegir un color personalizado",
+    "hexLabel": "Código de color",
+    "invalid": "Introduce un color como #0B5FFF.",
+    "tooLight": "Este color es demasiado claro para leerse en papel, así que se usará un tono más oscuro.",
+    "useShade": "Usar el tono más oscuro",
+    "clear": "Usar el color heredado",
+    "clearPlain": "Quitar color",
+    "inherited": {
+      "client": "Se usa el color de este cliente.",
+      "workspace": "Se usa el color de tu espacio de trabajo.",
+      "design": "Se usa el color propio de cada diseño."
+    },
+    "preview": "Vista previa del color",
+    "previewTotal": "Total"
+  },
+  "InvoiceTds": {
+    "title": "El cliente retiene TDS",
+    "hint": "Muestra el TDS en la factura y cobra solo el importe neto.",
+    "exportOff": "El TDS no se aplica a las facturas de exportación.",
+    "section": "Sección",
+    "rate": "Tasa (%)",
+    "invalidSection": "Usa un código como 194J.",
+    "invalidRate": "Introduce una tasa entre 0 y 100.",
+    "fromClient": "Rellenado desde este cliente.",
+    "tdsLine": "Menos: TDS @ {rate}%",
+    "net": "Neto a pagar",
+    "estimate": "Una estimación sobre el importe antes de GST. La factura muestra la cifra exacta."
+  },
+  "InvoiceCompare": {
+    "title": "Comparar diseños",
+    "subtitle": "Tu última factura en cada diseño. Toca uno para verlo a pantalla completa y elegir tu favorito.",
+    "back": "Volver a facturación",
+    "showing": "Mostrando",
+    "sampleBadge": "Factura de ejemplo.",
+    "sampleHint": "Crea una factura para ver tus propios datos aquí.",
+    "controls": "Opciones de vista previa",
+    "accent": "Color de acento",
+    "accentHint": "Solo vista previa. Pasa a ser tu predeterminado al usar un diseño.",
+    "showTds": "Mostrar TDS",
+    "tdsHint": "Mira cómo la retención cambia los totales.",
+    "tdsSection": "Sección",
+    "tdsRate": "Tasa (%)",
+    "designs": "Diseños de factura",
+    "current": "Actual",
+    "open": "Ver {design} a pantalla completa",
+    "retry": "No se pudo generar. Reintentar",
+    "rendering": "Generando vista previa",
+    "position": "{index} de {total}",
+    "zoom": "Zoom",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "prev": "Diseño anterior",
+    "next": "Diseño siguiente",
+    "canvasLabel": "Vista previa del diseño {design}",
+    "useDesign": "Usar este diseño",
+    "usingThis": "Diseño actual",
+    "download": "Descargar PDF",
+    "noPermission": "Solo los administradores del espacio pueden cambiar el diseño.",
+    "saved": "{design} es ahora tu diseño de factura.",
+    "saveFailed": "No se pudo guardar el diseño. Inténtalo de nuevo."
   }
 }

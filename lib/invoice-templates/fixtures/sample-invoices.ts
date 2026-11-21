@@ -1,4 +1,5 @@
-import type { PDFParams } from "@/lib/invoice/build-invoice-view-model";
+import type { PDFLine, PDFParams } from "@/lib/invoice/build-invoice-view-model";
+import type { StatementInput } from "@/lib/invoice/statement";
 import { calculateInvoiceTotals } from "@/lib/invoice/totals";
 
 const baseProfile: PDFParams["profile"] = {
@@ -14,6 +15,7 @@ const baseProfile: PDFParams["profile"] = {
   website: "erp.bababuilds.com",
   udyamNumber: "UDYAM-KR-00-1234567",
   panNumber: "ABCDE1234F",
+  gstStateCode: "29",
   bankName: "HDFC Bank",
   accountName: "BabaBuilds ERP Services Pvt Ltd",
   accountNumber: "1234567890",
@@ -75,6 +77,70 @@ const makeParams = (
     ...overrides,
   };
 };
+
+/** Builds params from detailed lines so totals, services and lines always agree. */
+const makeLineParams = (lines: PDFLine[], overrides: Partial<PDFParams> = {}, taxExempt = false): PDFParams => {
+  const services = lines.map((l) => ({ title: l.description, nicDetails: l.note ?? "", amount: l.amount, sacCode: l.sacCode ?? null }));
+  const totals = calculateInvoiceTotals({
+    services: lines.map((l) => ({ amount: l.amount, taxRate: l.taxRate ?? 0.18 })),
+    isTaxExempt: taxExempt,
+    defaultTaxRate: 0.18,
+  });
+  return makeParams({
+    services,
+    lines,
+    totals,
+    formattedTotal: totals.total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    ...overrides,
+  }, lines.length, taxExempt);
+};
+
+const gstLines: PDFLine[] = [
+  { description: "ERP implementation", note: "Discovery, configuration and training", quantity: 2, unitPrice: 2500, amount: 5000, taxRate: 0.18, sacCode: "998313" },
+  { description: "Annual support", note: "Priority email and phone support", quantity: 1, unitPrice: 12000, discountAmount: 1000, amount: 11000, taxRate: 0.18, sacCode: "998313" },
+];
+
+const day = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+
+/** Static QR images used by the payment-QR fixtures. The files are created by the tests that render them. */
+export const FIXTURE_QR_DIR_WORKSPACE = "fixture-ws";
+const fixtureQr = (name: string) => ({ label: name, imagePath: `/payment-qr/${FIXTURE_QR_DIR_WORKSPACE}/${name.toLowerCase()}.png` });
+const fixtureUpi = { vpa: "shop@okhdfc", payeeName: "Baba & Sons" };
+
+const statementHistory: StatementInput = {
+  previousBalance: 3500,
+  openItems: [
+    { number: "INV/26-27/009", date: day("2026-03-05"), dueDate: day("2026-03-12"), balance: 2000 },
+    { number: "INV/26-27/011", date: day("2026-04-02"), dueDate: day("2026-04-09"), balance: 1500 },
+  ],
+  hiddenOpenItems: 0,
+  payments: [{ date: day("2026-04-10"), amount: 3000, method: "UPI", reference: "UTR-4421" }],
+  credits: [{ number: "CN/26-27/001", date: day("2026-04-12"), amount: 500 }],
+  sinceDate: day("2026-04-02"),
+};
+
+const statementManyOpen: StatementInput = {
+  previousBalance: 12000,
+  openItems: Array.from({ length: 8 }, (_, i) => ({ number: `INV/26-27/${String(i + 1).padStart(3, "0")}`, date: day(`2026-03-${String(i + 1).padStart(2, "0")}`), dueDate: day(`2026-03-${String(i + 8).padStart(2, "0")}`), balance: 1000 })),
+  hiddenOpenItems: 4,
+  payments: [],
+  credits: [],
+  sinceDate: day("2026-04-02"),
+};
+
+const projectLines: PDFLine[] = [
+  { description: "Discovery workshop", note: "Two-day on-site session with stakeholders", quantity: 1, unitPrice: 4000, amount: 4000, taxRate: 0.18, sacCode: "998313", section: "Phase 1: Discovery" },
+  { description: "Requirements document", quantity: 1, unitPrice: 6500, discountAmount: 500, amount: 6000, taxRate: 0.18, sacCode: "998313", section: "Phase 1: Discovery" },
+  { description: "Development", note: "Hourly, as per timesheet", quantity: 40, unitPrice: 150, amount: 6000, taxRate: 0.18, sacCode: "998314", section: "Phase 2: Build" },
+  { description: "QA and handover", quantity: 1, unitPrice: 2000, amount: 2000, taxRate: 0.18, sacCode: "998314", section: "Phase 2: Build" },
+];
+
+const mixedRateLines: PDFLine[] = [
+  { description: "Consulting", quantity: 1, unitPrice: 100.01, amount: 100.01, taxRate: 0.18, sacCode: "998311" },
+  { description: "Printed manuals", quantity: 3, unitPrice: 16.677, amount: 50.03, taxRate: 0.05, sacCode: "4901" },
+  { description: "Courier", quantity: 1, unitPrice: 0.01, amount: 0.01, taxRate: 0.12, sacCode: "996812" },
+  { description: "Workshop", quantity: 1, unitPrice: 33.33, amount: 33.33, taxRate: 0.18, sacCode: "999293" },
+];
 
 export const SAMPLE_INVOICES: Record<string, PDFParams> = {
   basic: makeParams(),
@@ -138,4 +204,64 @@ export const SAMPLE_INVOICES: Record<string, PDFParams> = {
   }),
   paid: makeParams({ status: "PAID" }),
   partiallyPaid: makeParams({ status: "PARTIALLY_PAID" }),
+  gstIntra: makeLineParams(gstLines, {
+    client: { ...baseClient, gstStateCode: "29", address: "12 MG Road, Bengaluru, Karnataka, India" },
+    gst: { placeOfSupply: "29" },
+  }),
+  gstInter: makeLineParams(gstLines, {
+    client: { ...baseClient, gstStateCode: "27" },
+    gst: { placeOfSupply: "27", irn: "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90", irnAckNo: "112610000012345", irnAckDate: new Date("2026-04-27T00:00:00.000Z") },
+  }),
+  mixedRates: makeLineParams(mixedRateLines, { gst: { placeOfSupply: "29" } }),
+  emptyLines: makeLineParams([], { gst: { placeOfSupply: "29" } }),
+  zeroTotal: makeLineParams([{ description: "Complimentary onboarding", quantity: 1, unitPrice: 0, amount: 0, taxRate: 0.18 }], { gst: { placeOfSupply: "29" } }),
+  devanagariClient: makeLineParams(gstLines, {
+    client: { ...baseClient, name: "शर्मा ट्रेडर्स प्राइवेट लिमिटेड", address: "४२ गांधी रोड, मुंबई, महाराष्ट्र" },
+    gst: { placeOfSupply: "27" },
+  }),
+  manyLines: makeLineParams(
+    Array.from({ length: 200 }, (_, i): PDFLine => ({
+      description: i === 3 ? "https://example.com/a-very-long-unbroken-reference/path/with/many/segments/that/cannot/wrap/naturally/0123456789" : `Line item ${i + 1}`,
+      note: i % 10 === 0 ? "Includes setup and handover" : null,
+      quantity: 1 + (i % 4),
+      unitPrice: 100 + i,
+      amount: (1 + (i % 4)) * (100 + i),
+      taxRate: 0.18,
+      sacCode: "998313",
+    })),
+    { gst: { placeOfSupply: "29" } },
+  ),
+  paidWithLink: makeLineParams(gstLines, {
+    status: "PAID",
+    paymentLink: "https://rzp.io/i/paid123",
+    payment: { paidOn: new Date("2026-04-30T00:00:00.000Z") },
+    gst: { placeOfSupply: "29" },
+  }),
+  partialWithBalance: makeLineParams(gstLines, {
+    status: "PARTIALLY_PAID",
+    paymentLink: "https://rzp.io/i/partial456",
+    payment: { amountPaid: 4000, paidOn: new Date("2026-04-30T00:00:00.000Z") },
+    gst: { placeOfSupply: "29" },
+  }),
+  unpaidWithLink: makeLineParams(gstLines, { paymentLink: "https://rzp.io/i/unpaid789", gst: { placeOfSupply: "29" } }),
+  accentInvoice: makeLineParams(gstLines, { accentColor: "#0B5FFF", gst: { placeOfSupply: "29" } }),
+  accentClient: makeLineParams(gstLines, { client: { ...baseClient, invoiceAccentColor: "#B45309" }, gst: { placeOfSupply: "29" } }),
+  sectionedProject: makeLineParams(projectLines, { billingMonth: "Customer portal, Q2 2026", gst: { placeOfSupply: "29" } }),
+  tdsInvoice: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, tds: { section: "194J", ratePercent: 10, amount: 1600 } }),
+  tdsInvoiceWithLink: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, tds: { section: "194J", ratePercent: 10, amount: 1600 }, paymentLink: "https://rzp.io/i/tds123" }),
+  tdsPaid: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, status: "PAID", tds: { section: "194J", ratePercent: 10, amount: 1600 }, payment: { paidOn: new Date("2026-04-30T00:00:00.000Z") } }),
+  tdsOnExport: makeParams({ client: { ...baseClient, country: "United States", isExport: true, taxId: null }, tds: { section: "194J", ratePercent: 10, amount: 1010 }, baseCurrency: "USD", userLocale: "en-US" }, 2, true),
+  statementInvoice: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, statement: statementHistory }),
+  statementFirst: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, statement: { previousBalance: 0, openItems: [], hiddenOpenItems: 0, payments: [], credits: [], sinceDate: null } }),
+  statementManyOpen: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, statement: statementManyOpen }),
+  statementPaid: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, status: "PAID", payment: { paidOn: day("2026-04-30") }, statement: statementHistory }),
+  upiOnly: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, upi: fixtureUpi }),
+  linkUpiStatic: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, paymentLink: "https://rzp.io/i/lus123", upi: fixtureUpi, staticQrs: [fixtureQr("Paytm"), fixtureQr("GPay")] }),
+  staticOnly: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, staticQrs: [fixtureQr("Paytm")] }),
+  manyStatic: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, upi: fixtureUpi, staticQrs: [fixtureQr("Paytm"), fixtureQr("GPay"), fixtureQr("PhonePe"), fixtureQr("Bank")] }),
+  tdsUpi: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, tds: { section: "194J", ratePercent: 10, amount: 1600 }, upi: fixtureUpi }),
+  paidUpi: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, status: "PAID", payment: { paidOn: day("2026-04-30") }, upi: fixtureUpi, staticQrs: [fixtureQr("Paytm")] }),
+  usdUpi: makeParams({ client: { ...baseClient, country: "United States", isExport: true, taxId: null }, baseCurrency: "USD", userLocale: "en-US", upi: fixtureUpi, staticQrs: [fixtureQr("Paytm")] }, 2, true),
+  invalidUpi: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, upi: { vpa: "not a vpa" } }),
+  missingStaticFile: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, staticQrs: [{ label: "Ghost", imagePath: "/payment-qr/fixture-ws/does-not-exist.png" }] }),
 };

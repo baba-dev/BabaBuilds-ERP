@@ -7,6 +7,7 @@ import { syncPrimaryRemittanceBankAccount } from "@/lib/banking/sync-primary-rem
 import { encrypt } from "@/lib/encryption";
 import { RbacDeniedError, rbacDeniedResponse, requirePermission } from "@/lib/rbac";
 import { enforceRouteRateLimit } from "@/lib/route-rate-limit";
+import { parseOptionalUpiVpa } from "@/lib/invoice/upi";
 
 type SetupPayload = {
   countryCode?: string;
@@ -19,6 +20,8 @@ type SetupPayload = {
   proprietorName?: string;
   email?: string;
   address?: string;
+  /** Optional UPI ID for pay-now QR codes on invoices. */
+  upiVpa?: string;
   
   smtpHost?: string;
   smtpPort?: number;
@@ -95,7 +98,10 @@ export async function POST(req: Request) {
         fieldErrors.email = "Please enter a valid email address.";
       }
       if (!body.address?.trim()) fieldErrors.address = "Billing address is required.";
+      if (!parseOptionalUpiVpa(body.upiVpa).ok) fieldErrors.upiVpa = "A UPI ID looks like name@bank, with no spaces.";
     }
+    const upiParsed = parseOptionalUpiVpa(body.isSkip ? null : body.upiVpa);
+    const upiVpa = upiParsed.ok ? upiParsed.value : null;
 
     if (Object.keys(fieldErrors).length > 0) {
       return NextResponse.json(
@@ -138,6 +144,7 @@ export async function POST(req: Request) {
           proprietorName: body.proprietorName?.trim() || "Owner",
           email: body.email?.trim() || "pending@example.com",
           address: body.address?.trim() || "Pending Setup",
+          upiVpa,
           taxLabel: body.taxLabel || "GST",
           taxIdLabel: body.taxIdLabel,
           routingLabel: body.routingLabel,
@@ -169,6 +176,8 @@ export async function POST(req: Request) {
           proprietorName: body.proprietorName?.trim() || "Owner",
           email: body.email?.trim() || "pending@example.com",
           address: body.address?.trim() || "Pending Setup",
+          // Setup never wipes a UPI ID that was already saved.
+          ...(upiVpa ? { upiVpa } : {}),
           taxLabel: body.taxLabel || "GST",
           taxIdLabel: body.taxIdLabel,
           routingLabel: body.routingLabel,

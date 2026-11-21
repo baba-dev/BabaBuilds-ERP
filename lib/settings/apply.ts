@@ -46,12 +46,15 @@ export function buildSectionUpdate(section: SettingsSectionKey, v: Values, exist
     }
     case "invoicing":
       set("invoiceTheme", v.invoiceTheme);
+      if (has("invoiceAccentColor")) set("invoiceAccentColor", (v.invoiceAccentColor as string | null) ?? null);
       set("invoicePrefix", (v.invoicePrefix as string) || "INV");
       set("invoiceTermsDays", v.invoiceTermsDays);
       break;
     case "banking":
       for (const k of ["bankName", "accountName"]) if (has(k)) set(k, v[k]);
       if (has("ifscCode")) set("ifscCode", v.ifscCode ?? "");
+      if (has("upiVpa")) set("upiVpa", (v.upiVpa as string | null) ?? null);
+      if (has("upiPayeeName")) set("upiPayeeName", (v.upiPayeeName as string | null) ?? null);
       if (typeof v.routingLabel === "string" && v.routingLabel) set("routingLabel", v.routingLabel);
       break;
     case "email":

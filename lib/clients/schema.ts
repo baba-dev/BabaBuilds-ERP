@@ -1,6 +1,8 @@
 import { parseClientGstInput } from "@/lib/gst/client-state";
 import { countryName, isForeignTo, matchCountry } from "./country";
 import { serializeTags } from "./tags";
+import { normalizeHexColor } from "@/lib/invoice-templates/shared/accent-color";
+import { normalizeTdsSection } from "@/lib/invoice/tds";
 
 export const CLIENT_STATUSES = ["ACTIVE", "VIP", "INACTIVE"] as const;
 export type ClientStatus = (typeof CLIENT_STATUSES)[number];
@@ -9,7 +11,7 @@ export type FieldIssue = { field: string; code: string };
 
 export type ClientColumns = {
   name: string; address: string; country: string; countryCode: string | null; taxId: string | null;
-  gstStateCode: string | null; gstSupplyOverride: "SEZ_WP" | "SEZ_WOP" | null; gstReverseCharge: boolean;
+  invoiceAccentColor: string | null; tdsSection: string | null; tdsRatePercent: number | null; gstStateCode: string | null; gstSupplyOverride: "SEZ_WP" | "SEZ_WOP" | null; gstReverseCharge: boolean;
   email: string | null; phone: string | null; website: string | null; industry: string | null; currency: string | null;
   paymentTermsDays: number | null; creditLimit: number | null; tags: string; status: ClientStatus; ownerUserId: string | null; isExport: boolean;
 };
@@ -129,6 +131,21 @@ export function normalizeClientInput(raw: Raw, opts: { workspaceCountry: string;
   if (has(raw, "status")) {
     const s = (str(raw.status) ?? "").toUpperCase();
     if (!(CLIENT_STATUSES as readonly string[]).includes(s)) issues.push({ field: "status", code: "STATUS" }); else out.status = s as ClientStatus;
+  }
+  if (has(raw, "tdsSection")) {
+    const s = (str(raw.tdsSection) ?? "").trim();
+    if (!s) out.tdsSection = null;
+    else { const section = normalizeTdsSection(s); if (!section) issues.push({ field: "tdsSection", code: "INVALID" }); else out.tdsSection = section; }
+  }
+  if (has(raw, "tdsRatePercent")) {
+    const r = (str(raw.tdsRatePercent) ?? "").trim();
+    if (!r) out.tdsRatePercent = null;
+    else { const n = Number(r); if (!Number.isFinite(n) || n < 0 || n > 100) issues.push({ field: "tdsRatePercent", code: "INVALID" }); else out.tdsRatePercent = n === 0 ? null : n; }
+  }
+  if (has(raw, "invoiceAccentColor")) {
+    const c = (str(raw.invoiceAccentColor) ?? "").trim();
+    if (!c) out.invoiceAccentColor = null;
+    else { const hex = normalizeHexColor(c); if (!hex) issues.push({ field: "invoiceAccentColor", code: "INVALID" }); else out.invoiceAccentColor = hex; }
   }
   if (has(raw, "ownerUserId")) out.ownerUserId = (str(raw.ownerUserId) ?? "").trim() || null;
 

@@ -1,3 +1,4 @@
+import { listPaymentQrs } from '@/lib/settings/payment-qr-service';
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
@@ -9,6 +10,7 @@ import path from 'path';
 import { scanBuffer } from '@/lib/security/clamav';
 import { ensureDir, sniffAllowedContent, uniqueStoredName, buildPrivatePath } from '@/lib/uploads/private-storage';
 import { isSupportedLocale } from '@/i18n/locales';
+import { isInvoiceDesignId } from '@/lib/invoice-templates/catalog';
 import { getTaxFeatureFlags } from '@/lib/tax/feature-flags';
 import { logActivity } from '@/lib/security/activity-log';
 import { invalidateDashboardCacheForWorkspace, noteDashboardCacheIncident } from '@/lib/dashboard-cache';
@@ -104,6 +106,7 @@ export async function GET() {
     return NextResponse.json({
       ...safeProfile,
       primaryBankAccount: profile ? resolvePrimaryRemittanceFromProfile(profile) : null,
+      paymentQrs: await listPaymentQrs(workspaceId),
       locale,
       planTier,
       subscriptionStatus: workspace?.subscriptionStatus ?? "FREE",
@@ -173,7 +176,8 @@ export async function POST(request: Request) {
     const smtpUser       = getStringField('smtpUser');
     const smtpFromEmail  = getStringField('smtpFromEmail');
     const defaultSacCode = (formData.get('defaultSacCode') as string) || "998313";
-    const invoiceTheme   = (formData.get('invoiceTheme')  as string) || "DESIGN_1";
+    const requestedTheme = formData.get('invoiceTheme');
+    const invoiceTheme   = isInvoiceDesignId(requestedTheme) ? requestedTheme : "DESIGN_1";
     const clientLocale   = formData.get('locale')         as string;
 
     if (clientLocale && !isSupportedLocale(clientLocale)) {

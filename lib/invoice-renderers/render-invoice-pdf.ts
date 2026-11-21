@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 
 import { createPaginator } from "@/lib/invoice-templates/shared/paginator";
 import type { PdfFonts } from "@/lib/invoice-templates/types";
+import { embedUnicodeFonts } from "@/lib/invoice-templates/shared/fonts";
 import { getInvoiceTemplate } from "@/lib/invoice-templates/registry";
 import "@/lib/invoice-templates";
 import type { InvoiceViewModel } from "@/lib/invoice/build-invoice-view-model";
@@ -16,7 +17,7 @@ const embedFonts = async (pdfDoc: PDFDocument): Promise<PdfFonts> => {
 export const renderInvoicePdf = async (vm: InvoiceViewModel): Promise<Uint8Array> => {
   const template = getInvoiceTemplate(vm.template.resolvedTemplateId);
   const pdfDoc = await PDFDocument.create();
-  const fonts = await embedFonts(pdfDoc);
+  const fonts = template.meta.fonts === "unicode" ? await embedUnicodeFonts(pdfDoc) : await embedFonts(pdfDoc);
   const paginator = createPaginator(pdfDoc, { paperSize: template.meta.paperSize });
   await template.draw({ pdfDoc, fonts, vm, paginator });
   paginator.finalize();

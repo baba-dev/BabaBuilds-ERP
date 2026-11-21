@@ -11,7 +11,7 @@ export type ClientRowData = {
   id: string; name: string; email: string | null; phone: string | null; website: string | null; industry: string | null; country: string; countryCode: string | null;
   address: string; taxId: string | null; logoUrl: string | null; status: string; isExport: boolean; currency: string | null; paymentTermsDays: number | null;
   creditLimit: number | null; tagList: string[]; archivedAt: string | null; contactCount: number; lastContactedAt: string | null; ownerUserId: string | null;
-  gstStateCode?: string | null; gstSupplyOverride?: string | null; gstReverseCharge?: boolean | null; source?: string;
+  invoiceAccentColor?: string | null; tdsSection?: string | null; tdsRatePercent?: number | null; gstStateCode?: string | null; gstSupplyOverride?: string | null; gstReverseCharge?: boolean | null; source?: string;
   metrics: Metrics; payment: { avgDaysToPay: number | null; onTimeRate: number | null; termsDays: number };
   health: Health; credit: Credit;
   retainerSummary?: { activeCount?: number; monthlyValue?: number } | null;

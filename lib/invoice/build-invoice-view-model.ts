@@ -5,6 +5,11 @@ import { resolvePrimaryRemittanceFromProfile } from "@/lib/banking/resolve-prima
 import type { NormalizedPrimaryRemittanceAccount } from "@/lib/banking/types";
 import { normalizeInvoiceWatermark, type InvoiceWatermarkKind } from "@/lib/invoice-templates/shared/watermark";
 import { resolveInvoiceTemplateId } from "@/lib/invoice-templates/registry";
+import { buildGstBreakdown, type GstBreakdown, type GstInput } from "@/lib/invoice/gst-breakdown";
+import type { StatementInput } from "@/lib/invoice/statement";
+import { buildUpiUri, normalizeUpiVpa } from "@/lib/invoice/upi";
+import { amountInWords } from "@/lib/invoice-templates/shared/words";
+import { normalizeHexColor } from "@/lib/invoice-templates/shared/accent-color";
 
 export interface PDFProfile {
   companyName: string;
@@ -32,6 +37,10 @@ export interface PDFProfile {
   } | null;
   signatureUrl?: string | null;
   invoiceTheme?: string | null;
+  /** Workspace default brand colour, #RRGGBB. */
+  invoiceAccentColor?: string | null;
+  /** Supplier GST state code (2 digits). */
+  gstStateCode?: string | null;
   taxLabel?: string | null;
   workspace?: {
     planTier: string;
@@ -50,6 +59,9 @@ export interface PDFClient {
   taxId?: string | null;
   isExport: boolean;
   logoUrl?: string | null;
+  /** Per-client brand colour override, #RRGGBB. */
+  invoiceAccentColor?: string | null;
+  gstStateCode?: string | null;
 }
 
 export interface PDFService {
@@ -57,6 +69,20 @@ export interface PDFService {
   nicDetails: string;
   amount: number;
   sacCode?: string | null;
+}
+
+export interface PDFLine {
+  description: string;
+  note?: string | null;
+  quantity: number;
+  unitPrice: number;
+  discountAmount?: number;
+  /** Fraction, e.g. 0.18. Falls back to the invoice's tax rate when absent. */
+  taxRate?: number | null;
+  sacCode?: string | null;
+  /** The line's taxable value (after discount), the figure the invoice totals add up. */
+  amount: number;
+  section?: string | null;
 }
 
 export interface PDFParams {
@@ -76,12 +102,58 @@ export interface PDFParams {
   status?: string | null;
   showFreePlanFooter?: boolean;
   templateId?: string | null;
+  /** Detailed line items. When absent the lines are derived from `services` (quantity 1). */
+  lines?: PDFLine[];
+  /** GST treatment: place of supply, reverse charge, SEZ, e-invoice IRN. */
+  gst?: GstInput;
+  /** Per-invoice brand colour override, #RRGGBB. */
+  accentColor?: string | null;
+  /** Payment details for the PAID / PARTIAL stamp. An unknown paid amount is treated as nothing paid. */
+  payment?: { paidOn?: Date | null; amountPaid?: number };
+  /** Expected TDS the client will deduct (amount computed by the server on the pre-GST subtotal). */
+  tds?: { section?: string | null; ratePercent: number; amount: number } | null;
+  /** Client history for the Statement design (built by lib/invoice/statement.ts). */
+  statement?: StatementInput | null;
+  /** The workspace's UPI ID, shown as a pay-now QR with the exact amount (INR, unpaid invoices only). */
+  upi?: { vpa: string; payeeName?: string | null } | null;
+  /** Uploaded static QR images (no amount); at most three UPI/uploaded QRs are shown together. */
+  staticQrs?: Array<{ label: string; imagePath: string }>;
 }
 
 type InvoiceAddress = {
   full: string;
   lines: string[];
 };
+
+export type InvoiceLineView = {
+  description: string;
+  note: string | null;
+  quantity: number;
+  quantityFormatted: string;
+  unitPrice: number;
+  unitPriceFormatted: string;
+  discountAmount: number;
+  taxRatePercent: number;
+  sacCode: string | null;
+  amount: number;
+  amountFormatted: string;
+  section: string | null;
+};
+
+export type InvoicePaymentView = {
+  kind: "NONE" | "PARTIAL" | "PAID";
+  paidOn: Date | null;
+  amountPaid: number;
+  balanceDue: number;
+};
+
+export type InvoiceQrSource =
+  | { kind: "PAYMENT_LINK"; url: string; label: string }
+  | { kind: "UPI"; uri: string; label: string; vpa: string }
+  | { kind: "STATIC_IMAGE"; imagePath: string; label: string };
+
+/** UPI and uploaded QRs shown together, after the payment link. */
+export const MAX_UPI_AND_STATIC_QRS = 3;
 
 type InvoiceServiceView = {
   title: string;
@@ -100,6 +172,19 @@ export interface InvoiceViewModel {
   dueDate: Date;
   billingMonth: string;
   services: InvoiceServiceView[];
+  lines: InvoiceLineView[];
+  gst: GstBreakdown;
+  /** Normalised accent colours by level; a template resolves them with its own default. */
+  accentCandidates: { invoice: string | null; client: string | null; workspace: string | null };
+  payment: InvoicePaymentView;
+  /** Expected TDS, or null (none, an export, or a zero amount). */
+  tds: { section: string | null; ratePercent: number; amount: number; sectionLabel: string } | null;
+  /** Total less expected TDS: what the client pays. Equals the total when there is no TDS. */
+  netPayable: number;
+  /** Client statement with what is due now, or null when none was supplied. */
+  statement: (StatementInput & { amountDueNow: number }) | null;
+  amountInWords: string | null;
+  paymentQrs: InvoiceQrSource[];
   totals: InvoiceTotals;
   formattedTotal: string;
   baseCurrency: string;
@@ -203,6 +288,14 @@ export const buildInvoiceViewModel = ({
   status,
   showFreePlanFooter: showFreePlanFooterArg,
   templateId,
+  lines: linesArg,
+  gst: gstArg,
+  accentColor,
+  payment: paymentArg,
+  tds: tdsArg,
+  statement: statementArg,
+  upi: upiArg,
+  staticQrs: staticQrsArg,
 }: PDFParams): InvoiceViewModel => {
   const billingSnapshot = {
     planTier: profile.workspace?.planTier,
@@ -235,6 +328,59 @@ export const buildInvoiceViewModel = ({
   const watermarkKind = normalizeInvoiceWatermark(status);
   const workspaceCountryCode = profile.workspace?.countryCode?.trim().toUpperCase() || "IN";
   const isIndiaWorkspace = workspaceCountryCode === "IN";
+  const roundMoney = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const defaultLineRate = totals.taxMode === "exempt" ? 0 : totals.taxRate;
+  const sourceLines: PDFLine[] =
+    linesArg ??
+    services.map((s) => ({ description: s.title, note: s.nicDetails || null, quantity: 1, unitPrice: s.amount, amount: s.amount, sacCode: s.sacCode ?? null }));
+  const lines: InvoiceLineView[] = sourceLines.map((l) => {
+    const sac = resolveSacCodeDisplay(l.sacCode || null);
+    const rate = totals.taxMode === "exempt" ? 0 : (l.taxRate ?? defaultLineRate);
+    return {
+      description: sanitizeDisplayText(l.description),
+      note: sanitizeDisplayText(l.note) || null,
+      quantity: l.quantity,
+      quantityFormatted: l.quantity.toLocaleString(userLocale, { maximumFractionDigits: 3 }),
+      unitPrice: l.unitPrice,
+      unitPriceFormatted: l.unitPrice.toLocaleString(userLocale, { minimumFractionDigits: 2 }),
+      discountAmount: l.discountAmount ?? 0,
+      taxRatePercent: Math.round(rate * 10_000) / 100,
+      sacCode: sac !== "N/A" ? sac : null,
+      amount: l.amount,
+      amountFormatted: l.amount.toLocaleString(userLocale, { minimumFractionDigits: 2 }),
+      section: sanitizeDisplayText(l.section) || null,
+    };
+  });
+  const gst = buildGstBreakdown({
+    lines: lines.map((l) => ({ amount: l.amount, taxRate: l.taxRatePercent / 100 })),
+    gst: gstArg ? { ...gstArg, supplierStateCode: gstArg.supplierStateCode ?? profile.gstStateCode ?? null } : undefined,
+    isExport: Boolean(client.isExport),
+    isTaxExempt: totals.taxMode === "exempt",
+    totalTaxAmount: totals.taxAmount,
+  });
+  const tds = tdsArg && !client.isExport && tdsArg.amount > 0 && tdsArg.ratePercent > 0
+    ? { section: tdsArg.section?.trim() || null, ratePercent: tdsArg.ratePercent, amount: tdsArg.amount, sectionLabel: tdsArg.section?.trim() ? `Sec ${tdsArg.section.trim()}` : "" }
+    : null;
+  const netPayable = Math.max(0, roundMoney(totals.total - (tds?.amount ?? 0)));
+  const amountPaid = watermarkKind === "PAID" ? (paymentArg?.amountPaid ?? netPayable) : watermarkKind === "PARTIAL" ? (paymentArg?.amountPaid ?? 0) : 0;
+  const payment: InvoicePaymentView = {
+    kind: watermarkKind === "NONE" ? "NONE" : watermarkKind,
+    paidOn: paymentArg?.paidOn ?? null,
+    amountPaid,
+    balanceDue: Math.max(0, roundMoney(netPayable - amountPaid)),
+  };
+  // Pay-now QRs: the payment link first (it reconciles itself), then UPI with the exact amount, then uploaded images.
+  const amountToCollect = payment.kind === "PARTIAL" ? payment.balanceDue : netPayable;
+  const canCollectInIndia = baseCurrency === "INR" && payment.kind !== "PAID" && amountToCollect > 0;
+  const upiVpa = normalizeUpiVpa(upiArg?.vpa);
+  const upiUri = canCollectInIndia && upiVpa ? buildUpiUri({ vpa: upiVpa, payeeName: upiArg?.payeeName, amount: amountToCollect, note: invoiceNumber }) : null;
+  const paymentQrs: InvoiceQrSource[] = [];
+  if (normalizedPaymentLink) paymentQrs.push({ kind: "PAYMENT_LINK", url: normalizedPaymentLink, label: "Pay online" });
+  if (upiUri && upiVpa) paymentQrs.push({ kind: "UPI", uri: upiUri, label: "UPI", vpa: upiVpa });
+  if (canCollectInIndia) {
+    const room = MAX_UPI_AND_STATIC_QRS - (upiUri ? 1 : 0);
+    for (const q of (staticQrsArg ?? []).slice(0, room)) paymentQrs.push({ kind: "STATIC_IMAGE", imagePath: q.imagePath, label: q.label });
+  }
   const resolvedTemplateId = resolveInvoiceTemplateId({
     requestedTemplateId: templateId,
     profileTheme: profile.invoiceTheme,
@@ -259,6 +405,19 @@ export const buildInvoiceViewModel = ({
         sacCodeDisplay: sacDisplay !== "N/A" ? sacDisplay : undefined,
       };
     }),
+    lines,
+    gst,
+    accentCandidates: {
+      invoice: normalizeHexColor(accentColor),
+      client: normalizeHexColor(client.invoiceAccentColor),
+      workspace: normalizeHexColor(profile.invoiceAccentColor),
+    },
+    payment,
+    tds,
+    netPayable,
+    statement: statementArg ? { ...statementArg, amountDueNow: roundMoney(Math.max(0, statementArg.previousBalance) + (watermarkKind === "PAID" ? 0 : payment.balanceDue)) } : null,
+    amountInWords: amountInWords(totals.total, baseCurrency),
+    paymentQrs,
     totals,
     formattedTotal,
     baseCurrency,
