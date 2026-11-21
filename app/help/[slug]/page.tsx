@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { categoryToSlug, getDocBySlug, getAllDocs } from "@/lib/docs";
 import { MDXRemote } from "next-mdx-remote/rsc";
+import remarkGfm from "remark-gfm";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
@@ -409,7 +410,7 @@ export default async function DocPage({ params }: Props) {
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px] gap-8 xl:gap-10">
         {/* Markdown content rendered via MDXRemote with custom components */}
         <div className={cn(typography.richContent, "max-w-none")}>
-          <MDXRemote source={doc.content} components={components} />
+          <MDXRemote source={doc.content} components={components} options={{ mdxOptions: { remarkPlugins: [remarkGfm] } }} />
         </div>
 
         {/* Table of contents */}

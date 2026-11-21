@@ -101,3 +101,11 @@ describe("viewport + layout guards", () => {
     expect(src).not.toMatch(/"sticky top-0 z-20/);
   });
 });
+
+describe("responsive dialog on phones", () => {
+  it("lets a long form scroll inside the bottom sheet, so every field and the footer stay reachable", () => {
+    const src = read("components/ResponsiveDialog.tsx");
+    const mobile = src.slice(src.indexOf("<Drawer open"));
+    expect(mobile).toMatch(/className="[^"]*\bmin-h-0\b[^"]*\bflex-1\b[^"]*\boverflow-y-auto\b[^"]*"/);
+  });
+});

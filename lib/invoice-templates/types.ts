@@ -22,6 +22,10 @@ export interface InvoiceTemplateMeta {
   supportsSignature: boolean;
   supportsPaymentLink: boolean;
   supportsMultiPage: boolean;
+  /** Font set the renderer embeds. Defaults to "standard" (Helvetica); "unicode" embeds a bundled font with the rupee sign. */
+  fonts?: "standard" | "unicode";
+  /** Hex accent used when no invoice, client or workspace colour is set. */
+  defaultAccent?: string;
 }
 
 export interface Paginator {

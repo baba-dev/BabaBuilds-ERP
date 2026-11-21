@@ -6,7 +6,7 @@ category: "General"
 tags: ["settings", "configuration", "workspace", "branding", "modules"]
 estimatedMinutes: 12
 isFeatured: true
-dateModified: "2026-06-04"
+dateModified: "2026-11-21"
 ---
 
 # Configuring Your Business Profile & Workspace Settings
@@ -39,7 +39,14 @@ Ensuring your tax and banking details are correct is critical before sending you
 
 - **Tax IDs:** Enter your local tax registration numbers (e.g., GSTIN, VAT, EIN). These are legally required on invoices in many jurisdictions.
 - **Bank Remittance Details:** Clearly state your bank name, account number, routing/IFSC codes, and account holder name so clients know where to send wire transfers.
+- **UPI ID and QR codes (optional):** Under **Bank account → UPI and QR codes**, add your UPI ID or upload up to three QR images (Paytm, Google Pay, PhonePe) so invoices can show a scan-to-pay QR.
 - **SMTP Configuration:** To send invoices directly from BabaBuilds ERP, enter your email provider's SMTP credentials. We recommend using an App Password for security.
+
+## Choose your invoice design and colour
+
+Open **Settings → Invoicing** to pick one of eight invoice designs, set your brand **Accent colour**, and choose your invoice prefix and payment terms. **Compare all designs** shows your latest invoice in every design. A colour can also be overridden per client or per invoice. See [Invoice Designs](/help/invoice-designs).
+
+<HelpImage src="/product-images/light/settings_invoicing.png" alt="Invoicing settings with the design picker, compare link and accent colour" caption="Settings → Invoicing: design, brand colour, numbering and payment terms." />
 
 ## Step 3: Enabling Optional Sub Systems
 
@@ -75,4 +82,4 @@ Enabled modules will immediately appear in your sidebar navigation. For more det
 This is almost always an SMTP issue. Ensure your SMTP host, port, username, and password are correct. If using Gmail or Outlook, you must generate a specific "App Password" rather than using your main account password.
 
 ### Can I have different branding for different clients?
-No, the branding configured in Workspace Settings applies globally to all invoices generated within that workspace. For multiple brands, consider provisioning a separate workspace.
+Partly. Your logo, business details and invoice design apply to the whole workspace, but the **accent colour** can be set per client (or per invoice) on top of your workspace colour. For fully separate brands, with their own logo and details, consider provisioning a separate workspace.

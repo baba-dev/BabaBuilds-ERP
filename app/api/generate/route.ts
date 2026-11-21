@@ -104,6 +104,10 @@ function buildRequestHash(payload: unknown): string {
 
 import { GenerateInvoiceSchema } from '@/lib/invoice/generate-schema';
 import { snapshotGstFields } from '@/lib/gst/source';
+import { designUsesPaymentQrs, toPdfGst, toPdfLines, toPdfPaymentQrs } from '@/lib/invoice/pdf-params';
+import { loadPaymentQrImages } from '@/lib/invoice/payment-qr-loader';
+import { loadClientStatement } from '@/lib/invoice/statement-loader';
+import { computeTds, netPayable as netPayableOf, normalizeTdsSection } from '@/lib/invoice/tds';
 import { supplierChargesGst } from "@/lib/msme/threshold";
 import { getClientRecipients } from '@/lib/clients/service';
 
@@ -351,6 +355,9 @@ export async function POST(request: Request) {
       isTaxExempt: Boolean(client.isExport) || !supplierChargesGst(profile, countryCode),
       defaultTaxRate: taxResolution.taxRate,
     });
+    // Expected TDS is taken on the pre-GST subtotal; payment links and QR codes collect what the client actually pays.
+    const tdsResult = computeTds({ subtotal: totals.subtotal, ratePercent: body.tds?.ratePercent, isExport: Boolean(client.isExport) });
+    const netPayable = netPayableOf(totals.total, tdsResult?.amount);
 
     const invoiceDate = customDate ? new Date(customDate) : new Date();
     const billingSnapshot: WorkspaceBillingSnapshot = {
@@ -462,7 +469,7 @@ export async function POST(request: Request) {
               }
 
               const linkResult = await generateTenantPaymentLink({
-                amount: toDecimal(totals.total).toNumber(),
+                amount: toDecimal(netPayable).toNumber(),
                 currency: baseCurrency,
                 description: `Invoice ${invoiceNumber}`,
                 invoiceDueDate: invoiceDueDate,
@@ -507,7 +514,7 @@ export async function POST(request: Request) {
               }
 
               const linkResult = await generateStripePaymentLink({
-                amount: toDecimal(totals.total).toNumber(),    // in major units — service converts to smallest unit internally
+                amount: toDecimal(netPayable).toNumber(),    // in major units — service converts to smallest unit internally
                 currency: baseCurrency,   // passes locale currency accurately for correct unit math
                 description: `Invoice ${invoiceNumber}`,
                 invoiceNumber,
@@ -551,6 +558,9 @@ export async function POST(request: Request) {
         // ──────────────────────────────────────────────────────────────────────
 
         // --- PDF GENERATION ENGINE ---
+        // Only the Statement design shows client history, so only it pays for the query.
+        const paymentQrs = designUsesPaymentQrs(profile.invoiceTheme) ? toPdfPaymentQrs(profile, await loadPaymentQrImages(workspaceId)) : {};
+        const statement = profile.invoiceTheme === 'DESIGN_6' ? await loadClientStatement(workspaceId, client.id, invoiceDate, baseCurrency) : undefined;
         const pdfBytes = await generateInvoicePDF({
           profile,
           client: {
@@ -561,6 +571,8 @@ export async function POST(request: Request) {
             taxId: client.taxId,
             isExport: client.isExport,
             logoUrl: client.logoUrl,
+            invoiceAccentColor: client.invoiceAccentColor,
+            gstStateCode: client.gstStateCode,
           },
           invoiceNumber,
           date: invoiceDate,
@@ -573,6 +585,12 @@ export async function POST(request: Request) {
             amount: s.amount,
             sacCode: s.sacCode || sacCode || profile.defaultSacCode || null,
           })),
+          lines: toPdfLines(sanitizedServices, (typeof sacCode === 'string' ? sacCode : null) || profile.defaultSacCode || null),
+          gst: toPdfGst(client, body.gst),
+          accentColor: body.accentColor ?? null,
+          tds: tdsResult ? { section: normalizeTdsSection(body.tds?.section), ratePercent: tdsResult.ratePercent, amount: tdsResult.amount } : null,
+          statement,
+          ...paymentQrs,
           totals,
           formattedTotal,
           baseCurrency,
@@ -602,6 +620,10 @@ export async function POST(request: Request) {
               financialYear: fy,
               billingMonth: billingMonthValue,
               invoiceDate,
+              accentColor: body.accentColor ?? null,
+              tdsSection: tdsResult ? normalizeTdsSection(body.tds?.section) : null,
+              tdsRatePercent: tdsResult?.ratePercent ?? null,
+              tdsAmount: tdsResult ? toDecimal(tdsResult.amount).toDecimalPlaces(2) : null,
               clientName: client.name,
               clientId: client.id,
               sacCode: typeof sacCode === 'string' ? sacCode : JSON.stringify(sacCode),

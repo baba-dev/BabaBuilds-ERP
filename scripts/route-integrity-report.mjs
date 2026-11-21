@@ -67,7 +67,12 @@ function listConfiguredRedirects() {
 }
 
 // Files whose path literals are not navigation links (crawler rules, framework error shells).
-const NON_LINK_FILES = new Set(['app/robots.ts', 'app/global-error.tsx']);
+const NON_LINK_FILES = new Set([
+  'app/robots.ts',
+  'app/global-error.tsx',
+  // Loads the generated /public/pdfjs browser files (see scripts/copy-pdfjs.mjs); static assets, not routes.
+  'app/(dashboard)/settings/invoice-designs/_components/pdf-render.ts',
+]);
 
 function listAppRoutes() {
   const routes = new Set();

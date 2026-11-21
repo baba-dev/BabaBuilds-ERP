@@ -1222,7 +1222,9 @@
     "mod_payroll_path_linked_title": "Workforce-linked setup",
     "mod_payroll_path_linked_desc": "Derive payroll context from Workforce employees + attendance.",
     "mod_payroll_checklist": "Go-live readiness checklist",
-    "mod_payroll_score": "Readiness score: {score}% · Posting: {status}"
+    "mod_payroll_score": "Readiness score: {score}% · Posting: {status}",
+    "upi_id": "UPI ID (optional)",
+    "upi_hint": "Adds a scan-to-pay QR with the exact amount to your invoices. You can add QR images later in Settings, Bank account."
   },
   "Tax": {
     "title": "Wealth & Tax Planner",
@@ -2019,7 +2021,8 @@
       "resellerProgram": "Reseller Program",
       "privacyPolicy": "Privacy Policy",
       "termsOfService": "Terms of Service",
-      "helpCenter": "Help Center"
+      "helpCenter": "Help Center",
+      "blog": "Blog"
     },
     "description": "Public-ready ERP platform for invoicing, compliance, and growth operations.",
     "addressLabel": "Address - Pilani, Rajasthan, India.",
@@ -4054,7 +4057,9 @@
       "download": "Download PDF",
       "viewInvoices": "View in invoices",
       "another": "Create another"
-    }
+    },
+    "accent": "Invoice colour",
+    "accentHint": "Overrides the client and workspace colour for this invoice only."
   },
   "ProposalsHub": {
     "title": "Proposals",
@@ -6528,7 +6533,9 @@
       "INVALID": "This value is not valid.",
       "PAID_PLAN_REQUIRED": "This needs an active Pro or Team plan.",
       "TEST_KEY_BLOCKED": "Test keys are blocked in production.",
-      "PROFILE_REQUIRED": "Save your business profile first."
+      "PROFILE_REQUIRED": "Save your business profile first.",
+      "UPI": "A UPI ID looks like name@bank, with no spaces.",
+      "PAYEE": "Use up to 60 characters for the name."
     },
     "secret": {
       "configured": "Saved and encrypted",
@@ -6624,11 +6631,23 @@
       "themeHint": "The look of every PDF you send.",
       "design": {
         "DESIGN_1": "Classic",
-        "DESIGN_2": "Modern agency"
+        "DESIGN_2": "Modern agency",
+        "DESIGN_3": "Tax invoice (GST)",
+        "DESIGN_4": "Pay-Fast",
+        "DESIGN_5": "Itemised project",
+        "DESIGN_6": "Statement",
+        "DESIGN_7": "Minimal Pro",
+        "DESIGN_8": "Receipt (80mm)"
       },
       "designHint": {
         "DESIGN_1": "White header and clean lines. Shows your signature.",
-        "DESIGN_2": "Bold dark header. Does not show a signature."
+        "DESIGN_2": "Bold dark header. Does not show a signature.",
+        "DESIGN_3": "GST-ready: HSN/SAC, CGST/SGST/IGST split, place of supply, IRN and amount in words.",
+        "DESIGN_4": "Big amount due and a scan-to-pay QR so clients pay sooner.",
+        "DESIGN_5": "Sections with subtotals, quantity × rate, discounts and line notes, so clients see what they pay for.",
+        "DESIGN_6": "Shows what the client still owes: previous balance, payments, credits and the amount due now.",
+        "DESIGN_7": "Quiet and spacious: one accent, rules instead of boxes, nothing you do not need.",
+        "DESIGN_8": "A narrow thermal-printer receipt with a small payment QR at the end."
       },
       "numbering": "Invoice numbers",
       "numberingHint": "Numbers run in order within each financial year.",
@@ -6641,7 +6660,11 @@
       "dueOnReceipt": "On receipt",
       "days": "{count} days",
       "termsNote": "Applies to new invoices. Retainers and proposals keep their own terms.",
-      "dueExample": "An invoice dated {date} would be due on {due}."
+      "dueExample": "An invoice dated {date} would be due on {due}.",
+      "accent": "Invoice colour",
+      "accentHint": "Used for headers, totals and accents on your invoices. Leave it empty to use each design's own colour.",
+      "compareLink": "Compare all designs",
+      "compareHint": "See your latest invoice in all of them."
     },
     "banking": {
       "title": "Bank details on invoices",
@@ -6661,7 +6684,25 @@
       "routingLabelHint": "For example SWIFT, Sort Code or ABA.",
       "printed": "These details are printed on invoices and visible to your team.",
       "moreAccounts": "Track several bank accounts and reconcile statements.",
-      "openReconciliation": "Open reconciliation"
+      "openReconciliation": "Open reconciliation",
+      "upiTitle": "UPI and QR codes",
+      "upiHint": "Show a scan-to-pay QR on your invoices. Optional.",
+      "upiId": "UPI ID",
+      "upiIdHint": "A UPI ID makes a QR with the exact amount and invoice number, and works in every UPI app.",
+      "upiPayee": "Name shown to the payer",
+      "upiPayeeHint": "Optional. Usually your business name.",
+      "upiTest": "Scan to check",
+      "qrTitle": "Uploaded QR codes",
+      "qrHint": "From Paytm, GPay, PhonePe or your bank. These do not include the amount, so invoices ask the payer to type it.",
+      "qrLabel": "Label",
+      "qrLabelPlaceholder": "Paytm",
+      "qrChoose": "Choose image",
+      "qrRemove": "Remove",
+      "qrAdded": "QR added.",
+      "qrRemoved": "QR removed.",
+      "qrLimit": "You have added the maximum of 3 QR images.",
+      "qrFailed": "Could not update the QR images.",
+      "qrAlt": "{label} payment QR"
     },
     "email": {
       "server": "Mail server",
@@ -7159,7 +7200,13 @@
       "save": "Save changes",
       "create": "Create client",
       "duplicateTitle": "{name} looks like the same client.",
-      "createAnyway": "Create anyway"
+      "createAnyway": "Create anyway",
+      "accent": "Invoice colour for this client",
+      "accentHint": "Optional. Overrides your workspace colour on this client's invoices.",
+      "tds": "TDS this client deducts",
+      "tdsHint": "Optional. Prefills new invoices for this client.",
+      "tdsSection": "Section",
+      "tdsRate": "Rate (%)"
     },
     "errors": {
       "REQUIRED": "This field is required.",
@@ -10580,5 +10627,68 @@
       "recorded": "Payment recorded on {invoice}",
       "failed": "Couldn’t record the payment. Try again."
     }
+  },
+  "InvoiceAccent": {
+    "swatch": "Use colour {hex}",
+    "custom": "Pick a custom colour",
+    "hexLabel": "Colour code",
+    "invalid": "Enter a colour like #0B5FFF.",
+    "tooLight": "This colour is too light to read on paper, so a darker shade will be used.",
+    "useShade": "Use the darker shade",
+    "clear": "Use inherited colour",
+    "clearPlain": "Remove colour",
+    "inherited": {
+      "client": "Using this client's colour.",
+      "workspace": "Using your workspace colour.",
+      "design": "Using each design's own colour."
+    },
+    "preview": "Colour preview",
+    "previewTotal": "Total"
+  },
+  "InvoiceTds": {
+    "title": "Client deducts TDS",
+    "hint": "Show TDS on the invoice and collect only the net amount.",
+    "exportOff": "TDS does not apply to export invoices.",
+    "section": "Section",
+    "rate": "Rate (%)",
+    "invalidSection": "Use a code like 194J.",
+    "invalidRate": "Enter a rate between 0 and 100.",
+    "fromClient": "Prefilled from this client.",
+    "tdsLine": "Less: TDS @ {rate}%",
+    "net": "Net payable",
+    "estimate": "An estimate on the amount before GST. The invoice shows the exact figure."
+  },
+  "InvoiceCompare": {
+    "title": "Compare designs",
+    "subtitle": "Your latest invoice in every design. Tap one to see it full screen and pick your favourite.",
+    "back": "Back to invoicing",
+    "showing": "Showing",
+    "sampleBadge": "Sample invoice.",
+    "sampleHint": "Create an invoice to see your own data here.",
+    "controls": "Preview options",
+    "accent": "Accent colour",
+    "accentHint": "Previews only. It becomes your default when you use a design.",
+    "showTds": "Show TDS",
+    "tdsHint": "See how withholding changes the totals.",
+    "tdsSection": "Section",
+    "tdsRate": "Rate (%)",
+    "designs": "Invoice designs",
+    "current": "Current",
+    "open": "View {design} full screen",
+    "retry": "Could not render. Retry",
+    "rendering": "Rendering preview",
+    "position": "{index} of {total}",
+    "zoom": "Zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "prev": "Previous design",
+    "next": "Next design",
+    "canvasLabel": "Preview of the {design} design",
+    "useDesign": "Use this design",
+    "usingThis": "Current design",
+    "download": "Download PDF",
+    "noPermission": "Only workspace managers can change the design.",
+    "saved": "{design} is now your invoice design.",
+    "saveFailed": "Could not save the design. Please try again."
   }
 }

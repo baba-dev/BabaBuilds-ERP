@@ -14,6 +14,11 @@ const withSerwist = withSerwistInit({
 const nextConfig: NextConfig = {
   output: 'standalone', // Drastically reduces Node.js memory footprint on VPS
   compress: false,      // Offload GZIP/Brotli compression to NGINX for CPU efficiency
+  // Invoice PDF fonts are read from disk at runtime, so the standalone trace must ship them.
+  outputFileTracingIncludes: {
+    '/*': ['./assets/invoice-fonts/**/*', './content/blog/**/*'],
+    '/api/**': ['./assets/invoice-fonts/**/*'],
+  },
   async headers() {
     const isDev = process.env.NODE_ENV === 'development';
     const staging = process.env.ERP_STAGING_MODE === '1';

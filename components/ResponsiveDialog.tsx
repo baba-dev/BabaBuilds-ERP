@@ -57,7 +57,8 @@ export function ResponsiveDialog({
           <DrawerTitle>{title}</DrawerTitle>
           {description && <DrawerDescription>{description}</DrawerDescription>}
         </DrawerHeader>
-        <div className="px-4 pb-4">
+        {/* The sheet is capped at 92dvh, so long forms scroll inside it; the header and footer stay put. */}
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
           {children}
         </div>
         {footer && <DrawerFooter>{footer}</DrawerFooter>}

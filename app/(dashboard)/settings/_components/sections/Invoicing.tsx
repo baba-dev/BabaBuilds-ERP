@@ -1,9 +1,12 @@
 "use client";
 
 import { useFormatter, useTranslations } from "next-intl";
-import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { INVOICE_DESIGN_IDS, isInvoiceDesignId, type InvoiceDesignId } from "@/lib/invoice-templates/catalog";
+import { AccentColorField } from "@/components/invoice/AccentColorField";
 import { Field, Panel, ReadOnlyBanner, SaveBar, useSectionForm } from "../form-kit";
 import type { SectionProps } from "./types";
 
@@ -14,12 +17,38 @@ function fyLabel(now = new Date()) {
   return `${String(y).slice(2)}-${String((y + 1) % 100).padStart(2, "0")}`;
 }
 
+/** A tiny wireframe of each design for the picker (the full previews live on the compare page). */
+function DesignWireframe({ id }: { id: InvoiceDesignId }) {
+  if (id === "DESIGN_1") {
+    return <div className="space-y-1.5"><div className="flex justify-between"><div className="h-2 w-16 rounded bg-zinc-300" /><div className="h-2 w-8 rounded bg-zinc-200" /></div><div className="h-1.5 w-full rounded bg-zinc-200" /><div className="h-1.5 w-4/5 rounded bg-zinc-200" /><div className="h-1.5 w-3/5 rounded bg-zinc-200" /></div>;
+  }
+  if (id === "DESIGN_2") {
+    return <div className="space-y-1.5"><div className="-m-2 mb-1 flex h-7 items-center justify-between bg-zinc-800 px-2"><div className="h-2 w-16 rounded bg-zinc-500" /><div className="h-2 w-8 rounded bg-zinc-600" /></div><div className="h-1.5 w-full rounded bg-zinc-200" /><div className="h-1.5 w-4/5 rounded bg-zinc-200" /></div>;
+  }
+  if (id === "DESIGN_3") {
+    return <div className="space-y-1.5"><div className="flex items-center justify-between"><div className="h-2 w-14 rounded bg-blue-900/70" /><div className="h-2.5 w-10 rounded bg-blue-800" /></div><div className="h-1 w-full rounded bg-blue-800" /><div className="grid grid-cols-2 gap-1.5"><div className="h-3 rounded bg-zinc-200" /><div className="h-3 rounded bg-zinc-200" /></div><div className="h-2 w-full rounded bg-blue-800" /><div className="h-1.5 w-full rounded bg-zinc-200" /><div className="flex justify-between"><div className="h-2 w-12 rounded bg-blue-100" /><div className="h-2.5 w-10 rounded bg-blue-800" /></div></div>;
+  }
+  if (id === "DESIGN_4") {
+    return <div className="space-y-1.5"><div className="flex gap-1.5"><div className="h-9 flex-1 rounded-sm bg-teal-700 p-1"><div className="h-1.5 w-8 rounded bg-white/70" /><div className="mt-1 h-3 w-14 rounded bg-white" /></div><div className="grid size-9 grid-cols-4 gap-px rounded-sm border border-teal-700 p-0.5">{Array.from({ length: 16 }, (_, i) => <div key={i} className={i % 3 === 0 || i % 5 === 0 ? "bg-zinc-800" : "bg-transparent"} />)}</div></div><div className="h-1.5 w-full rounded bg-zinc-200" /><div className="h-1.5 w-3/4 rounded bg-zinc-200" /></div>;
+  }
+  if (id === "DESIGN_8") {
+    return <div className="mx-auto w-16 space-y-1.5"><div className="mx-auto h-2 w-10 rounded bg-zinc-800" /><div className="border-t border-dashed border-zinc-400" /><div className="flex justify-between"><div className="h-1.5 w-8 rounded bg-zinc-300" /><div className="h-1.5 w-4 rounded bg-zinc-400" /></div><div className="flex justify-between"><div className="h-1.5 w-6 rounded bg-zinc-300" /><div className="h-1.5 w-4 rounded bg-zinc-400" /></div><div className="border-t border-dashed border-zinc-400" /><div className="mx-auto grid size-6 grid-cols-3 gap-px border border-zinc-700 p-px">{Array.from({ length: 9 }, (_, i) => <div key={i} className={i % 2 === 0 ? "bg-zinc-800" : "bg-transparent"} />)}</div></div>;
+  }
+  if (id === "DESIGN_7") {
+    return <div className="space-y-2"><div className="flex items-end justify-between"><div><div className="h-1.5 w-6 rounded bg-zinc-300" /><div className="mt-1 h-3 w-14 rounded bg-zinc-800" /><div className="mt-1 h-0.5 w-5 bg-zinc-900" /></div><div className="h-4 w-12 rounded bg-zinc-800" /></div><div className="h-px w-full bg-zinc-300" /><div className="h-1.5 w-full rounded bg-zinc-100" /><div className="h-px w-full bg-zinc-200" /><div className="h-1.5 w-3/4 rounded bg-zinc-100" /></div>;
+  }
+  if (id === "DESIGN_6") {
+    return <div className="space-y-1.5"><div className="flex h-8 items-center justify-between rounded-sm bg-violet-600 px-2"><div className="h-3 w-14 rounded bg-white" /><div className="h-1.5 w-8 rounded bg-white/70" /></div><div className="grid grid-cols-4 gap-1 rounded-sm bg-violet-50 p-1">{Array.from({ length: 4 }, (_, i) => <div key={i} className="h-2 rounded bg-violet-300" />)}</div><div className="h-1.5 w-full rounded bg-zinc-200" /><div className="h-1.5 w-4/5 rounded bg-zinc-200" /></div>;
+  }
+  return <div className="flex gap-2"><div className="w-1 rounded bg-indigo-600" /><div className="flex-1 space-y-1.5"><div className="h-3 w-12 rounded bg-zinc-800" /><div className="h-4 w-full rounded bg-indigo-100" /><div className="h-2 w-full rounded bg-indigo-200" /><div className="h-1.5 w-full rounded bg-zinc-200" /><div className="h-2 w-full rounded bg-indigo-200" /></div></div>;
+}
+
 export function InvoicingSection({ data, canManage }: SectionProps) {
   const t = useTranslations("SettingsHub.invoicing");
   const form = useSectionForm({
     section: "invoicing",
-    initial: { invoiceTheme: data.invoiceTheme === "DESIGN_2" ? "DESIGN_2" : "DESIGN_1", invoicePrefix: data.invoicePrefix ?? "INV", invoiceTermsDays: String(data.invoiceTermsDays ?? 7) },
-    toPayload: (v) => ({ ...v, invoiceTermsDays: Number(v.invoiceTermsDays) }),
+    initial: { invoiceTheme: isInvoiceDesignId(data.invoiceTheme) ? data.invoiceTheme : "DESIGN_1", invoiceAccentColor: data.invoiceAccentColor ?? "", invoicePrefix: data.invoicePrefix ?? "INV", invoiceTermsDays: String(data.invoiceTermsDays ?? 7) },
+    toPayload: (v) => ({ ...v, invoiceAccentColor: v.invoiceAccentColor || null, invoiceTermsDays: Number(v.invoiceTermsDays) }),
   });
   const { values: v, set, errors } = form;
   const format = useFormatter();
@@ -31,16 +60,16 @@ export function InvoicingSection({ data, canManage }: SectionProps) {
     <div className="space-y-5">
       {!canManage ? <ReadOnlyBanner /> : null}
       <Panel title={t("theme")} description={t("themeHint")}>
-        <div role="radiogroup" aria-label={t("theme")} className="grid gap-3 sm:grid-cols-2">
-          {(["DESIGN_1", "DESIGN_2"] as const).map((d) => (
+        <Link href="/settings/invoice-designs" className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm transition-colors hover:border-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-indigo-500/30 dark:bg-indigo-500/10 pointer-coarse:min-h-11">
+          <span><span className="block font-semibold">{t("compareLink")}</span><span className="block text-xs text-muted-foreground">{t("compareHint")}</span></span>
+          <ArrowRight className="size-4 shrink-0 text-indigo-600 rtl:rotate-180" aria-hidden />
+        </Link>
+        <div role="radiogroup" aria-label={t("theme")} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {INVOICE_DESIGN_IDS.map((d) => (
             <button key={d} type="button" role="radio" aria-checked={v.invoiceTheme === d} disabled={!canManage} onClick={() => set("invoiceTheme", d)}
               className={cn("relative rounded-xl border p-3 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60", v.invoiceTheme === d ? "border-indigo-500 bg-indigo-50/60 dark:bg-indigo-500/10" : "border-border/70 hover:border-indigo-300")}>
               <div className="mb-3 h-24 overflow-hidden rounded-lg border border-border/60 bg-background p-2" aria-hidden>
-                {d === "DESIGN_1" ? (
-                  <div className="space-y-1.5"><div className="flex justify-between"><div className="h-2 w-16 rounded bg-zinc-300" /><div className="h-2 w-8 rounded bg-zinc-200" /></div><div className="h-1.5 w-full rounded bg-zinc-200" /><div className="h-1.5 w-4/5 rounded bg-zinc-200" /><div className="h-1.5 w-3/5 rounded bg-zinc-200" /></div>
-                ) : (
-                  <div className="space-y-1.5"><div className="-m-2 mb-1 flex h-7 items-center justify-between bg-zinc-800 px-2"><div className="h-2 w-16 rounded bg-zinc-500" /><div className="h-2 w-8 rounded bg-zinc-600" /></div><div className="h-1.5 w-full rounded bg-zinc-200" /><div className="h-1.5 w-4/5 rounded bg-zinc-200" /></div>
-                )}
+                <DesignWireframe id={d} />
               </div>
               <p className="text-sm font-semibold">{t(`design.${d}`)}</p>
               <p className="text-xs text-muted-foreground">{t(`designHint.${d}`)}</p>
@@ -48,6 +77,10 @@ export function InvoicingSection({ data, canManage }: SectionProps) {
             </button>
           ))}
         </div>
+      </Panel>
+      <Panel title={t("accent")} description={t("accentHint")}>
+        <AccentColorField hideLabel label={t("accent")} value={v.invoiceAccentColor || null} onChange={(hex) => set("invoiceAccentColor", hex ?? "")} inheritedFrom={{ source: "design" }} disabled={!canManage} />
+        {errors.invoiceAccentColor ? <p role="alert" className="mt-2 text-xs text-rose-600 dark:text-rose-400">{errors.invoiceAccentColor}</p> : null}
       </Panel>
       <Panel title={t("numbering")} description={t("numberingHint")}>
         <div className="grid gap-4 sm:grid-cols-2">

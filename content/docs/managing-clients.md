@@ -6,7 +6,7 @@ category: "Clients"
 tags: ["CRM", "clients", "export", "GSTIN", "billing", "master data"]
 estimatedMinutes: 9
 isFeatured: true
-dateModified: "2026-06-04"
+dateModified: "2026-11-21"
 ---
 
 # Managing Your Client CRM
@@ -45,6 +45,8 @@ For complex billing scenarios, you'll need to utilize the detailed profile field
 
 - **Billing Address vs. Shipping Address:** Ensure these are distinguished if your client requires physical product delivery versus digital services.
 - **Default Currency:** If dealing with international clients, set their default currency here to automatically apply it to future invoices.
+- **Invoice colour for this client:** Optional. Gives this client's invoices their own accent colour instead of your workspace colour.
+- **TDS this client deducts:** Optional. Set the section (for example 194J) and rate to prefill new invoices, which then show net payable.
 - **Payment Terms:** Set default payment terms (e.g., Net 30, Due on Receipt) that will auto-populate when drafting invoices for this client.
 
 ## Best Practices
