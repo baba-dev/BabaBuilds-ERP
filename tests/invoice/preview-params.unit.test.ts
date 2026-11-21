@@ -143,3 +143,13 @@ describe("applyPreviewOverrides", () => {
     expect(JSON.stringify(input)).toBe(copy);
   });
 });
+
+describe("mapInvoiceToParams with no line items", () => {
+  it("shows the total as a single line and a matching subtotal", () => {
+    const p = mapInvoiceToParams(row({ items: [], subtotal: 0, taxAmount: 0, total: 15000, taxRate: 0, billingMonth: "November 2026" }), { profile });
+    expect(p.lines).toHaveLength(1);
+    expect(p.lines?.[0]).toMatchObject({ quantity: 1, unitPrice: 15000, amount: 15000 });
+    expect(p.totals.subtotal).toBe(15000);
+    expect(p.services[0].title).toContain("November 2026");
+  });
+});

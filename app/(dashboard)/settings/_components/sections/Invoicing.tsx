@@ -1,7 +1,8 @@
 "use client";
 
 import { useFormatter, useTranslations } from "next-intl";
-import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { INVOICE_DESIGN_IDS, isInvoiceDesignId, type InvoiceDesignId } from "@/lib/invoice-templates/catalog";
@@ -59,6 +60,10 @@ export function InvoicingSection({ data, canManage }: SectionProps) {
     <div className="space-y-5">
       {!canManage ? <ReadOnlyBanner /> : null}
       <Panel title={t("theme")} description={t("themeHint")}>
+        <Link href="/settings/invoice-designs" className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3 text-sm transition-colors hover:border-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-indigo-500/30 dark:bg-indigo-500/10 pointer-coarse:min-h-11">
+          <span><span className="block font-semibold">{t("compareLink")}</span><span className="block text-xs text-muted-foreground">{t("compareHint")}</span></span>
+          <ArrowRight className="size-4 shrink-0 text-indigo-600 rtl:rotate-180" aria-hidden />
+        </Link>
         <div role="radiogroup" aria-label={t("theme")} className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {INVOICE_DESIGN_IDS.map((d) => (
             <button key={d} type="button" role="radio" aria-checked={v.invoiceTheme === d} disabled={!canManage} onClick={() => set("invoiceTheme", d)}

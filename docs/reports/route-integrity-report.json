@@ -1,8 +1,8 @@
 {
-  "generatedAt": "2026-11-17T17:00:52.187Z",
+  "generatedAt": "2026-11-21T12:24:47.067Z",
   "summary": {
-    "knownRoutes": 128,
-    "checkedReferencedRoutes": 103,
+    "knownRoutes": 138,
+    "checkedReferencedRoutes": 110,
     "brokenReferencedRoutes": 0
   },
   "gate": {
@@ -28,6 +28,9 @@
         "app/api/shop/[slug]/assets/[...asset]/route.ts",
         "app/api/user/profile/route.ts",
         "app/documents/[...path]/route.ts",
+        "app/features/[slug]/page.tsx",
+        "app/features/layout.tsx",
+        "app/features/page.tsx",
         "app/help/HelpSidebar.tsx",
         "app/invite/[token]/page.tsx",
         "app/invoices/[...path]/route.ts",
@@ -35,6 +38,7 @@
         "app/logos/[...path]/route.ts",
         "app/manifest.ts",
         "app/not-found.tsx",
+        "app/payment-qr/[...path]/route.ts",
         "app/products/[...path]/route.ts",
         "app/receipts/[...path]/route.ts",
         "app/shop/[slug]/ShopClient.tsx",
@@ -82,6 +86,13 @@
       ]
     },
     {
+      "route": "/admin/jobs/deliveries",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/admin/_components/AdminShell.tsx"
+      ]
+    },
+    {
       "route": "/admin/logs",
       "exists": true,
       "references": [
@@ -122,7 +133,8 @@
       "exists": true,
       "references": [
         "app/(dashboard)/admin/_components/AdminShell.tsx",
-        "app/(dashboard)/admin/system-health/[id]/page.tsx"
+        "app/(dashboard)/admin/system-health/[id]/page.tsx",
+        "app/(dashboard)/admin/system-health/_auth.ts"
       ]
     },
     {
@@ -322,10 +334,47 @@
       ]
     },
     {
+      "route": "/email-billing/balances",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/email-billing/balances/[clientId]/page.tsx",
+        "app/(dashboard)/email-billing/balances/page.tsx",
+        "app/(dashboard)/email-billing/calendar/page.tsx",
+        "app/(dashboard)/email-billing/domains/[id]/page.tsx",
+        "app/(dashboard)/email-billing/page.tsx"
+      ]
+    },
+    {
+      "route": "/email-billing/calendar",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/email-billing/page.tsx"
+      ]
+    },
+    {
       "route": "/email-billing/domains",
       "exists": true,
       "references": [
+        "app/(dashboard)/email-billing/balances/page.tsx",
+        "app/(dashboard)/email-billing/calendar/page.tsx",
+        "app/(dashboard)/email-billing/domains/page.tsx",
+        "app/(dashboard)/email-billing/page.tsx",
         "app/api/chat/route.ts"
+      ]
+    },
+    {
+      "route": "/email-billing/mailboxes",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/email-billing/mailboxes/page.tsx",
+        "app/(dashboard)/email-billing/page.tsx"
+      ]
+    },
+    {
+      "route": "/email-billing/operations",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/email-billing/page.tsx"
       ]
     },
     {
@@ -374,6 +423,14 @@
         "app/sw.ts",
         "components/layout/mobile-nav.tsx",
         "components/navigation/nav-config.ts"
+      ]
+    },
+    {
+      "route": "/features",
+      "exists": true,
+      "references": [
+        "components/ComparisonTable.tsx",
+        "content/marketing/feature-paths.ts"
       ]
     },
     {
@@ -536,6 +593,8 @@
       "references": [
         "app/(dashboard)/dashboard/dashboard-routes.ts",
         "app/(dashboard)/dashboard/help/InAppHelpHubClient.tsx",
+        "app/(dashboard)/email-billing/balances/[clientId]/page.tsx",
+        "app/(dashboard)/email-billing/calendar/page.tsx",
         "app/(dashboard)/income/new/page.tsx",
         "app/(dashboard)/launch/page.tsx",
         "app/(dashboard)/shop/_components/OrderDrawer.tsx",
@@ -544,6 +603,7 @@
         "app/manifest.ts",
         "app/sw.ts",
         "components/dashboard/GuidedFlowsHub.tsx",
+        "components/email-billing/collections.tsx",
         "components/invoice/InvoiceGeneratorForm.tsx",
         "components/layout/mobile-nav.tsx",
         "components/navigation/nav-config.ts"
@@ -868,6 +928,7 @@
         "app/(dashboard)/reconciliation/import/page.tsx",
         "app/(dashboard)/reporting/layout.tsx",
         "app/(dashboard)/settings/_components/sections/Automation.tsx",
+        "app/(dashboard)/settings/invoice-designs/_components/DesignCompare.tsx",
         "app/(dashboard)/settings/team/page.tsx",
         "app/(dashboard)/shop/_components/StorefrontPanel.tsx",
         "app/(dashboard)/shop/page.tsx",
@@ -902,6 +963,13 @@
       "exists": true,
       "references": [
         "app/(dashboard)/dashboard/dashboard-routes.ts"
+      ]
+    },
+    {
+      "route": "/settings/invoice-designs",
+      "exists": true,
+      "references": [
+        "app/(dashboard)/settings/_components/sections/Invoicing.tsx"
       ]
     },
     {

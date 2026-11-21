@@ -6690,7 +6690,9 @@
       "termsNote": "Se aplica a las facturas nuevas. Las igualas y propuestas mantienen sus propios plazos.",
       "dueExample": "Una factura con fecha {date} vencería el {due}.",
       "accent": "Color de la factura",
-      "accentHint": "Se usa en encabezados, totales y detalles de tus facturas. Déjalo vacío para usar el color propio de cada diseño."
+      "accentHint": "Se usa en encabezados, totales y detalles de tus facturas. Déjalo vacío para usar el color propio de cada diseño.",
+      "compareLink": "Comparar todos los diseños",
+      "compareHint": "Mira tu última factura en todos."
     },
     "banking": {
       "title": "Datos bancarios en las facturas",
@@ -10683,5 +10685,38 @@
     "tdsLine": "Menos: TDS @ {rate}%",
     "net": "Neto a pagar",
     "estimate": "Una estimación sobre el importe antes de GST. La factura muestra la cifra exacta."
+  },
+  "InvoiceCompare": {
+    "title": "Comparar diseños",
+    "subtitle": "Tu última factura en cada diseño. Toca uno para verlo a pantalla completa y elegir tu favorito.",
+    "back": "Volver a facturación",
+    "showing": "Mostrando",
+    "sampleBadge": "Factura de ejemplo.",
+    "sampleHint": "Crea una factura para ver tus propios datos aquí.",
+    "controls": "Opciones de vista previa",
+    "accent": "Color de acento",
+    "accentHint": "Solo vista previa. Pasa a ser tu predeterminado al usar un diseño.",
+    "showTds": "Mostrar TDS",
+    "tdsHint": "Mira cómo la retención cambia los totales.",
+    "tdsSection": "Sección",
+    "tdsRate": "Tasa (%)",
+    "designs": "Diseños de factura",
+    "current": "Actual",
+    "open": "Ver {design} a pantalla completa",
+    "retry": "No se pudo generar. Reintentar",
+    "rendering": "Generando vista previa",
+    "position": "{index} de {total}",
+    "zoom": "Zoom",
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "prev": "Diseño anterior",
+    "next": "Diseño siguiente",
+    "canvasLabel": "Vista previa del diseño {design}",
+    "useDesign": "Usar este diseño",
+    "usingThis": "Diseño actual",
+    "download": "Descargar PDF",
+    "noPermission": "Solo los administradores del espacio pueden cambiar el diseño.",
+    "saved": "{design} es ahora tu diseño de factura.",
+    "saveFailed": "No se pudo guardar el diseño. Inténtalo de nuevo."
   }
 }

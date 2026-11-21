@@ -6661,7 +6661,9 @@
       "termsNote": "Applies to new invoices. Retainers and proposals keep their own terms.",
       "dueExample": "An invoice dated {date} would be due on {due}.",
       "accent": "Invoice colour",
-      "accentHint": "Used for headers, totals and accents on your invoices. Leave it empty to use each design's own colour."
+      "accentHint": "Used for headers, totals and accents on your invoices. Leave it empty to use each design's own colour.",
+      "compareLink": "Compare all designs",
+      "compareHint": "See your latest invoice in all of them."
     },
     "banking": {
       "title": "Bank details on invoices",
@@ -10654,5 +10656,38 @@
     "tdsLine": "Less: TDS @ {rate}%",
     "net": "Net payable",
     "estimate": "An estimate on the amount before GST. The invoice shows the exact figure."
+  },
+  "InvoiceCompare": {
+    "title": "Compare designs",
+    "subtitle": "Your latest invoice in every design. Tap one to see it full screen and pick your favourite.",
+    "back": "Back to invoicing",
+    "showing": "Showing",
+    "sampleBadge": "Sample invoice.",
+    "sampleHint": "Create an invoice to see your own data here.",
+    "controls": "Preview options",
+    "accent": "Accent colour",
+    "accentHint": "Previews only. It becomes your default when you use a design.",
+    "showTds": "Show TDS",
+    "tdsHint": "See how withholding changes the totals.",
+    "tdsSection": "Section",
+    "tdsRate": "Rate (%)",
+    "designs": "Invoice designs",
+    "current": "Current",
+    "open": "View {design} full screen",
+    "retry": "Could not render. Retry",
+    "rendering": "Rendering preview",
+    "position": "{index} of {total}",
+    "zoom": "Zoom",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "prev": "Previous design",
+    "next": "Next design",
+    "canvasLabel": "Preview of the {design} design",
+    "useDesign": "Use this design",
+    "usingThis": "Current design",
+    "download": "Download PDF",
+    "noPermission": "Only workspace managers can change the design.",
+    "saved": "{design} is now your invoice design.",
+    "saveFailed": "Could not save the design. Please try again."
   }
 }

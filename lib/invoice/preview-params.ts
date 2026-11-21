@@ -52,7 +52,13 @@ const asFraction = (rate: number) => (rate > 1 ? rate / 100 : rate);
  */
 export const mapInvoiceToParams = (row: PreviewInvoiceRow, extras: Extras): PDFParams => {
   const locale = row.currency === "INR" ? "en-IN" : "en-US";
-  const lines: PDFLine[] = row.items.map((i) => ({
+  // Older and demo invoices can carry only a total. Show it as one line rather than an empty table.
+  const base = row.subtotal > 0 ? row.subtotal : Math.max(0, round2(row.total - row.taxAmount));
+  const items: PreviewInvoiceRow["items"] = row.items.length || base <= 0
+    ? row.items
+    : [{ description: row.billingMonth ? `Services - ${row.billingMonth}` : "Services", quantity: 1, unitPrice: base, taxRate: row.taxRate, sacCode: row.sacCode, totalAmount: base }];
+  const subtotal = items === row.items ? row.subtotal : base;
+  const lines: PDFLine[] = items.map((i) => ({
     description: i.description,
     quantity: i.quantity,
     unitPrice: i.unitPrice,
@@ -78,8 +84,8 @@ export const mapInvoiceToParams = (row: PreviewInvoiceRow, extras: Extras): PDFP
     dueDate: row.dueDate ?? new Date(row.invoiceDate.getTime() + 7 * DAY_MS),
     billingMonth: row.billingMonth,
     sacCode: row.sacCode,
-    services: row.items.map((i) => ({ title: i.description, nicDetails: "", amount: i.totalAmount, sacCode: i.sacCode })),
-    totals: { subtotal: row.subtotal, taxRate: row.taxRate, taxAmount: row.taxAmount, total: row.total, taxMode },
+    services: items.map((i) => ({ title: i.description, nicDetails: "", amount: i.totalAmount, sacCode: i.sacCode })),
+    totals: { subtotal, taxRate: row.taxRate, taxAmount: row.taxAmount, total: row.total, taxMode },
     formattedTotal: row.total.toLocaleString(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
     baseCurrency: row.currency,
     userLocale: locale,

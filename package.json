@@ -8,10 +8,11 @@
   },
   "scripts": {
     "check:runtime": "node scripts/check-runtime.mjs",
-    "predev": "node scripts/check-runtime.mjs",
+    "predev": "node scripts/check-runtime.mjs && node scripts/copy-pdfjs.mjs",
     "dev": "next dev",
     "postinstall": "prisma generate",
     "prebuild:partner-kit": "npx tsx scripts/build-partner-kit.ts",
+    "prebuild": "node scripts/copy-pdfjs.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --max-warnings=73 && npm run check:kpi-impact",
