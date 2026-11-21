@@ -104,7 +104,8 @@ function buildRequestHash(payload: unknown): string {
 
 import { GenerateInvoiceSchema } from '@/lib/invoice/generate-schema';
 import { snapshotGstFields } from '@/lib/gst/source';
-import { toPdfGst, toPdfLines } from '@/lib/invoice/pdf-params';
+import { designUsesPaymentQrs, toPdfGst, toPdfLines, toPdfPaymentQrs } from '@/lib/invoice/pdf-params';
+import { loadPaymentQrImages } from '@/lib/invoice/payment-qr-loader';
 import { loadClientStatement } from '@/lib/invoice/statement-loader';
 import { computeTds, netPayable as netPayableOf, normalizeTdsSection } from '@/lib/invoice/tds';
 import { supplierChargesGst } from "@/lib/msme/threshold";
@@ -558,6 +559,7 @@ export async function POST(request: Request) {
 
         // --- PDF GENERATION ENGINE ---
         // Only the Statement design shows client history, so only it pays for the query.
+        const paymentQrs = designUsesPaymentQrs(profile.invoiceTheme) ? toPdfPaymentQrs(profile, await loadPaymentQrImages(workspaceId)) : {};
         const statement = profile.invoiceTheme === 'DESIGN_6' ? await loadClientStatement(workspaceId, client.id, invoiceDate, baseCurrency) : undefined;
         const pdfBytes = await generateInvoicePDF({
           profile,
@@ -588,6 +590,7 @@ export async function POST(request: Request) {
           accentColor: body.accentColor ?? null,
           tds: tdsResult ? { section: normalizeTdsSection(body.tds?.section), ratePercent: tdsResult.ratePercent, amount: tdsResult.amount } : null,
           statement,
+          ...paymentQrs,
           totals,
           formattedTotal,
           baseCurrency,

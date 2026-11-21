@@ -17,7 +17,8 @@ import { snapshotGstFields } from "@/lib/gst/source";
 import { getFinancialYear, getNextInvoiceNumber } from "@/lib/document-numbering";
 import { supplierChargesGst } from "@/lib/msme/threshold";
 import { getClientRecipients } from "@/lib/clients/service";
-import { toPdfGst, toPdfLines } from "@/lib/invoice/pdf-params";
+import { designUsesPaymentQrs, toPdfGst, toPdfLines, toPdfPaymentQrs } from "@/lib/invoice/pdf-params";
+import { loadPaymentQrImages } from "@/lib/invoice/payment-qr-loader";
 import { loadClientStatement } from "@/lib/invoice/statement-loader";
 
 type DraftPaymentLink = {
@@ -64,6 +65,8 @@ export async function finalizeInvoiceFromDraft(params: {
 
   // Only the Statement design shows client history, so only it pays for the query.
   const statement = profile.invoiceTheme === "DESIGN_6" ? await loadClientStatement(workspaceId, client.id, invoiceDate, baseCurrency) : undefined;
+
+  const paymentQrs = designUsesPaymentQrs(profile.invoiceTheme) ? toPdfPaymentQrs(profile, await loadPaymentQrImages(workspaceId)) : {};
 
   let generatedPdfPath = "";
   let newInvoice: Awaited<ReturnType<typeof prisma.invoice.create>> | null = null;
@@ -113,6 +116,7 @@ export async function finalizeInvoiceFromDraft(params: {
         accentColor,
         tds,
         statement,
+        ...paymentQrs,
         totals,
         formattedTotal,
         baseCurrency,

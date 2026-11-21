@@ -2,6 +2,7 @@ import { isStateCode } from "@/lib/gst/states";
 import { resolveTreatment, type ClientGstDefaults, type InvoiceGstOverrides } from "@/lib/gst/source";
 import type { PDFLine } from "@/lib/invoice/build-invoice-view-model";
 import type { GstInput } from "@/lib/invoice/gst-breakdown";
+import { normalizePayeeName, normalizeUpiVpa } from "@/lib/invoice/upi";
 
 type ServiceLike = {
   title: string;
@@ -41,5 +42,20 @@ export const toPdfGst = (
     placeOfSupply: t.placeOfSupply ?? clientState,
     supplyOverride: t.supplyOverride,
     reverseCharge: t.reverseCharge,
+  };
+};
+
+/** Only these designs draw UPI / uploaded QR codes, so only they pay for loading them. */
+export const designUsesPaymentQrs = (theme: string | null | undefined): boolean => theme === "DESIGN_4" || theme === "DESIGN_8";
+
+/** UPI ID and uploaded QR images for the renderer. An invalid UPI ID is ignored; images keep their order, at most three. */
+export const toPdfPaymentQrs = (
+  profile: { upiVpa?: string | null; upiPayeeName?: string | null },
+  images: Array<{ label: string; imagePath: string; sortOrder: number }>,
+): { upi: { vpa: string; payeeName: string | null } | undefined; staticQrs: Array<{ label: string; imagePath: string }> } => {
+  const vpa = normalizeUpiVpa(profile.upiVpa);
+  return {
+    upi: vpa ? { vpa, payeeName: normalizePayeeName(profile.upiPayeeName) } : undefined,
+    staticQrs: [...images].sort((a, b) => a.sortOrder - b.sortOrder).slice(0, 3).map((q) => ({ label: q.label, imagePath: q.imagePath })),
   };
 };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toPdfGst, toPdfLines } from "@/lib/invoice/pdf-params";
+import { designUsesPaymentQrs, toPdfGst, toPdfLines, toPdfPaymentQrs } from "@/lib/invoice/pdf-params";
 
 describe("toPdfLines", () => {
   it("keeps quantity, unit price, rate and SAC from the composer", () => {
@@ -49,5 +49,33 @@ describe("toPdfGst", () => {
   it("carries reverse charge and SEZ treatment, invoice choice first", () => {
     expect(toPdfGst({ gstSupplyOverride: "SEZ_WP", gstReverseCharge: true }, undefined)).toMatchObject({ supplyOverride: "SEZ_WP", reverseCharge: true });
     expect(toPdfGst({ gstSupplyOverride: "SEZ_WP", gstReverseCharge: true }, { supplyOverride: "SEZ_WOP", reverseCharge: false })).toMatchObject({ supplyOverride: "SEZ_WOP", reverseCharge: false });
+  });
+});
+
+describe("toPdfPaymentQrs", () => {
+  const img = (label: string, sortOrder: number) => ({ label, imagePath: `/payment-qr/ws/${label}.png`, sortOrder });
+
+  it("is empty when nothing is configured", () => {
+    expect(toPdfPaymentQrs({}, [])).toEqual({ upi: undefined, staticQrs: [] });
+    expect(toPdfPaymentQrs({ upiVpa: null, upiPayeeName: null }, [])).toEqual({ upi: undefined, staticQrs: [] });
+  });
+
+  it("normalises a valid UPI ID and payee name, and ignores an invalid ID", () => {
+    expect(toPdfPaymentQrs({ upiVpa: " Shop@OKHDFC ", upiPayeeName: " Baba  Sons " }, []).upi).toEqual({ vpa: "shop@okhdfc", payeeName: "Baba Sons" });
+    expect(toPdfPaymentQrs({ upiVpa: "not a vpa", upiPayeeName: "Baba" }, []).upi).toBeUndefined();
+  });
+
+  it("orders uploaded images by their sort order and keeps at most three", () => {
+    const { staticQrs } = toPdfPaymentQrs({}, [img("D", 3), img("B", 1), img("A", 0), img("C", 2)]);
+    expect(staticQrs.map((q) => q.label)).toEqual(["A", "B", "C"]);
+    expect(staticQrs[0]).toEqual({ label: "A", imagePath: "/payment-qr/ws/A.png" });
+  });
+});
+
+describe("designUsesPaymentQrs", () => {
+  it("is true only for Pay-Fast and the receipt", () => {
+    expect(designUsesPaymentQrs("DESIGN_4")).toBe(true);
+    expect(designUsesPaymentQrs("DESIGN_8")).toBe(true);
+    for (const id of ["DESIGN_1", "DESIGN_2", "DESIGN_3", "DESIGN_5", "DESIGN_6", "DESIGN_7", "", null, undefined]) expect(designUsesPaymentQrs(id as string | null | undefined), String(id)).toBe(false);
   });
 });
