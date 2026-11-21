@@ -1,4 +1,4 @@
-import type { PDFParams } from "@/lib/invoice/build-invoice-view-model";
+import type { PDFLine, PDFParams } from "@/lib/invoice/build-invoice-view-model";
 import { calculateInvoiceTotals } from "@/lib/invoice/totals";
 
 const baseProfile: PDFParams["profile"] = {
@@ -14,6 +14,7 @@ const baseProfile: PDFParams["profile"] = {
   website: "erp.bababuilds.com",
   udyamNumber: "UDYAM-KR-00-1234567",
   panNumber: "ABCDE1234F",
+  gstStateCode: "29",
   bankName: "HDFC Bank",
   accountName: "BabaBuilds ERP Services Pvt Ltd",
   accountNumber: "1234567890",
@@ -75,6 +76,35 @@ const makeParams = (
     ...overrides,
   };
 };
+
+/** Builds params from detailed lines so totals, services and lines always agree. */
+const makeLineParams = (lines: PDFLine[], overrides: Partial<PDFParams> = {}, taxExempt = false): PDFParams => {
+  const services = lines.map((l) => ({ title: l.description, nicDetails: l.note ?? "", amount: l.amount, sacCode: l.sacCode ?? null }));
+  const totals = calculateInvoiceTotals({
+    services: lines.map((l) => ({ amount: l.amount, taxRate: l.taxRate ?? 0.18 })),
+    isTaxExempt: taxExempt,
+    defaultTaxRate: 0.18,
+  });
+  return makeParams({
+    services,
+    lines,
+    totals,
+    formattedTotal: totals.total.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+    ...overrides,
+  }, lines.length, taxExempt);
+};
+
+const gstLines: PDFLine[] = [
+  { description: "ERP implementation", note: "Discovery, configuration and training", quantity: 2, unitPrice: 2500, amount: 5000, taxRate: 0.18, sacCode: "998313" },
+  { description: "Annual support", note: "Priority email and phone support", quantity: 1, unitPrice: 12000, discountAmount: 1000, amount: 11000, taxRate: 0.18, sacCode: "998313" },
+];
+
+const mixedRateLines: PDFLine[] = [
+  { description: "Consulting", quantity: 1, unitPrice: 100.01, amount: 100.01, taxRate: 0.18, sacCode: "998311" },
+  { description: "Printed manuals", quantity: 3, unitPrice: 16.677, amount: 50.03, taxRate: 0.05, sacCode: "4901" },
+  { description: "Courier", quantity: 1, unitPrice: 0.01, amount: 0.01, taxRate: 0.12, sacCode: "996812" },
+  { description: "Workshop", quantity: 1, unitPrice: 33.33, amount: 33.33, taxRate: 0.18, sacCode: "999293" },
+];
 
 export const SAMPLE_INVOICES: Record<string, PDFParams> = {
   basic: makeParams(),
@@ -138,4 +168,46 @@ export const SAMPLE_INVOICES: Record<string, PDFParams> = {
   }),
   paid: makeParams({ status: "PAID" }),
   partiallyPaid: makeParams({ status: "PARTIALLY_PAID" }),
+  gstIntra: makeLineParams(gstLines, {
+    client: { ...baseClient, gstStateCode: "29", address: "12 MG Road, Bengaluru, Karnataka, India" },
+    gst: { placeOfSupply: "29" },
+  }),
+  gstInter: makeLineParams(gstLines, {
+    client: { ...baseClient, gstStateCode: "27" },
+    gst: { placeOfSupply: "27", irn: "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90", irnAckNo: "112610000012345", irnAckDate: new Date("2026-04-27T00:00:00.000Z") },
+  }),
+  mixedRates: makeLineParams(mixedRateLines, { gst: { placeOfSupply: "29" } }),
+  emptyLines: makeLineParams([], { gst: { placeOfSupply: "29" } }),
+  zeroTotal: makeLineParams([{ description: "Complimentary onboarding", quantity: 1, unitPrice: 0, amount: 0, taxRate: 0.18 }], { gst: { placeOfSupply: "29" } }),
+  devanagariClient: makeLineParams(gstLines, {
+    client: { ...baseClient, name: "शर्मा ट्रेडर्स प्राइवेट लिमिटेड", address: "४२ गांधी रोड, मुंबई, महाराष्ट्र" },
+    gst: { placeOfSupply: "27" },
+  }),
+  manyLines: makeLineParams(
+    Array.from({ length: 200 }, (_, i): PDFLine => ({
+      description: i === 3 ? "https://example.com/a-very-long-unbroken-reference/path/with/many/segments/that/cannot/wrap/naturally/0123456789" : `Line item ${i + 1}`,
+      note: i % 10 === 0 ? "Includes setup and handover" : null,
+      quantity: 1 + (i % 4),
+      unitPrice: 100 + i,
+      amount: (1 + (i % 4)) * (100 + i),
+      taxRate: 0.18,
+      sacCode: "998313",
+    })),
+    { gst: { placeOfSupply: "29" } },
+  ),
+  paidWithLink: makeLineParams(gstLines, {
+    status: "PAID",
+    paymentLink: "https://rzp.io/i/paid123",
+    payment: { paidOn: new Date("2026-04-30T00:00:00.000Z") },
+    gst: { placeOfSupply: "29" },
+  }),
+  partialWithBalance: makeLineParams(gstLines, {
+    status: "PARTIALLY_PAID",
+    paymentLink: "https://rzp.io/i/partial456",
+    payment: { amountPaid: 4000, paidOn: new Date("2026-04-30T00:00:00.000Z") },
+    gst: { placeOfSupply: "29" },
+  }),
+  unpaidWithLink: makeLineParams(gstLines, { paymentLink: "https://rzp.io/i/unpaid789", gst: { placeOfSupply: "29" } }),
+  accentInvoice: makeLineParams(gstLines, { accentColor: "#0B5FFF", gst: { placeOfSupply: "29" } }),
+  accentClient: makeLineParams(gstLines, { client: { ...baseClient, invoiceAccentColor: "#B45309" }, gst: { placeOfSupply: "29" } }),
 };

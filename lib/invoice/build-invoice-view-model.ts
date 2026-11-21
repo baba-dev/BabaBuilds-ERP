@@ -5,6 +5,9 @@ import { resolvePrimaryRemittanceFromProfile } from "@/lib/banking/resolve-prima
 import type { NormalizedPrimaryRemittanceAccount } from "@/lib/banking/types";
 import { normalizeInvoiceWatermark, type InvoiceWatermarkKind } from "@/lib/invoice-templates/shared/watermark";
 import { resolveInvoiceTemplateId } from "@/lib/invoice-templates/registry";
+import { buildGstBreakdown, type GstBreakdown, type GstInput } from "@/lib/invoice/gst-breakdown";
+import { amountInWords } from "@/lib/invoice-templates/shared/words";
+import { normalizeHexColor } from "@/lib/invoice-templates/shared/accent-color";
 
 export interface PDFProfile {
   companyName: string;
@@ -32,6 +35,10 @@ export interface PDFProfile {
   } | null;
   signatureUrl?: string | null;
   invoiceTheme?: string | null;
+  /** Workspace default brand colour, #RRGGBB. */
+  invoiceAccentColor?: string | null;
+  /** Supplier GST state code (2 digits). */
+  gstStateCode?: string | null;
   taxLabel?: string | null;
   workspace?: {
     planTier: string;
@@ -50,6 +57,9 @@ export interface PDFClient {
   taxId?: string | null;
   isExport: boolean;
   logoUrl?: string | null;
+  /** Per-client brand colour override, #RRGGBB. */
+  invoiceAccentColor?: string | null;
+  gstStateCode?: string | null;
 }
 
 export interface PDFService {
@@ -57,6 +67,20 @@ export interface PDFService {
   nicDetails: string;
   amount: number;
   sacCode?: string | null;
+}
+
+export interface PDFLine {
+  description: string;
+  note?: string | null;
+  quantity: number;
+  unitPrice: number;
+  discountAmount?: number;
+  /** Fraction, e.g. 0.18. Falls back to the invoice's tax rate when absent. */
+  taxRate?: number | null;
+  sacCode?: string | null;
+  /** The line's taxable value (after discount), the figure the invoice totals add up. */
+  amount: number;
+  section?: string | null;
 }
 
 export interface PDFParams {
@@ -76,12 +100,44 @@ export interface PDFParams {
   status?: string | null;
   showFreePlanFooter?: boolean;
   templateId?: string | null;
+  /** Detailed line items. When absent the lines are derived from `services` (quantity 1). */
+  lines?: PDFLine[];
+  /** GST treatment: place of supply, reverse charge, SEZ, e-invoice IRN. */
+  gst?: GstInput;
+  /** Per-invoice brand colour override, #RRGGBB. */
+  accentColor?: string | null;
+  /** Payment details for the PAID / PARTIAL stamp. An unknown paid amount is treated as nothing paid. */
+  payment?: { paidOn?: Date | null; amountPaid?: number };
 }
 
 type InvoiceAddress = {
   full: string;
   lines: string[];
 };
+
+export type InvoiceLineView = {
+  description: string;
+  note: string | null;
+  quantity: number;
+  quantityFormatted: string;
+  unitPrice: number;
+  unitPriceFormatted: string;
+  discountAmount: number;
+  taxRatePercent: number;
+  sacCode: string | null;
+  amount: number;
+  amountFormatted: string;
+  section: string | null;
+};
+
+export type InvoicePaymentView = {
+  kind: "NONE" | "PARTIAL" | "PAID";
+  paidOn: Date | null;
+  amountPaid: number;
+  balanceDue: number;
+};
+
+export type InvoiceQrSource = { kind: "PAYMENT_LINK"; url: string; label: string };
 
 type InvoiceServiceView = {
   title: string;
@@ -100,6 +156,13 @@ export interface InvoiceViewModel {
   dueDate: Date;
   billingMonth: string;
   services: InvoiceServiceView[];
+  lines: InvoiceLineView[];
+  gst: GstBreakdown;
+  /** Normalised accent colours by level; a template resolves them with its own default. */
+  accentCandidates: { invoice: string | null; client: string | null; workspace: string | null };
+  payment: InvoicePaymentView;
+  amountInWords: string | null;
+  paymentQrs: InvoiceQrSource[];
   totals: InvoiceTotals;
   formattedTotal: string;
   baseCurrency: string;
@@ -203,6 +266,10 @@ export const buildInvoiceViewModel = ({
   status,
   showFreePlanFooter: showFreePlanFooterArg,
   templateId,
+  lines: linesArg,
+  gst: gstArg,
+  accentColor,
+  payment: paymentArg,
 }: PDFParams): InvoiceViewModel => {
   const billingSnapshot = {
     planTier: profile.workspace?.planTier,
@@ -235,6 +302,43 @@ export const buildInvoiceViewModel = ({
   const watermarkKind = normalizeInvoiceWatermark(status);
   const workspaceCountryCode = profile.workspace?.countryCode?.trim().toUpperCase() || "IN";
   const isIndiaWorkspace = workspaceCountryCode === "IN";
+  const roundMoney = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100;
+  const defaultLineRate = totals.taxMode === "exempt" ? 0 : totals.taxRate;
+  const sourceLines: PDFLine[] =
+    linesArg ??
+    services.map((s) => ({ description: s.title, note: s.nicDetails || null, quantity: 1, unitPrice: s.amount, amount: s.amount, sacCode: s.sacCode ?? null }));
+  const lines: InvoiceLineView[] = sourceLines.map((l) => {
+    const sac = resolveSacCodeDisplay(l.sacCode || null);
+    const rate = totals.taxMode === "exempt" ? 0 : (l.taxRate ?? defaultLineRate);
+    return {
+      description: sanitizeDisplayText(l.description),
+      note: sanitizeDisplayText(l.note) || null,
+      quantity: l.quantity,
+      quantityFormatted: l.quantity.toLocaleString(userLocale, { maximumFractionDigits: 3 }),
+      unitPrice: l.unitPrice,
+      unitPriceFormatted: l.unitPrice.toLocaleString(userLocale, { minimumFractionDigits: 2 }),
+      discountAmount: l.discountAmount ?? 0,
+      taxRatePercent: Math.round(rate * 10_000) / 100,
+      sacCode: sac !== "N/A" ? sac : null,
+      amount: l.amount,
+      amountFormatted: l.amount.toLocaleString(userLocale, { minimumFractionDigits: 2 }),
+      section: sanitizeDisplayText(l.section) || null,
+    };
+  });
+  const gst = buildGstBreakdown({
+    lines: lines.map((l) => ({ amount: l.amount, taxRate: l.taxRatePercent / 100 })),
+    gst: gstArg ? { ...gstArg, supplierStateCode: gstArg.supplierStateCode ?? profile.gstStateCode ?? null } : undefined,
+    isExport: Boolean(client.isExport),
+    isTaxExempt: totals.taxMode === "exempt",
+    totalTaxAmount: totals.taxAmount,
+  });
+  const amountPaid = watermarkKind === "PAID" ? (paymentArg?.amountPaid ?? totals.total) : watermarkKind === "PARTIAL" ? (paymentArg?.amountPaid ?? 0) : 0;
+  const payment: InvoicePaymentView = {
+    kind: watermarkKind === "NONE" ? "NONE" : watermarkKind,
+    paidOn: paymentArg?.paidOn ?? null,
+    amountPaid,
+    balanceDue: Math.max(0, roundMoney(totals.total - amountPaid)),
+  };
   const resolvedTemplateId = resolveInvoiceTemplateId({
     requestedTemplateId: templateId,
     profileTheme: profile.invoiceTheme,
@@ -259,6 +363,16 @@ export const buildInvoiceViewModel = ({
         sacCodeDisplay: sacDisplay !== "N/A" ? sacDisplay : undefined,
       };
     }),
+    lines,
+    gst,
+    accentCandidates: {
+      invoice: normalizeHexColor(accentColor),
+      client: normalizeHexColor(client.invoiceAccentColor),
+      workspace: normalizeHexColor(profile.invoiceAccentColor),
+    },
+    payment,
+    amountInWords: amountInWords(totals.total, baseCurrency),
+    paymentQrs: normalizedPaymentLink ? [{ kind: "PAYMENT_LINK", url: normalizedPaymentLink, label: "Pay online" }] : [],
     totals,
     formattedTotal,
     baseCurrency,
