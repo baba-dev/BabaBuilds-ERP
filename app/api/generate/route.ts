@@ -105,6 +105,7 @@ function buildRequestHash(payload: unknown): string {
 import { GenerateInvoiceSchema } from '@/lib/invoice/generate-schema';
 import { snapshotGstFields } from '@/lib/gst/source';
 import { toPdfGst, toPdfLines } from '@/lib/invoice/pdf-params';
+import { computeTds, netPayable as netPayableOf, normalizeTdsSection } from '@/lib/invoice/tds';
 import { supplierChargesGst } from "@/lib/msme/threshold";
 import { getClientRecipients } from '@/lib/clients/service';
 
@@ -352,6 +353,9 @@ export async function POST(request: Request) {
       isTaxExempt: Boolean(client.isExport) || !supplierChargesGst(profile, countryCode),
       defaultTaxRate: taxResolution.taxRate,
     });
+    // Expected TDS is taken on the pre-GST subtotal; payment links and QR codes collect what the client actually pays.
+    const tdsResult = computeTds({ subtotal: totals.subtotal, ratePercent: body.tds?.ratePercent, isExport: Boolean(client.isExport) });
+    const netPayable = netPayableOf(totals.total, tdsResult?.amount);
 
     const invoiceDate = customDate ? new Date(customDate) : new Date();
     const billingSnapshot: WorkspaceBillingSnapshot = {
@@ -463,7 +467,7 @@ export async function POST(request: Request) {
               }
 
               const linkResult = await generateTenantPaymentLink({
-                amount: toDecimal(totals.total).toNumber(),
+                amount: toDecimal(netPayable).toNumber(),
                 currency: baseCurrency,
                 description: `Invoice ${invoiceNumber}`,
                 invoiceDueDate: invoiceDueDate,
@@ -508,7 +512,7 @@ export async function POST(request: Request) {
               }
 
               const linkResult = await generateStripePaymentLink({
-                amount: toDecimal(totals.total).toNumber(),    // in major units — service converts to smallest unit internally
+                amount: toDecimal(netPayable).toNumber(),    // in major units — service converts to smallest unit internally
                 currency: baseCurrency,   // passes locale currency accurately for correct unit math
                 description: `Invoice ${invoiceNumber}`,
                 invoiceNumber,
@@ -609,6 +613,9 @@ export async function POST(request: Request) {
               billingMonth: billingMonthValue,
               invoiceDate,
               accentColor: body.accentColor ?? null,
+              tdsSection: tdsResult ? normalizeTdsSection(body.tds?.section) : null,
+              tdsRatePercent: tdsResult?.ratePercent ?? null,
+              tdsAmount: tdsResult ? toDecimal(tdsResult.amount).toDecimalPlaces(2) : null,
               clientName: client.name,
               clientId: client.id,
               sacCode: typeof sacCode === 'string' ? sacCode : JSON.stringify(sacCode),

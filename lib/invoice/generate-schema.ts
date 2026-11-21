@@ -1,6 +1,7 @@
 /** Request schema for POST /api/generate (kept out of the route file so it can be unit-tested). */
 import { z } from "zod";
 import { accentColorField } from "@/lib/invoice-templates/shared/accent-color";
+import { normalizeTdsSection } from "@/lib/invoice/tds";
 
 export const ServiceSchema = z.object({
   title: z.string().trim().min(1, "Service title is required").max(200, "Service title is too long"),
@@ -24,6 +25,12 @@ export const GstOverridesSchema = z.object({
   reverseCharge: z.boolean().nullish(),
 });
 
+/** TDS the client will deduct from this invoice; the amount is always computed on the server. */
+export const TdsSchema = z.object({
+  section: z.string().trim().max(12).nullish().refine((v) => v == null || v === "" || normalizeTdsSection(v) !== null, "Invalid TDS section"),
+  ratePercent: z.number().min(0).max(100).nullish(),
+});
+
 export const GenerateInvoiceSchema = z.object({
   idempotencyKey: z.string().optional(),
   draftId: z.string().optional(),
@@ -43,6 +50,7 @@ export const GenerateInvoiceSchema = z.object({
   gst: GstOverridesSchema.optional(),
   /** Per-invoice brand colour override (#RRGGBB); empty clears it. */
   accentColor: accentColorField,
+  tds: TdsSchema.optional(),
   /** Billable expenses added to this invoice as lines; they are marked billed with the invoice. */
   billableExpenseIds: z.array(z.string().min(1)).max(50).optional(),
 });

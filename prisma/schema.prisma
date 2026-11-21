@@ -1597,6 +1597,8 @@ model Client {
   phone   String?
   logoUrl String?
   invoiceAccentColor String? // per-client invoice colour override, #RRGGBB
+  tdsSection         String? // TDS section the client usually deducts under, e.g. 194J
+  tdsRatePercent     Float? // TDS rate the client usually deducts, percent
 
   status String @default("ACTIVE") // "ACTIVE", "INACTIVE", "VIP"
 
@@ -1668,6 +1670,10 @@ model Invoice {
   invoiceDate         DateTime
   dueDate             DateTime?
   accentColor         String? // per-invoice colour override, #RRGGBB (kept so re-sent PDFs match)
+  // Expected TDS shown on the invoice (what the client will deduct). Not the same as withholding* below, which records deductions that actually happened.
+  tdsSection          String?
+  tdsRatePercent      Float?
+  tdsAmount           Decimal?
   paymentTermsDays    Int?
   expectedPaymentDate DateTime?
   collectionRiskScore Float?
