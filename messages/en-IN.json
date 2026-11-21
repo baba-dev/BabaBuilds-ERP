@@ -6629,14 +6629,16 @@
         "DESIGN_2": "Modern agency",
         "DESIGN_3": "Tax invoice (GST)",
         "DESIGN_4": "Pay-Fast",
-        "DESIGN_5": "Itemised project"
+        "DESIGN_5": "Itemised project",
+        "DESIGN_6": "Statement"
       },
       "designHint": {
         "DESIGN_1": "White header and clean lines. Shows your signature.",
         "DESIGN_2": "Bold dark header. Does not show a signature.",
         "DESIGN_3": "GST-ready: HSN/SAC, CGST/SGST/IGST split, place of supply, IRN and amount in words.",
         "DESIGN_4": "Big amount due and a scan-to-pay QR so clients pay sooner.",
-        "DESIGN_5": "Sections with subtotals, quantity × rate, discounts and line notes, so clients see what they pay for."
+        "DESIGN_5": "Sections with subtotals, quantity × rate, discounts and line notes, so clients see what they pay for.",
+        "DESIGN_6": "Shows what the client still owes: previous balance, payments, credits and the amount due now."
       },
       "numbering": "Invoice numbers",
       "numberingHint": "Numbers run in order within each financial year.",

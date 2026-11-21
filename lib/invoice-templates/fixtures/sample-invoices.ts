@@ -1,4 +1,5 @@
 import type { PDFLine, PDFParams } from "@/lib/invoice/build-invoice-view-model";
+import type { StatementInput } from "@/lib/invoice/statement";
 import { calculateInvoiceTotals } from "@/lib/invoice/totals";
 
 const baseProfile: PDFParams["profile"] = {
@@ -98,6 +99,29 @@ const gstLines: PDFLine[] = [
   { description: "ERP implementation", note: "Discovery, configuration and training", quantity: 2, unitPrice: 2500, amount: 5000, taxRate: 0.18, sacCode: "998313" },
   { description: "Annual support", note: "Priority email and phone support", quantity: 1, unitPrice: 12000, discountAmount: 1000, amount: 11000, taxRate: 0.18, sacCode: "998313" },
 ];
+
+const day = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
+
+const statementHistory: StatementInput = {
+  previousBalance: 3500,
+  openItems: [
+    { number: "INV/26-27/009", date: day("2026-03-05"), dueDate: day("2026-03-12"), balance: 2000 },
+    { number: "INV/26-27/011", date: day("2026-04-02"), dueDate: day("2026-04-09"), balance: 1500 },
+  ],
+  hiddenOpenItems: 0,
+  payments: [{ date: day("2026-04-10"), amount: 3000, method: "UPI", reference: "UTR-4421" }],
+  credits: [{ number: "CN/26-27/001", date: day("2026-04-12"), amount: 500 }],
+  sinceDate: day("2026-04-02"),
+};
+
+const statementManyOpen: StatementInput = {
+  previousBalance: 12000,
+  openItems: Array.from({ length: 8 }, (_, i) => ({ number: `INV/26-27/${String(i + 1).padStart(3, "0")}`, date: day(`2026-03-${String(i + 1).padStart(2, "0")}`), dueDate: day(`2026-03-${String(i + 8).padStart(2, "0")}`), balance: 1000 })),
+  hiddenOpenItems: 4,
+  payments: [],
+  credits: [],
+  sinceDate: day("2026-04-02"),
+};
 
 const projectLines: PDFLine[] = [
   { description: "Discovery workshop", note: "Two-day on-site session with stakeholders", quantity: 1, unitPrice: 4000, amount: 4000, taxRate: 0.18, sacCode: "998313", section: "Phase 1: Discovery" },
@@ -222,4 +246,8 @@ export const SAMPLE_INVOICES: Record<string, PDFParams> = {
   tdsInvoiceWithLink: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, tds: { section: "194J", ratePercent: 10, amount: 1600 }, paymentLink: "https://rzp.io/i/tds123" }),
   tdsPaid: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, status: "PAID", tds: { section: "194J", ratePercent: 10, amount: 1600 }, payment: { paidOn: new Date("2026-04-30T00:00:00.000Z") } }),
   tdsOnExport: makeParams({ client: { ...baseClient, country: "United States", isExport: true, taxId: null }, tds: { section: "194J", ratePercent: 10, amount: 1010 }, baseCurrency: "USD", userLocale: "en-US" }, 2, true),
+  statementInvoice: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, statement: statementHistory }),
+  statementFirst: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, statement: { previousBalance: 0, openItems: [], hiddenOpenItems: 0, payments: [], credits: [], sinceDate: null } }),
+  statementManyOpen: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, statement: statementManyOpen }),
+  statementPaid: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, status: "PAID", payment: { paidOn: day("2026-04-30") }, statement: statementHistory }),
 };
