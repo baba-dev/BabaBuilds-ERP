@@ -8,11 +8,10 @@ import { safeText } from "@/lib/invoice-templates/shared/fonts";
 import { drawLineTable, type TableColumn } from "@/lib/invoice-templates/shared/table";
 import { drawTotalsBlock, measureTotalsBlock } from "@/lib/invoice-templates/shared/totals";
 import { drawPartyBlock } from "@/lib/invoice-templates/shared/party-blocks";
-import { drawPaymentStamp, drawPaymentWatermark } from "@/lib/invoice-templates/shared/stamp";
+import { drawPaymentStamp } from "@/lib/invoice-templates/shared/stamp";
+import { CONTINUATION_TOP, installPageChrome } from "@/lib/invoice-templates/shared/page-chrome";
 
 const MARGIN = 40;
-const CONTINUATION_TOP = 60;
-const FOOTER_RULE_FROM_BOTTOM = 44;
 const TOTALS_WIDTH = 225;
 const STAMP_SPACE = 96;
 
@@ -40,24 +39,7 @@ const taxInvoiceTemplate: InvoiceTemplate = {
     const date = (d: Date) => d.toLocaleDateString(vm.userLocale, { day: "numeric", month: "short", year: "numeric" });
     const num = (n: number) => n.toLocaleString(vm.userLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    drawPaymentWatermark(page, fonts, vm);
-    paginator.onPageAdded((added) => {
-      drawPaymentWatermark(added, fonts, vm);
-      const h = added.getSize().height;
-      drawText(added, h, fonts, safeText(fonts.bold, `Invoice ${vm.invoiceNumber}  ·  ${vm.clientRaw.name}`), MARGIN, 30, 8, { isBold: true, color: MUTED });
-      drawText(added, h, fonts, "Continued", right, 30, 8, { align: "right", color: MUTED });
-      added.drawLine({ start: { x: MARGIN, y: h - 40 }, end: { x: right, y: h - 40 }, thickness: 0.5, color: RULE });
-    });
-    paginator.onFinalize((target, index, total) => {
-      const h = target.getSize().height;
-      target.drawLine({ start: { x: MARGIN, y: FOOTER_RULE_FROM_BOTTOM }, end: { x: right, y: FOOTER_RULE_FROM_BOTTOM }, thickness: 0.5, color: RULE });
-      const ids = [vm.profile.companyName, vm.profile.gstin ? `${vm.safeTaxIdLabel}: ${vm.profile.gstin}` : null, vm.profile.panNumber ? `PAN: ${vm.profile.panNumber}` : null].filter(Boolean).join("  ·  ");
-      drawText(target, h, fonts, safeText(fonts.regular, ids), MARGIN, h - 30, 7, { color: MUTED });
-      drawText(target, h, fonts, `Invoice ${vm.invoiceNumber}  ·  Page ${index} of ${total}`, right, h - 30, 7, { align: "right", color: MUTED });
-      if (vm.showFreePlanFooter) {
-        drawText(target, h, fonts, "This document was prepared on erp.bababuilds.com | Make yours.", width / 2, h - 14, 6.5, { align: "center", color: rgb(0.55, 0.55, 0.58), isItalic: true });
-      }
-    });
+    installPageChrome({ paginator, fonts, vm, margin: MARGIN });
 
     // Header: logo or company name on the left, document title on the right.
     const hasLogo = vm.profile.logoUrl ? await loadLogo(pdfDoc, page, height, vm.profile.logoUrl, MARGIN, 34, 130, 44) : false;
