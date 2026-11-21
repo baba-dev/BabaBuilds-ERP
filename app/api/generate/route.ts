@@ -583,6 +583,7 @@ export async function POST(request: Request) {
           lines: toPdfLines(sanitizedServices, (typeof sacCode === 'string' ? sacCode : null) || profile.defaultSacCode || null),
           gst: toPdfGst(client, body.gst),
           accentColor: body.accentColor ?? null,
+          tds: tdsResult ? { section: normalizeTdsSection(body.tds?.section), ratePercent: tdsResult.ratePercent, amount: tdsResult.amount } : null,
           totals,
           formattedTotal,
           baseCurrency,

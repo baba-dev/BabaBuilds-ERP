@@ -218,4 +218,8 @@ export const SAMPLE_INVOICES: Record<string, PDFParams> = {
   accentInvoice: makeLineParams(gstLines, { accentColor: "#0B5FFF", gst: { placeOfSupply: "29" } }),
   accentClient: makeLineParams(gstLines, { client: { ...baseClient, invoiceAccentColor: "#B45309" }, gst: { placeOfSupply: "29" } }),
   sectionedProject: makeLineParams(projectLines, { billingMonth: "Customer portal, Q2 2026", gst: { placeOfSupply: "29" } }),
+  tdsInvoice: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, tds: { section: "194J", ratePercent: 10, amount: 1600 } }),
+  tdsInvoiceWithLink: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, tds: { section: "194J", ratePercent: 10, amount: 1600 }, paymentLink: "https://rzp.io/i/tds123" }),
+  tdsPaid: makeLineParams(gstLines, { gst: { placeOfSupply: "29" }, status: "PAID", tds: { section: "194J", ratePercent: 10, amount: 1600 }, payment: { paidOn: new Date("2026-04-30T00:00:00.000Z") } }),
+  tdsOnExport: makeParams({ client: { ...baseClient, country: "United States", isExport: true, taxId: null }, tds: { section: "194J", ratePercent: 10, amount: 1010 }, baseCurrency: "USD", userLocale: "en-US" }, 2, true),
 };

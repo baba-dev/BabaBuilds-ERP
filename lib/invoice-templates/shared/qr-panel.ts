@@ -23,7 +23,7 @@ export type ScanPanelMode = "PAID" | "NO_PAYMENT_DUE" | "QR" | "BANK";
 /** Which variant the panel shows, so a design can avoid repeating what the panel already says (e.g. bank details). */
 export const scanPanelMode = (vm: InvoiceViewModel): ScanPanelMode => {
   if (vm.payment.kind === "PAID") return "PAID";
-  const due = vm.payment.kind === "PARTIAL" ? vm.payment.balanceDue : vm.totals.total;
+  const due = vm.payment.kind === "PARTIAL" ? vm.payment.balanceDue : vm.netPayable;
   if (due <= 0) return "NO_PAYMENT_DUE";
   const source = vm.paymentQrs[0];
   return source && qrMatrix(source.url).length > 0 ? "QR" : "BANK";
@@ -52,7 +52,7 @@ export const drawScanToPay = (args: {
   drawRect(page, pageHeight, x, y, width, SCAN_PANEL_HEIGHT, WHITE, tokens.accent);
 
   const mode = scanPanelMode(vm);
-  const due = vm.payment.kind === "PARTIAL" ? vm.payment.balanceDue : vm.totals.total;
+  const due = vm.payment.kind === "PARTIAL" ? vm.payment.balanceDue : vm.netPayable;
 
   if (mode === "PAID") {
     drawText(page, pageHeight, fonts, "Paid in full", centerX, y + 68, 16, { isBold: true, align: "center", color: PAID_INK });

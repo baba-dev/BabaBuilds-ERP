@@ -9,13 +9,15 @@ import { drawRect, drawText, wrapTextByWidth } from "@/lib/invoice-templates/sha
 
 const ROW_H = 18;
 const TOTAL_H = 30;
+const NET_H = 28;
+const NOTE_H = 16;
 const WORDS_SIZE = 8;
 const WORDS_LINE_H = 10.5;
 const WORDS_GAP = 8;
 const INK = rgb(0.13, 0.13, 0.15);
 const MUTED = rgb(0.42, 0.42, 0.46);
 
-type Row = { label: string; value: string; style: "normal" | "muted" | "total" };
+type Row = { label: string; value: string; style: "normal" | "muted" | "total" | "net" | "note" };
 
 type BlockOptions = { showGstSplit: boolean; showAmountInWords: boolean };
 
@@ -46,6 +48,12 @@ const buildRows = (vm: InvoiceViewModel, showGstSplit: boolean): Row[] => {
     rows.push({ label: vm.taxRowLabel, value: money(vm.totals.taxAmount), style: "normal" });
   }
   rows.push({ label: "Total", value: money(vm.totals.total), style: "total" });
+  if (vm.tds) {
+    const section = vm.tds.sectionLabel ? ` (${vm.tds.sectionLabel})` : "";
+    rows.push({ label: `Less: TDS @ ${trimRate(vm.tds.ratePercent)}%${section}`, value: `-${money(vm.tds.amount)}`, style: "muted" });
+    rows.push({ label: "Net payable", value: money(vm.netPayable), style: "net" });
+    if (vm.profile.panNumber) rows.push({ label: `Our PAN: ${vm.profile.panNumber}`, value: "", style: "note" });
+  }
   return rows;
 };
 
@@ -55,7 +63,8 @@ const wordsLines = (vm: InvoiceViewModel, fonts: PdfFonts, width: number, enable
 /** Height `drawTotalsBlock` will use, so callers can keep the block together on one page. */
 export const measureTotalsBlock = (vm: InvoiceViewModel, opts: BlockOptions & { fonts: PdfFonts; width: number }): number => {
   const rows = buildRows(vm, opts.showGstSplit);
-  const rowsHeight = rows.reduce((sum, r) => sum + (r.style === "total" ? TOTAL_H : ROW_H), 0);
+  const heightOf = (r: Row) => (r.style === "total" ? TOTAL_H : r.style === "net" ? NET_H : r.style === "note" ? NOTE_H : ROW_H);
+  const rowsHeight = rows.reduce((sum, r) => sum + heightOf(r), 0);
   const words = wordsLines(vm, opts.fonts, opts.width, opts.showAmountInWords);
   return rowsHeight + (words.length ? WORDS_GAP + words.length * WORDS_LINE_H : 0);
 };
@@ -85,6 +94,14 @@ export const drawTotalsBlock = (args: BlockOptions & {
       drawText(page, pageHeight, fonts, label, x + 10, y + 19.5, 11, { isBold: true, color: tokens.onAccent });
       drawText(page, pageHeight, fonts, value, x + width - 10, y + 19.5, 12.5, { isBold: true, align: "right", color: tokens.onAccent });
       y += TOTAL_H;
+    } else if (row.style === "net") {
+      drawRect(page, pageHeight, x, y, width, NET_H, tokens.accentTintStrong);
+      drawText(page, pageHeight, fonts, label, x + 10, y + 18, 10.5, { isBold: true, color: tokens.accentDark });
+      drawText(page, pageHeight, fonts, value, x + width - 10, y + 18, 11.5, { isBold: true, align: "right", color: tokens.accentDark });
+      y += NET_H;
+    } else if (row.style === "note") {
+      drawText(page, pageHeight, fonts, label, x + 10, y + 11, 7.5, { color: MUTED });
+      y += NOTE_H;
     } else {
       const color = row.style === "muted" ? MUTED : INK;
       drawText(page, pageHeight, fonts, label, x + 10, y + 12.5, 9, { color });

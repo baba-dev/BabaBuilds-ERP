@@ -107,6 +107,7 @@ export async function finalizeInvoiceFromDraft(params: {
         lines: toPdfLines(sanitizedServices, sanitizedSacCode || profile.defaultSacCode || null),
         gst: toPdfGst(client, draftInput.gst),
         accentColor,
+        tds,
         totals,
         formattedTotal,
         baseCurrency,

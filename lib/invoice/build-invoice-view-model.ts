@@ -108,6 +108,8 @@ export interface PDFParams {
   accentColor?: string | null;
   /** Payment details for the PAID / PARTIAL stamp. An unknown paid amount is treated as nothing paid. */
   payment?: { paidOn?: Date | null; amountPaid?: number };
+  /** Expected TDS the client will deduct (amount computed by the server on the pre-GST subtotal). */
+  tds?: { section?: string | null; ratePercent: number; amount: number } | null;
 }
 
 type InvoiceAddress = {
@@ -161,6 +163,10 @@ export interface InvoiceViewModel {
   /** Normalised accent colours by level; a template resolves them with its own default. */
   accentCandidates: { invoice: string | null; client: string | null; workspace: string | null };
   payment: InvoicePaymentView;
+  /** Expected TDS, or null (none, an export, or a zero amount). */
+  tds: { section: string | null; ratePercent: number; amount: number; sectionLabel: string } | null;
+  /** Total less expected TDS: what the client pays. Equals the total when there is no TDS. */
+  netPayable: number;
   amountInWords: string | null;
   paymentQrs: InvoiceQrSource[];
   totals: InvoiceTotals;
@@ -270,6 +276,7 @@ export const buildInvoiceViewModel = ({
   gst: gstArg,
   accentColor,
   payment: paymentArg,
+  tds: tdsArg,
 }: PDFParams): InvoiceViewModel => {
   const billingSnapshot = {
     planTier: profile.workspace?.planTier,
@@ -332,12 +339,16 @@ export const buildInvoiceViewModel = ({
     isTaxExempt: totals.taxMode === "exempt",
     totalTaxAmount: totals.taxAmount,
   });
-  const amountPaid = watermarkKind === "PAID" ? (paymentArg?.amountPaid ?? totals.total) : watermarkKind === "PARTIAL" ? (paymentArg?.amountPaid ?? 0) : 0;
+  const tds = tdsArg && !client.isExport && tdsArg.amount > 0 && tdsArg.ratePercent > 0
+    ? { section: tdsArg.section?.trim() || null, ratePercent: tdsArg.ratePercent, amount: tdsArg.amount, sectionLabel: tdsArg.section?.trim() ? `Sec ${tdsArg.section.trim()}` : "" }
+    : null;
+  const netPayable = Math.max(0, roundMoney(totals.total - (tds?.amount ?? 0)));
+  const amountPaid = watermarkKind === "PAID" ? (paymentArg?.amountPaid ?? netPayable) : watermarkKind === "PARTIAL" ? (paymentArg?.amountPaid ?? 0) : 0;
   const payment: InvoicePaymentView = {
     kind: watermarkKind === "NONE" ? "NONE" : watermarkKind,
     paidOn: paymentArg?.paidOn ?? null,
     amountPaid,
-    balanceDue: Math.max(0, roundMoney(totals.total - amountPaid)),
+    balanceDue: Math.max(0, roundMoney(netPayable - amountPaid)),
   };
   const resolvedTemplateId = resolveInvoiceTemplateId({
     requestedTemplateId: templateId,
@@ -371,6 +382,8 @@ export const buildInvoiceViewModel = ({
       workspace: normalizeHexColor(profile.invoiceAccentColor),
     },
     payment,
+    tds,
+    netPayable,
     amountInWords: amountInWords(totals.total, baseCurrency),
     paymentQrs: normalizedPaymentLink ? [{ kind: "PAYMENT_LINK", url: normalizedPaymentLink, label: "Pay online" }] : [],
     totals,

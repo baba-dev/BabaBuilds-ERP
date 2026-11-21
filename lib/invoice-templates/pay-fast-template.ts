@@ -61,14 +61,14 @@ const payFastTemplate: InvoiceTemplate = {
     const paid = vm.payment.kind === "PAID";
     const partial = vm.payment.kind === "PARTIAL";
     const heroLabel = paid ? "PAID IN FULL" : partial ? "BALANCE DUE" : "AMOUNT DUE";
-    const heroAmount = money(paid ? vm.totals.total : partial ? vm.payment.balanceDue : vm.totals.total);
+    const heroAmount = money(partial ? vm.payment.balanceDue : vm.netPayable);
     drawRect(page, height, MARGIN, heroY, heroWidth, SCAN_PANEL_HEIGHT, tokens.accent);
     drawText(page, height, fonts, heroLabel, MARGIN + 20, heroY + 34, 8.5, { isBold: true, color: tokens.onAccent });
     const amountText = safeText(fonts.bold, heroAmount);
     const amountSize = Math.min(32, ((heroWidth - 40) / Math.max(1, fonts.bold.widthOfTextAtSize(amountText, 1))));
     drawText(page, height, fonts, amountText, MARGIN + 20, heroY + 34 + 8 + amountSize, amountSize, { isBold: true, color: tokens.onAccent });
     page.drawLine({ start: { x: MARGIN + 20, y: height - (heroY + 108) }, end: { x: MARGIN + heroWidth - 20, y: height - (heroY + 108) }, thickness: 0.6, color: tokens.onAccent, opacity: 0.45 });
-    const nothingDue = !paid && (partial ? vm.payment.balanceDue : vm.totals.total) <= 0;
+    const nothingDue = !paid && (partial ? vm.payment.balanceDue : vm.netPayable) <= 0;
     const dueLine = paid && vm.payment.paidOn ? `Paid ${date(vm.payment.paidOn)}` : paid ? "Thank you for your payment" : nothingDue ? "No payment required" : `Due ${date(vm.dueDate)}`;
     drawText(page, height, fonts, dueLine, MARGIN + 20, heroY + 128, 12, { isBold: true, color: tokens.onAccent });
     if (vm.billingMonth) drawText(page, height, fonts, safeText(fonts.regular, `For ${vm.billingMonth}`), MARGIN + 20, heroY + 144, 8.5, { color: tokens.onAccent });
