@@ -6624,11 +6624,17 @@
       "themeHint": "The look of every PDF you send.",
       "design": {
         "DESIGN_1": "Classic",
-        "DESIGN_2": "Modern agency"
+        "DESIGN_2": "Modern agency",
+        "DESIGN_3": "Tax invoice (GST)",
+        "DESIGN_4": "Pay-Fast",
+        "DESIGN_5": "Itemised project"
       },
       "designHint": {
         "DESIGN_1": "White header and clean lines. Shows your signature.",
-        "DESIGN_2": "Bold dark header. Does not show a signature."
+        "DESIGN_2": "Bold dark header. Does not show a signature.",
+        "DESIGN_3": "GST-ready: HSN/SAC, CGST/SGST/IGST split, place of supply, IRN and amount in words.",
+        "DESIGN_4": "Big amount due and a scan-to-pay QR so clients pay sooner.",
+        "DESIGN_5": "Sections with subtotals, quantity × rate, discounts and line notes, so clients see what they pay for."
       },
       "numbering": "Invoice numbers",
       "numberingHint": "Numbers run in order within each financial year.",

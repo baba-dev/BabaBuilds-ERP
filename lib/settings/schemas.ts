@@ -3,6 +3,7 @@ import { normalizeGstin, validateGstin } from "@/lib/gst/gstin";
 import { validateUdyam } from "@/lib/msme/udyam";
 import { isSupportedLocale } from "@/i18n/locales";
 import { accentColorField } from "@/lib/invoice-templates/shared/accent-color";
+import { INVOICE_DESIGN_IDS } from "@/lib/invoice-templates/catalog";
 
 /**
  * Settings are saved one section at a time. Each section has its own schema, so a bad value in one place never blocks
@@ -47,7 +48,7 @@ export const taxSchema = z
 
 export const invoicingSchema = z.object({
   invoiceAccentColor: accentColorField,
-  invoiceTheme: z.enum(["DESIGN_1", "DESIGN_2"]),
+  invoiceTheme: z.enum(INVOICE_DESIGN_IDS),
   invoicePrefix: text(10).transform((v) => v.toUpperCase()).refine((v) => v === "" || /^[A-Z0-9][A-Z0-9/_-]{0,9}$/.test(v), "PREFIX"),
   invoiceTermsDays: z.number().int().min(0).max(365),
 });
