@@ -101,10 +101,13 @@ export const drawLineTable = (args: {
   reserveBottom?: number;
   zebra?: boolean;
   sectionSubtotals?: boolean;
+  /** "filled" (default): accent header, zebra rows and tinted section bands. "minimal": rules only, no fills. */
+  style?: "filled" | "minimal";
 }): { page: PDFPage; yFromTop: number } => {
   const { paginator, fonts, tokens, lines, columns, x, locale, emptyLabel, continuationTopY } = args;
   const reserveBottom = args.reserveBottom ?? 0;
-  const useZebra = args.zebra ?? true;
+  const minimal = args.style === "minimal";
+  const useZebra = (args.zebra ?? true) && !minimal;
   const totalWidth = columns.reduce((sum, c) => sum + c.width, 0);
   const items = buildItems(lines, fonts, columns, Boolean(args.sectionSubtotals));
 
@@ -128,8 +131,13 @@ export const drawLineTable = (args: {
     page.drawLine({ start: { x, y: pageHeight() - atYFromTop }, end: { x: x + totalWidth, y: pageHeight() - atYFromTop }, thickness: 0.5, color: RULE });
 
   const drawHeader = () => {
-    drawRect(page, pageHeight(), x, y, totalWidth, HEADER_H, tokens.accent);
-    columns.forEach((col, i) => textInCell(col.header, i, y + 15.5, { bold: true, color: tokens.onAccent, size: 8 }));
+    if (minimal) {
+      columns.forEach((col, i) => textInCell(col.header.toUpperCase(), i, y + 15, { bold: true, color: MUTED, size: 7 }));
+      page.drawLine({ start: { x, y: pageHeight() - (y + HEADER_H) }, end: { x: x + totalWidth, y: pageHeight() - (y + HEADER_H) }, thickness: 0.9, color: INK });
+    } else {
+      drawRect(page, pageHeight(), x, y, totalWidth, HEADER_H, tokens.accent);
+      columns.forEach((col, i) => textInCell(col.header, i, y + 15.5, { bold: true, color: tokens.onAccent, size: 8 }));
+    }
     y += HEADER_H;
   };
 
@@ -160,12 +168,12 @@ export const drawLineTable = (args: {
     if (startNewPageIfNeeded(y + item.height + follower + (isLast ? reserveBottom : 0))) drawHeader();
 
     if (item.kind === "section") {
-      drawRect(page, pageHeight(), x, y, totalWidth, item.height, tokens.accentTintStrong);
-      drawText(page, pageHeight(), fonts, safeText(fonts.bold, item.title), x + PAD, y + 15, FONT, { isBold: true, color: tokens.accentDark });
+      if (!minimal) drawRect(page, pageHeight(), x, y, totalWidth, item.height, tokens.accentTintStrong);
+      drawText(page, pageHeight(), fonts, safeText(fonts.bold, item.title), x + PAD, y + 15, FONT, { isBold: true, color: minimal ? INK : tokens.accentDark });
     } else if (item.kind === "subtotal") {
       const amountIndex = columns.findIndex((c) => c.key === "amount");
       const label = `Subtotal: ${item.title}`;
-      drawRect(page, pageHeight(), x, y, totalWidth, item.height, tokens.accentTint);
+      if (!minimal) drawRect(page, pageHeight(), x, y, totalWidth, item.height, tokens.accentTint);
       drawText(page, pageHeight(), fonts, safeText(fonts.bold, label), colX(Math.max(0, amountIndex)) - PAD, y + 15, FONT, { isBold: true, align: "right", color: INK });
       if (amountIndex >= 0) {
         textInCell(item.amount.toLocaleString(locale, { minimumFractionDigits: 2 }), amountIndex, y + 15, { bold: true });

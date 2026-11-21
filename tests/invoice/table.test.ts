@@ -8,6 +8,7 @@ import { createPaginator } from "@/lib/invoice-templates/shared/paginator";
 import { drawLineTable, measureLineRow, type TableColumn } from "@/lib/invoice-templates/shared/table";
 import { buildAccentTokens } from "@/lib/invoice-templates/shared/tokens";
 import { extractPdfText, extractTextItems } from "./helpers/pdf-text";
+import { countRects } from "./helpers/pdf-content";
 
 const tokens = buildAccentTokens("#0B3D91");
 const COLUMNS: TableColumn[] = [
@@ -21,7 +22,7 @@ const COLUMNS: TableColumn[] = [
 const X = 40;
 const DESC_RIGHT = X + 240;
 
-const run = async (lines: InvoiceLineView[], opts: { reserveBottom?: number; startYFromTop?: number; sectionSubtotals?: boolean } = {}) => {
+const run = async (lines: InvoiceLineView[], opts: { reserveBottom?: number; startYFromTop?: number; sectionSubtotals?: boolean; style?: "filled" | "minimal" } = {}) => {
   const doc = await PDFDocument.create();
   const fonts = await embedUnicodeFonts(doc);
   const paginator = createPaginator(doc, { paperSize: "A4" });
@@ -38,6 +39,7 @@ const run = async (lines: InvoiceLineView[], opts: { reserveBottom?: number; sta
     continuationTopY: 60,
     reserveBottom: opts.reserveBottom,
     sectionSubtotals: opts.sectionSubtotals,
+    style: opts.style,
   });
   const bytes = await doc.save();
   return { doc, fonts, paginator, result, bytes, pages: await extractPdfText(bytes) };
@@ -121,5 +123,33 @@ describe("drawLineTable", () => {
   it("includes line notes under the description", async () => {
     const { pages } = await run(linesOf("gstIntra"));
     expect(pages[0]).toContain("Discovery, configuration and training");
+  });
+
+  it("minimal style draws no filled shapes but keeps every row and the header", async () => {
+    const lines = linesOf("mixedRates");
+    const filled = await run(lines);
+    const minimal = await run(lines, { style: "minimal" });
+    expect(await countRects(filled.bytes)).toBeGreaterThan(0);
+    expect(await countRects(minimal.bytes)).toBe(0);
+    for (const word of ["DESCRIPTION", "AMOUNT", "Consulting", "Printed manuals", "Courier", "Workshop", "100.01"]) {
+      expect(minimal.pages[0]).toContain(word);
+    }
+  });
+
+  it("minimal style still paginates with the header repeated", async () => {
+    const { pages, paginator } = await run(linesOf("manyLines"), { style: "minimal" });
+    expect(paginator.pageCount()).toBeGreaterThan(2);
+    for (const text of pages) expect(text).toContain("DESCRIPTION");
+  });
+
+  it("minimal style shows section titles and subtotals without fills", async () => {
+    const lines = [
+      line({ description: "Design", section: "Phase 1", amount: 100, amountFormatted: "100.00" }),
+      line({ description: "Launch", section: "Phase 2", amount: 75, amountFormatted: "75.00" }),
+    ];
+    const { pages, bytes } = await run(lines, { sectionSubtotals: true, style: "minimal" });
+    expect(pages[0]).toContain("Phase 1");
+    expect(pages[0]).toContain("Subtotal");
+    expect(await countRects(bytes)).toBe(0);
   });
 });
