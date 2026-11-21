@@ -669,6 +669,7 @@ model Workspace {
   bankReconciliationRules         BankReconciliationRule[]
   investments                     Investment[]
   serviceTemplates                ServiceTemplate[]
+  paymentQrImages                 PaymentQrImage[]
   proposals                       Proposal[]
   proposalConversions             ProposalConversion[]
   billingMilestones               BillingMilestone[]
@@ -1499,6 +1500,8 @@ model BusinessProfile {
 
   invoiceTheme  String  @default("DESIGN_1") // DESIGN_1..DESIGN_5 (see lib/invoice-templates/catalog.ts)
   invoiceAccentColor String? // workspace default brand colour for invoices, #RRGGBB
+  upiVpa             String? // UPI ID shown as a pay-now QR on invoices, e.g. shop@okhdfc
+  upiPayeeName       String? // name shown to the payer in their UPI app
   invoicePrefix String? @default("INV")
   invoiceTermsDays Int @default(7) // default payment terms: due date = invoice date + this many days
 
@@ -5694,3 +5697,15 @@ model ErpJobDelivery {
   @@index([workspaceId, createdAt(sort: Desc)], map: "ErpJobDelivery_ws_created_idx")
 }
 
+/// Static QR images a business uploads (Paytm, GPay, PhonePe ...). They carry no amount, so invoices print an "enter the amount" hint.
+model PaymentQrImage {
+  id          String    @id @default(cuid())
+  workspaceId String
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  label       String
+  imagePath   String
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  @@index([workspaceId, sortOrder])
+}

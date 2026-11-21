@@ -11,7 +11,8 @@ export type PrivateAssetKind =
   | 'products'
   | 'service-hero'
   | 'share-target'
-  | 'documents';
+  | 'documents'
+  | 'payment-qr';
 
 const DEFAULT_ROOT = path.join(process.cwd(), 'private_uploads');
 
