@@ -41,7 +41,7 @@ jobs:
     steps:
       - name: Verify current main SHA and all CI gates
         id: check
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           CI_SMOKE_ADVISORY: ${{ vars.CI_SMOKE_ADVISORY }}
         with:
@@ -154,7 +154,7 @@ jobs:
           path: erp-release
 
       - name: Recheck that candidate still matches latest main
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const {owner, repo} = context.repo;
