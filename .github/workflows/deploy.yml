@@ -125,7 +125,7 @@ jobs:
           python3 ops/erp-release/package.py build \
             --sha "${{ needs.provenance.outputs.sha }}" \
             --dest "$RUNNER_TEMP/erp-release"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: erp-arm64-${{ needs.provenance.outputs.sha }}
           path: ${{ runner.temp }}/erp-release/
