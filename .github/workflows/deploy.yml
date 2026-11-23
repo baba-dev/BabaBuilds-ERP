@@ -148,7 +148,7 @@ jobs:
           persist-credentials: false
 
       - name: Download verified native ARM64 candidate
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: erp-arm64-${{ needs.provenance.outputs.sha }}
           path: erp-release
